@@ -1,0 +1,51 @@
+
+import React from 'react';
+import { 
+  LayoutDashboard, 
+  PhoneCall, 
+  Users, 
+  FlaskConical, 
+  Search,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  ChevronRight,
+  TrendingUp,
+  Tag,
+  ArrowRight,
+  Sun,
+  Moon,
+  History,
+  Calendar,
+  Pin,
+  PinOff,
+  Filter,
+  CheckSquare,
+  Undo2,
+  RefreshCw
+} from 'lucide-react';
+
+export const ICONS = {
+  Dashboard: <LayoutDashboard size={20} />,
+  Logs: <PhoneCall size={20} />,
+  Contacts: <Users size={20} />,
+  Actions: <History size={20} />,
+  Lab: <FlaskConical size={20} />,
+  Search: <Search size={18} />,
+  Success: <CheckCircle2 size={16} className="text-emerald-500" />,
+  Pending: <Clock size={16} className="text-amber-500" />,
+  Error: <AlertCircle size={16} className="text-rose-500" />,
+  Chevron: <ChevronRight size={18} />,
+  Trend: <TrendingUp size={16} />,
+  Tag: <Tag size={14} />,
+  Action: <ArrowRight size={16} className="text-blue-500" />,
+  Sun: <Sun size={20} />,
+  Moon: <Moon size={20} />,
+  Calendar: <Calendar size={14} />,
+  Pin: <Pin size={16} />,
+  Unpin: <PinOff size={16} />,
+  Filter: <Filter size={16} />,
+  Check: <CheckSquare size={16} />,
+  Undo: <Undo2 size={16} />,
+  Refresh: <RefreshCw size={18} />
+};

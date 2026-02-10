@@ -1,0 +1,5 @@
+{
+  "name": "Project Horizon PRM",
+  "description": "An intelligent Personal Relationship Management system that transforms raw call transcripts into strategic executive briefs using Gemini AI.",
+  "requestFramePermissions": []
+}
