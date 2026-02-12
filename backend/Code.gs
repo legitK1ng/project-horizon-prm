@@ -21,15 +21,47 @@ function doPost(e) {
 
     // Parse incoming data
     let params = {};
+    let isBatch = false;
+
     if (e.postData && e.postData.contents) {
       try {
-        params = JSON.parse(e.postData.contents);
+        const payload = JSON.parse(e.postData.contents);
+        if (Array.isArray(payload)) {
+          // BATCH HANDLING
+          const rows = [];
+          payload.forEach(item => {
+            // Extract fields for each item
+            const pDate = item.timestamp ? new Date(item.timestamp) : new Date();
+            const pName = item.contact_name || 'Unknown';
+            const pPhone = item.phone_number || '';
+            const pDur = item.duration || 0;
+            const pTrans = item.transcript || item.note || '';
+            const pNotes = item.strategic_notes ? JSON.stringify(item.strategic_notes) : '';
+
+            rows.push([
+              pDate, pName, pPhone, pDur, pTrans, pNotes, '#batch_import', 'COMPLETED', ''
+            ]);
+          });
+
+          if (rows.length > 0) {
+            sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+            return ContentService.createTextOutput(`Batch success: ${rows.length} rows`);
+          }
+          return ContentService.createTextOutput('Batch empty');
+        } else {
+          params = payload;
+        }
       } catch {
         params = e.parameter || {};
       }
     } else {
       params = e.parameter || {};
     }
+
+    // ORIGINAL SINGLE RECORD LOGIC FOLLOWS...
+    // ROUTING: Check for Call Report signature & Map to Logs
+    // ...
+
 
     // ROUTING: Check for Call Report signature & Map to Logs
     // The new feature sends: direction, date, number, contact, etc.
@@ -38,15 +70,15 @@ function doPost(e) {
       const rawDate = params.date || '';
       const directionMap = { '1': 'Incoming', '2': 'Outgoing', '3': 'Missed', '5': 'Rejected' };
       const direction = directionMap[params.direction] || params.direction || 'Unknown';
-      
+
       const noteData = {
         source: 'ACR_REPORT',
         direction: direction,
         raw_date: rawDate
       };
-      
+
       const transcriptText = params.notes || `Call Report: ${direction}`;
-      
+
       sheet.appendRow([
         new Date(), // timestamp
         params.contact || 'Unknown', // contact_name
@@ -58,7 +90,7 @@ function doPost(e) {
         'COMPLETED', // status
         rawDate // external_id
       ]);
-      
+
       logToCloud('INFO', `Call Report Saved to Logs: ${params.number}`);
       return ContentService.createTextOutput('Success: Report Saved');
     }
@@ -71,42 +103,46 @@ function doPost(e) {
     // DEDUPLICATION CHECK
     // If external_id exists, check if we already have it.
     if (externalId) {
-       const idColIndex = HEADERS.LOGS.indexOf('external_id');
-       if (idColIndex > -1) {
-         // This is expensive O(N) but safe for reasonable sizes. 
-         // For massive sheets, we'd want a separate index sheet or CacheService.
-         const data = sheet.getDataRange().getValues();
-         // Start from row 1 (skip header)
-         for (let i = 1; i < data.length; i++) {
-           if (data[i][idColIndex].toString() === externalId) {
-             // SMART UPDATE: Check if we can improve existing data
-             const rowIdx = i + 1;
-             const nameIdx = HEADERS.LOGS.indexOf('contact_name');
-             const existingName = data[i][nameIdx];
+      const data = sheet.getDataRange().getValues();
+      const headers = data[0].map(h => h.toString().toLowerCase().trim());
 
-             // If existing is Unknown and new is known, UPDATE it.
-             if (existingName === 'Unknown Caller' && contactNameParam && contactNameParam !== 'Unknown Caller') {
-                sheet.getRange(rowIdx, nameIdx + 1).setValue(contactNameParam);
-                logToCloud('INFO', `Updated row ${rowIdx} name: ${contactNameParam}`);
-                return ContentService.createTextOutput('Updated: Contact Name'); 
-             }
+      let idColIndex = headers.indexOf('external id');
+      if (idColIndex === -1) idColIndex = headers.indexOf('external_id');
 
-             logToCloud('INFO', `Skipped duplicate ID: ${externalId}`);
-             return ContentService.createTextOutput('Skipped: Duplicate');
-           }
-         }
-       }
+      if (idColIndex > -1) {
+        // This is expensive O(N) but safe for reasonable sizes. 
+        // For massive sheets, we'd want a separate index sheet or CacheService.
+        // Start from row 1 (skip header)
+        for (let i = 1; i < data.length; i++) {
+          if (data[i][idColIndex].toString() === externalId) {
+            // SMART UPDATE: Check if we can improve existing data
+            const rowIdx = i + 1;
+            const nameIdx = HEADERS.LOGS.indexOf('contact_name');
+            const existingName = data[i][nameIdx];
+
+            // If existing is Unknown and new is known, UPDATE it.
+            if (existingName === 'Unknown Caller' && contactNameParam && contactNameParam !== 'Unknown Caller') {
+              sheet.getRange(rowIdx, nameIdx + 1).setValue(contactNameParam);
+              logToCloud('INFO', `Updated row ${rowIdx} name: ${contactNameParam}`);
+              return ContentService.createTextOutput('Updated: Contact Name');
+            }
+
+            logToCloud('INFO', `Skipped duplicate ID: ${externalId}`);
+            return ContentService.createTextOutput('Skipped: Duplicate');
+          }
+        }
+      }
     }
-    
+
     // SMART CONTACT MATCHING
-    
+
     // SMART CONTACT MATCHING
     let contactName = contactNameParam || 'Unknown Caller';
-    
+
     if (phone) {
       // 1. Normalize input phone (remove non-digits, take last 10)
       const cleanInput = phone.toString().replace(/\D/g, '').slice(-10);
-      
+
       if (cleanInput.length >= 10) {
         // 2. Search Contacts Sheet
         const contactSheet = ss.getSheetByName('Contacts_Sync');
@@ -119,7 +155,7 @@ function doPost(e) {
           const headers = data[0].map(h => h.toString().toLowerCase());
           const nameIdx = headers.indexOf('full name') > -1 ? headers.indexOf('full name') : 0;
           const phoneIdx = headers.indexOf('phone') > -1 ? headers.indexOf('phone') : 1;
-          
+
           for (let i = 1; i < data.length; i++) {
             const rowPhone = data[i][phoneIdx].toString().replace(/\D/g, '').slice(-10);
             if (rowPhone === cleanInput) {
@@ -142,9 +178,18 @@ function doPost(e) {
       return ContentService.createTextOutput('Skipped: No transcript');
     }
 
+    // Timestamp Logic: Use provided timestamp (for imports) or current time
+    let timestamp = new Date();
+    if (params.timestamp) {
+      const parsedDate = new Date(params.timestamp);
+      if (!isNaN(parsedDate.getTime())) {
+        timestamp = parsedDate;
+      }
+    }
+
     // Append to sheet with provided details
     sheet.appendRow([
-      new Date(),
+      timestamp,
       contactName,
       phone,
       duration,
@@ -152,7 +197,7 @@ function doPost(e) {
       strategic_notes,
       tags,
       status,
-      externalId, 
+      externalId,
     ]);
 
     logToCloud('INFO', `Saved call from: ${contactName}`);
@@ -200,11 +245,11 @@ function processQueue() {
   if (!sheet) return;
 
   const data = sheet.getDataRange().getValues();
-  const headers = data[0];
+  const headers = data[0].map(h => h.toString().toLowerCase().trim());
 
   const COL_STATUS = headers.indexOf('status');
   const COL_TRANSCRIPT = headers.indexOf('transcript');
-  const COL_NOTES = headers.indexOf('strategic_notes');
+  const COL_NOTES = headers.indexOf('strategic notes') > -1 ? headers.indexOf('strategic notes') : headers.indexOf('strategic_notes');
   const COL_TAGS = headers.indexOf('tags');
 
   if (COL_STATUS === -1) {
@@ -230,22 +275,23 @@ function processQueue() {
           // 1. Update Analysis Column (store full JSON for frontend parsing)
           // We assume analysis is a JSON object. We stringify it for storage.
           sheet.getRange(rowIndex, COL_NOTES + 1).setValue(JSON.stringify(analysis));
-          
+
           // 2. Update Tags
           const tags = Array.isArray(analysis.tags) ? analysis.tags.join(', ') : analysis.tags;
           sheet.getRange(rowIndex, COL_TAGS + 1).setValue(tags);
 
           // 3. Smart Data Filling: Update Contact Name if 'Unknown' and Gemini found one
           if (analysis.detected_contact && analysis.detected_contact.name) {
-             const currentName = row[headers.indexOf('contact_name')];
-             if (!currentName || currentName === 'Unknown Caller' || currentName === 'Manual Entry') {
-               const newName = analysis.detected_contact.name;
-               const colContact = headers.indexOf('contact_name');
-               if (colContact > -1) {
-                  sheet.getRange(rowIndex, colContact + 1).setValue(newName);
-                  logToCloud('INFO', `Gemini updated name for Row ${rowIndex} to ${newName}`);
-               }
-             }
+            const colNameIdx = headers.indexOf('contact name') > -1 ? headers.indexOf('contact name') : headers.indexOf('contact_name');
+            const currentName = row[colNameIdx];
+            if (!currentName || currentName === 'Unknown Caller' || currentName === 'Manual Entry') {
+              const newName = analysis.detected_contact.name;
+              const colContact = colNameIdx;
+              if (colContact > -1) {
+                sheet.getRange(rowIndex, colContact + 1).setValue(newName);
+                logToCloud('INFO', `Gemini updated name for Row ${rowIndex} to ${newName}`);
+              }
+            }
           }
 
           sheet.getRange(rowIndex, COL_STATUS + 1).setValue('COMPLETED');
@@ -314,39 +360,39 @@ function importCalendarHistory(daysToLookBack = 30) {
   const existingData = sheet.getDataRange().getValues();
   // Deduplication Set
   const existingKeys = new Set();
-  
+
   // Skip header
   for (let i = 1; i < existingData.length; i++) {
-     const row = existingData[i];
-     // Check external_id column (index 8)
-     const extId = row[8] ? row[8].toString() : '';
-     if (extId) existingKeys.add(extId);
+    const row = existingData[i];
+    // Check external_id column (index 8)
+    const extId = row[8] ? row[8].toString() : '';
+    if (extId) existingKeys.add(extId);
   }
 
   const now = new Date();
   const startTime = new Date(now.getTime() - (daysToLookBack * 24 * 60 * 60 * 1000));
-  
+
   const events = cal.getEvents(startTime, now);
   console.log(`Found ${events.length} events in the last ${daysToLookBack} days.`);
-  
+
   let addedCount = 0;
-  
+
   for (const event of events) {
     const title = event.getTitle();
     const desc = event.getDescription();
     const date = event.getStartTime();
     const eventId = event.getId(); // Use Calendar Event ID as external_id
-    
+
     if (existingKeys.has(eventId)) {
       continue;
     }
-    
+
     // Parse details (same logic as before)
     let number = '';
     let contact = 'Unknown';
     let direction = 'Unknown';
     let duration = 0;
-    
+
     const lines = desc.split('\n');
     for (const line of lines) {
       if (line.startsWith('Phone:')) number = line.substring(6).trim();
@@ -354,18 +400,18 @@ function importCalendarHistory(daysToLookBack = 30) {
       else if (line.startsWith('Type:')) direction = line.substring(5).trim();
       else if (line.startsWith('Duration:')) duration = line.substring(9).trim();
     }
-    
+
     if (!number && title.includes(':')) {
-       const parts = title.split(':');
-       if (parts.length > 1) number = parts[1].trim();
+      const parts = title.split(':');
+      if (parts.length > 1) number = parts[1].trim();
     }
-    
+
     const noteData = {
-        source: 'CALENDAR_IMPORT',
-        direction: direction,
-        original_date: date.toISOString()
+      source: 'CALENDAR_IMPORT',
+      direction: direction,
+      original_date: date.toISOString()
     };
-    
+
     sheet.appendRow([
       date, // timestamp (use actual call time)
       contact, // contact_name
@@ -377,10 +423,155 @@ function importCalendarHistory(daysToLookBack = 30) {
       'COMPLETED', // status
       eventId // external_id
     ]);
-    
+
     addedCount++;
   }
-  
+
   console.log(`Imported ${addedCount} new calls.`);
   return `Success: Imported ${addedCount} calls.`;
+}
+
+/**
+ * COMPLETELY RESET THE LOGS SHEET (DANGER)
+ * Clears all content and resets headers.
+ * Use for schema alignment.
+ */
+function resetSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(LOG_SHEET_NAME);
+  if (sheet) {
+    sheet.clear();
+  } else {
+    sheet = ss.insertSheet(LOG_SHEET_NAME);
+  }
+  sheet.appendRow(HEADERS.LOGS);
+  // Format Header Row
+  sheet.getRange(1, 1, 1, HEADERS.LOGS.length).setFontWeight('bold').setBackground('#f3f3f3');
+  sheet.setFrozenRows(1);
+  logToCloud('WARNING', 'Logs Sheet Reset Complete');
+  return 'Reset Complete';
+}
+
+/**
+ * DATA SAFEGUARD: ENFORCE SCHEMA
+ * Scans, Identifies Anchors, Realigns, and Type Casts.
+ * Run this after imports to self-heal data.
+ */
+function enforceSchema() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(LOG_SHEET_NAME);
+  if (!sheet) return 'Sheet not found';
+
+  const data = sheet.getDataRange().getValues();
+  // Assume Row 1 is Headers. Start at Row 2.
+  if (data.length < 2) return 'No data to clean';
+
+  // Column Indices (0-based) based on "The Schema"
+  // Timestamp=0, Contact=1, Phone=2, Duration=3, Transcript=4, Notes=5, Tags=6, Status=7, ExtID=8
+  const IDX = {
+    TIMESTAMP: 0,
+    CONTACT: 1,
+    PHONE: 2,
+    DURATION: 3,
+    TRANSCRIPT: 4,
+    NOTES: 5,
+    TAGS: 6,
+    STATUS: 7,
+    EXT_ID: 8
+  };
+
+  let updates = 0;
+
+  for (let i = 1; i < data.length; i++) {
+    let row = data[i];
+    let changed = false;
+
+    // 1. ANCHOR: TIMESTAMP (Column 0)
+    if (!isValidDate(row[IDX.TIMESTAMP])) {
+      // Search row for date
+      const foundDateIdx = row.findIndex(cell => isValidDate(cell));
+      if (foundDateIdx !== -1) {
+        row[IDX.TIMESTAMP] = new Date(row[foundDateIdx]);
+        if (foundDateIdx !== IDX.TIMESTAMP) row[foundDateIdx] = ''; // Clear source
+        changed = true;
+        console.log(`Row ${i + 1}: Moved Timestamp from Col ${foundDateIdx} to ${IDX.TIMESTAMP}`);
+      }
+    }
+
+    // 2. ANCHOR: TRANSCRIPT (Column 4)
+    // Look for long text (>50 chars)
+    if (typeof row[IDX.TRANSCRIPT] !== 'string' || row[IDX.TRANSCRIPT].length < 20) {
+      // Potential misalignment. Scan row.
+      const foundTransIdx = row.findIndex(cell => typeof cell === 'string' && cell.length > 50 && !isJsonString(cell));
+      if (foundTransIdx !== -1 && foundTransIdx !== IDX.TRANSCRIPT) {
+        row[IDX.TRANSCRIPT] = row[foundTransIdx];
+        if (foundTransIdx !== IDX.NOTES) row[foundTransIdx] = ''; // Clear source unless it's notes (which shouldn't happen due to check)
+        changed = true;
+        console.log(`Row ${i + 1}: Moved Transcript from Col ${foundTransIdx} to ${IDX.TRANSCRIPT}`);
+      }
+    }
+
+    // 3. ANCHOR: STRATEGIC NOTES (Column 5)
+    // Look for JSON string
+    if (!isJsonString(row[IDX.NOTES])) {
+      const foundJsonIdx = row.findIndex(cell => isJsonString(cell));
+      if (foundJsonIdx !== -1 && foundJsonIdx !== IDX.NOTES) {
+        row[IDX.NOTES] = row[foundJsonIdx];
+        if (foundJsonIdx !== IDX.TRANSCRIPT) row[foundJsonIdx] = '';
+        changed = true;
+        console.log(`Row ${i + 1}: Moved JSON from Col ${foundJsonIdx} to ${IDX.NOTES}`);
+      }
+    }
+
+    // 4. TYPE CAST & CLEANUP
+    // Phone -> String
+    if (row[IDX.PHONE] && typeof row[IDX.PHONE] !== 'string') {
+      row[IDX.PHONE] = row[IDX.PHONE].toString();
+      changed = true;
+    }
+
+    // Status -> Ensure Enum
+    const validStatus = ['QUEUED', 'COMPLETED', 'SKIPPED_SHORT', 'ERROR'];
+    if (!validStatus.includes(row[IDX.STATUS])) {
+      if (row[IDX.TRANSCRIPT]) {
+        // Safe default: If we have transcript + notes, it's completed. Else QUEUED.
+        row[IDX.STATUS] = (row[IDX.NOTES] && row[IDX.NOTES].length > 5) ? 'COMPLETED' : 'QUEUED';
+        changed = true;
+      } else {
+        row[IDX.STATUS] = 'ERROR';
+        changed = true;
+      }
+    }
+
+    // UPDATE SHEET
+    if (changed) {
+      sheet.getRange(i + 1, 1, 1, row.length).setValues([row]);
+      updates++;
+    }
+  }
+
+  if (updates > 0) logToCloud('INFO', `Cleanup: Updated ${updates} rows.`);
+  return `Cleanup Complete. Updated ${updates} rows.`;
+}
+
+// === HELPERS ===
+
+function isValidDate(d) {
+  if (Object.prototype.toString.call(d) === "[object Date]") {
+    return !isNaN(d.getTime());
+  }
+  if (typeof d === 'string' && d.length > 10) {
+    const t = Date.parse(d);
+    return !isNaN(t);
+  }
+  return false;
+}
+
+function isJsonString(str) {
+  if (typeof str !== 'string') return false;
+  try {
+    const o = JSON.parse(str);
+    if (o && typeof o === "object") return true;
+  } catch (e) { }
+  return false;
 }

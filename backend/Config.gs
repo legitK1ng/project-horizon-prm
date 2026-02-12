@@ -15,15 +15,15 @@ const GEMINI_SECRET_NAME = `projects/${PROJECT_NUMBER}/secrets/GEMINI_API_KEY/ve
 
 const HEADERS = {
   LOGS: [
-    'timestamp',
-    'contact_name',
-    'phone',
-    'duration',
-    'transcript',
-    'strategic_notes',
-    'tags',
-    'status',
-    'external_id',
+    'Timestamp',
+    'Contact Name',
+    'Phone Number',
+    'Duration',
+    'Transcript',
+    'Strategic Notes',
+    'Tags',
+    'Status',
+    'External ID',
   ],
 };
 

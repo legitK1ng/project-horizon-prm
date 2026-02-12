@@ -1,0 +1,37 @@
+{
+    "mcpServers": {
+        "sequential-thinking": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-sequential-thinking"
+            ],
+            "env": {}
+        },
+        "github-mcp-server": {
+            "command": "docker",
+            "args": [
+                "run",
+                "-i",
+                "--rm",
+                "-e",
+                "GITHUB_PERSONAL_ACCESS_TOKEN",
+                "ghcr.io/github/github-mcp-server"
+            ],
+            "env": {
+                "GITHUB_PERSONAL_ACCESS_TOKEN": "YOUR_GITHUB_TOKEN_HERE"
+            }
+        },
+        "StitchMCP": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "mcp-remote",
+                "https://stitch.googleapis.com/mcp",
+                "--header",
+                "X-Goog-Api-Key: AQ.Ab8RN6K7aiZAlI4Kd4hNFVsoztaRBGBxdvd667z-_76oTDQK8Q"
+            ],
+            "env": {}
+        }
+    }
+}

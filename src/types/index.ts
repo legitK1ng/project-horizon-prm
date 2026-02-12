@@ -52,7 +52,7 @@ export interface HistoryItem {
 export interface RawLog {
     timestamp?: string | number;
     contact_name?: string;
-    phone?: string | number;
+    phone_number?: string | number;
     duration?: string | number;
     transcript?: string;
     status?: string;
