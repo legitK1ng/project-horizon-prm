@@ -1,6 +1,14 @@
 ---
 name: acr-parser
-description: Specialized logic for parsing 'ACR Phone.html' call logs into structured data. Use this when the user provides a call log file.
+description: >-
+  Essential skill for parsing 'ACR Phone.html' call logs.
+  Triggers automatically when the user uploads an ACR call log,
+  asks to "process the phone file," or mentions "ACR data."
+  Extracts Contact, Time, Duration, and Transcripts.
+authors: 
+  - Project Horizon
+  - Gemini
+version: 1.1.0
 ---
 
 # ACR Phone Parser Skill
