@@ -95,7 +95,25 @@ Transcript: ${transcript}`;
 // SECRET MANAGER
 // ============================================================================
 
+// ============================================================================
+// SECRET MANAGER & PROPERTIES
+// ============================================================================
+
 function getGeminiKey() {
+  // 1. Try Script Properties (Easier Setup)
+  try {
+    const key = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+    if (key) return key;
+  } catch (e) {
+    console.warn('Script Properties access failed:', e);
+  }
+
+  // 2. Try Secret Manager (Advanced GCP Setup)
+  if (!PROJECT_NUMBER || PROJECT_NUMBER === 'YOUR_PROJECT_NUMBER') {
+    console.timeEnd('Gemini Auth');
+    return null; // Stop here if no project number
+  }
+
   const url = `https://secretmanager.googleapis.com/v1/${GEMINI_SECRET_NAME}:access`;
   const params = {
     method: 'get',
@@ -120,6 +138,12 @@ function getGeminiKey() {
 // ============================================================================
 
 function logToCloud(severity, message) {
+  // Fallback to console if GCP is not configured
+  if (!PROJECT_NUMBER || PROJECT_NUMBER === 'YOUR_PROJECT_NUMBER') {
+    console.log(`[${severity}] ${message}`);
+    return;
+  }
+
   const url = 'https://logging.googleapis.com/v2/entries:write';
   const payload = {
     logName: `projects/${PROJECT_NUMBER}/logs/horizon_backend`,

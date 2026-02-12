@@ -3,12 +3,18 @@ import fs from 'fs';
 import fetch from 'node-fetch';
 
 // Will execute against the new deployment (@31)
-const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwuQyTkN-fqEcnx6iIUO1qjdGzMjPqjIb6Ak5puh0pn18vTPzBQczf-BEWVztMpVh_I/exec';
+// REPLACE THIS WITH YOUR NEW DEPLOYMENT URL
+const WEB_APP_URL = 'YOUR_WEB_APP_URL_HERE';
 const LOGS_PATH = './parsed_logs.json';
 const CHUNK_SIZE = 50;
 
 async function ingestLogs() {
     console.log("🚀 Starting Bulk Ingestion (Batch Mode)...");
+
+    if (WEB_APP_URL.includes('YOUR_WEB_APP_URL')) {
+        console.error("❌ ERROR: You must update WEB_APP_URL in scripts/ingest_acr_logs.js with your new Web App URL.");
+        return;
+    }
 
     if (!fs.existsSync(LOGS_PATH)) {
         console.error("❌ parsed_logs.json not found.");
