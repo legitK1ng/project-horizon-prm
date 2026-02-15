@@ -13,6 +13,7 @@
 // ============================================================================
 
 function doPost(e) {
+  console.log('Webhook received', JSON.stringify(e.parameter));
   logToCloud('INFO', 'Webhook received');
 
   try {
@@ -39,7 +40,7 @@ function doPost(e) {
             const pNotes = item.strategic_notes ? JSON.stringify(item.strategic_notes) : '';
 
             rows.push([
-              pDate, pName, pPhone, pDur, pTrans, pNotes, '#batch_import', 'COMPLETED', ''
+              pDate, pName, pPhone, pDur, pTrans, pNotes, '#batch_import', 'QUEUED', ''
             ]);
           });
 
@@ -214,24 +215,72 @@ function doPost(e) {
 
 function doGet(e) {
   try {
+    const action = e.parameter.action;
+
+    if (action === 'list_models') {
+      return ContentService.createTextOutput(JSON.stringify(getGeminiModels()))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'run_tests') {
+      return ContentService.createTextOutput(JSON.stringify(runBackendTests()))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'test_gemini') {
+      const result = testGeminiConnection();
+      return ContentService.createTextOutput(JSON.stringify(result))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'trigger_processing') {
+      const result = processQueue(); // Call processQueue manually
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'success',
+        processed: result
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Moved sheet fetching inside try/catch or keep it specific?
+    // Let's just wrap the actions for now, or the whole thing.
+    // The structure of the file makes it hard to wrap *everything* without replacing the huge block.
+    // Let's just wrap the actions section.
+
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const logSheet = ss.getSheetByName(LOG_SHEET_NAME);
+    const logSheet = ss.getSheetByName('Logs');
+    // Explicitly name the Contacts sheet if it isn't already a variable
     const contactSheet = ss.getSheetByName('Contacts_Sync');
-    const callReportSheet = ss.getSheetByName(CALL_REPORT_SHEET_NAME);
+
+    // 1. Define how many columns are ACTUAL data (e.g., 4 columns for Contacts)
+    // Adjust these numbers to match your real sheet layout!
+    const logColumns = 12;       // Expanded to 12 to capture A-L (User has formulas in F, L, M, N)
+    const contactColumns = 6;   // Expanded to capture all contact fields
+
+    // 2. Fetch only that specific box of data
+    // getRange(row, col, numRows, numCols)
+    // We use getDisplayValues() to avoid formula errors and date object issues
+    const logsRaw = logSheet
+      ? logSheet.getRange(1, 1, logSheet.getLastRow(), logColumns).getDisplayValues()
+      : [];
+
+    const contactsRaw = contactSheet
+      ? contactSheet.getRange(1, 1, contactSheet.getLastRow(), contactColumns).getDisplayValues()
+      : [];
 
     const response = {
       status: 'success',
-      logs: logSheet ? dataToJSON(logSheet.getDataRange().getValues()) : [],
-      contacts: contactSheet ? dataToJSON(contactSheet.getDataRange().getValues()) : [],
+      logs: dataToJSON(logsRaw),       // Convert Array[][] to Object[]
+      contacts: dataToJSON(contactsRaw), // Convert Array[][] to Object[]
     };
 
-    return ContentService.createTextOutput(JSON.stringify(response)).setMimeType(
-      ContentService.MimeType.JSON
-    );
+    return ContentService.createTextOutput(JSON.stringify(response))
+      .setMimeType(ContentService.MimeType.JSON);
+
   } catch (error) {
-    return ContentService.createTextOutput(
-      JSON.stringify({ status: 'error', message: error.message })
-    ).setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'error',
+      message: error.message
+    })).setMimeType(ContentService.MimeType.JSON);
   }
 }
 
@@ -245,26 +294,50 @@ function processQueue() {
   if (!sheet) return;
 
   const data = sheet.getDataRange().getValues();
-  const headers = data[0].map(h => h.toString().toLowerCase().trim());
+
+  // Dynamic Header Detection (Scan first 10 rows)
+  let headerRowIndex = -1;
+  let headers = [];
+
+  for (let r = 0; r < Math.min(data.length, 10); r++) {
+    const rowStr = data[r].map(h => h.toString().toLowerCase().trim());
+    if (rowStr.indexOf('status') > -1) {
+      headerRowIndex = r;
+      headers = rowStr;
+      break;
+    }
+  }
+
+  if (headerRowIndex === -1) {
+    logToCloud('CRITICAL', 'Status column not found in first 10 rows');
+    return;
+  }
 
   const COL_STATUS = headers.indexOf('status');
   const COL_TRANSCRIPT = headers.indexOf('transcript');
   const COL_NOTES = headers.indexOf('strategic notes') > -1 ? headers.indexOf('strategic notes') : headers.indexOf('strategic_notes');
   const COL_TAGS = headers.indexOf('tags');
 
-  if (COL_STATUS === -1) {
-    logToCloud('CRITICAL', 'Status column not found');
-    return;
-  }
+  // ... (rest of function uses headers/COL_X correctly)
 
   let processedCount = 0;
-  const BATCH_LIMIT = 3; // Process 3 calls per run
+  const BATCH_LIMIT = 15; // Increased to 15 for visibility
 
-  for (let i = 1; i < data.length; i++) {
+  // Count/Log Queue Size for debugging
+  const queuedCount = data.filter((r, idx) => idx > headerRowIndex && r[COL_STATUS] === 'QUEUED').length;
+  console.log(`Found ${queuedCount} items waiting in QUEUE. Processing batch of ${BATCH_LIMIT}...`);
+
+  // Start processing AFTER the header row
+  console.log(`Searching for QUEUED items starting at row ${headerRowIndex + 2}...`);
+
+  for (let i = headerRowIndex + 1; i < data.length; i++) {
     if (processedCount >= BATCH_LIMIT) break;
 
     const row = data[i];
+    // console.log(`Row ${i+1} Status: ${row[COL_STATUS]}`); // Uncomment for verbose logging
+
     if (row[COL_STATUS] === 'QUEUED') {
+      console.log(`Processing Row ${i + 1}...`);
       const rowIndex = i + 1;
       const transcript = row[COL_TRANSCRIPT];
 
@@ -313,6 +386,7 @@ function processQueue() {
       }
     }
   }
+  return processedCount;
 }
 
 // ============================================================================
@@ -324,7 +398,16 @@ function dataToJSON(rows) {
   const headers = rows[0].map((h) => h.toString().toLowerCase().replace(/\s+/g, '_'));
   return rows.slice(1).map((row) => {
     let obj = {};
-    headers.forEach((h, i) => (obj[h] = row[i]));
+    headers.forEach((h, i) => {
+      // FIX: Handle Excel Serial Dates in Timestamp (Column 0, key 'timestamp')
+      if (h === 'timestamp' && typeof row[i] === 'number' && row[i] > 40000) {
+        // approximate conversion: (serial - 25569) * 86400 * 1000
+        const date = new Date((row[i] - 25569) * 86400 * 1000);
+        obj[h] = date.toISOString();
+      } else {
+        obj[h] = row[i];
+      }
+    });
     return obj;
   });
 }

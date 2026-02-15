@@ -29,6 +29,14 @@ function parseACRLogs() {
     // If strict hierarchy is unknown, selecting all 'li' is safer but requires filtering.
     const allItems = $('li').toArray().reverse();
 
+    const stats = {
+        skippedNoLink: 0,
+        skippedOrphan: 0,
+        skippedBadFormat: 0,
+        skippedNoNote: 0,
+        skippedShortTranscript: 0
+    };
+
     let currentDate = null;
 
     console.log(`🔍 Processing ${allItems.length} items...`);
@@ -47,69 +55,66 @@ function parseACRLogs() {
         // B. It's a Call Record (or garbage)
         // We look for the anchor tag with details
         const $link = $el.find('a[href*="job=db"]');
-        if ($link.length === 0) continue;
+        if ($link.length === 0) {
+            stats.skippedNoLink++;
+            continue;
+        }
 
         if (!currentDate) {
-            // console.warn('⚠️ Found call record before any Date Header. Skipping orphan.');
+            stats.skippedOrphan++;
             continue;
         }
 
         // EXTRACT DETAILS
         const fullTitle = $link.text().trim(); // "Kiana Stewart @ 11:27 AM" or "+1 555... @ ..."
-        // Split by last occurrence of ' @ ' in case name has @
         const lastAtIndex = fullTitle.lastIndexOf(' @ ');
-        if (lastAtIndex === -1) continue;
+        if (lastAtIndex === -1) {
+            stats.skippedBadFormat++;
+            continue;
+        }
 
         const contactNameOrPhone = fullTitle.substring(0, lastAtIndex).trim();
-        const timeString = fullTitle.substring(lastAtIndex + 3).trim(); // "11:27 AM"
+        const timeString = fullTitle.substring(lastAtIndex + 3).trim();
 
         // PARSE CONTACT / PHONE
         let contactName = contactNameOrPhone;
         let phoneNumber = null;
 
-        // Simple heuristic: If it looks like a phone number, it's a number.
-        // Remove spaces, dashes, pluses to check if digits
         const cleanStr = contactNameOrPhone.replace(/[+\s-]/g, '');
         if (/^\d+$/.test(cleanStr)) {
-            phoneNumber = contactNameOrPhone; // Keep formatting
+            phoneNumber = contactNameOrPhone;
             contactName = 'Unknown';
         }
 
         // PARSE TIMESTAMP
-        // Combine Date Header + Time String
         const dateTimeStr = `${currentDate} ${timeString}`;
         const timestamp = new Date(dateTimeStr).toISOString();
 
         // EXTRACT TRANSCRIPT & DURATION
         const $note = $el.find('p.tab.note');
-        if ($note.length === 0) continue;
+        if ($note.length === 0) {
+            stats.skippedNoNote++;
+            continue;
+        }
 
-        // The structure inside <p class="tab note"> is usually:
-        // <span class="tab note">00:00</span> Real Transcript Text... <br> ...
-
-        // We want the text *after* the initial 00:00 span
-        // But cheerio .text() gets everything. 
-        // Let's get the full text first.
         let fullNoteText = $note.text();
-        // Remove the first "00:00" if present (it's often in a span)
         fullNoteText = fullNoteText.replace(/^\s*00:00\s*/, '');
 
-        // DURATION EXTRACTION
-        // Find all MM:SS patterns
         const timeMatches = fullNoteText.match(/\d{2}:\d{2}/g);
         let duration = '00:00';
         if (timeMatches && timeMatches.length > 0) {
-            duration = timeMatches[timeMatches.length - 1]; // Last one is likely total duration
+            duration = timeMatches[timeMatches.length - 1];
         }
 
-        // CLEAN TRANSCRIPT
-        // Remove all MM:SS markers and clean up whitespace
         let rawTranscript = fullNoteText
-            .replace(/\d{2}:\d{2}/g, '') // Remove timestamps
-            .replace(/\s+/g, ' ')        // Collapse whitespace
+            .replace(/\d{2}:\d{2}/g, '')
+            .replace(/\s+/g, ' ')
             .trim();
 
-        if (rawTranscript.length < 5) continue; // Skip empty/garbage
+        if (rawTranscript.length < 5) {
+            stats.skippedShortTranscript++;
+            continue;
+        }
 
         validCalls.push({
             contact_name: contactName,
@@ -117,11 +122,17 @@ function parseACRLogs() {
             timestamp,
             duration,
             transcript: rawTranscript,
-            status: 'completed' // For our internal tracking
+            status: 'completed'
         });
     }
 
     console.log(`✅ Parsed ${validCalls.length} valid calls.`);
+    console.log(`⚠️ Skipped Breakdown:`);
+    console.log(`   - No Link (Structure/Date Header): ${stats.skippedNoLink}`);
+    console.log(`   - Orphan (No Date Context): ${stats.skippedOrphan}`);
+    console.log(`   - Bad Format (No ' @ '): ${stats.skippedBadFormat}`);
+    console.log(`   - No Note/Transcript Element: ${stats.skippedNoNote}`);
+    console.log(`   - Transcript Too Short (<5 chars): ${stats.skippedShortTranscript}`);
 
     fs.writeFileSync(OUTPUT_FILE, JSON.stringify(validCalls, null, 2));
     console.log(`💾 Saved to ${OUTPUT_FILE}`);

@@ -11,14 +11,15 @@ export interface ExecutiveBrief {
 }
 
 export interface CallRecord {
-    id: string;
+    id: string; // Mapped from external_id
     timestamp: string;
     contactName: string;
     phoneNumber: string;
     duration: string | number;
     transcript: string;
+    executiveBrief?: ExecutiveBrief; // Mapped from strategic_notes
+    tags: string[];
     status: 'QUEUED' | 'COMPLETED' | 'SKIPPED_SHORT' | 'ERROR';
-    executiveBrief?: ExecutiveBrief;
 }
 
 export interface Contact {
@@ -53,6 +54,7 @@ export interface RawLog {
     timestamp?: string | number;
     contact_name?: string;
     phone_number?: string | number;
+    phone?: string | number;
     duration?: string | number;
     transcript?: string;
     status?: string;

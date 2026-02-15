@@ -42,6 +42,7 @@ export const MOCK_CALLS: CallRecord[] = [
     contactName: 'Brandon Gilles',
     phoneNumber: '+15550102030',
     duration: 862, // 14m 22s
+    tags: [],
     status: 'COMPLETED',
     transcript:
       "Hey, it's Brandon. I wanted to follow up on the Horizon project. We need to finalize the API documentation by next Tuesday if we want to hit the Q3 launch date. Also, Elena mentioned the budget for the server migration might need an extra 15% padding. Let's talk about that on Monday morning.",
@@ -64,6 +65,7 @@ export const MOCK_CALLS: CallRecord[] = [
     contactName: 'Elena Rodriguez',
     phoneNumber: '+15550405060',
     duration: 495, // 8m 15s
+    tags: [],
     status: 'COMPLETED',
     transcript:
       "Good morning. Regarding the logistics contract, we are seeing some delays at the port. I'll need you to review the force majeure clause in the new agreement. We're looking at a 3-day buffer for current shipments. Send me a quick confirmation once you've looked it over.",
@@ -86,6 +88,7 @@ export const MOCK_CALLS: CallRecord[] = [
     contactName: 'Sarah Miller',
     phoneNumber: '+15550203040',
     duration: 342, // 5m 42s
+    tags: [],
     status: 'COMPLETED',
     transcript:
       "Hi there, quick question about the Quantum integration. The dev team is blocked on the OAuth implementation. Can we schedule a 30-minute call this week to walk through the configuration?",
@@ -108,6 +111,7 @@ export const MOCK_CALLS: CallRecord[] = [
     contactName: 'Unknown Caller',
     phoneNumber: '+15559876543',
     duration: 138, // 2m 18s
+    tags: [],
     status: 'QUEUED',
     transcript:
       'Hello, this is a message regarding your vehicle warranty...',

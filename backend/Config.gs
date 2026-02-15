@@ -7,10 +7,11 @@
 // CONFIGURATION
 // ============================================================================
 
-const PROJECT_NUMBER = 'YOUR_PROJECT_NUMBER'; // Replace with your GCP project number
+const PROJECT_NUMBER = '5744119255'; // Replace with your GCP project number
 const LOG_SHEET_NAME = 'Logs';
 const CALL_REPORT_SHEET_NAME = 'call_report';
 const CALENDAR_ID = 'classroom106114988262286153479@group.calendar.google.com';
+const SPREADSHEET_ID = '1IHUhndDYoTQzClUDN4U-aHTE1R5RSWZ8DdNEoEJF9Ew'; // Explicit ID
 const GEMINI_SECRET_NAME = `projects/${PROJECT_NUMBER}/secrets/GEMINI_API_KEY/versions/latest`;
 
 const HEADERS = {
@@ -31,11 +32,38 @@ const HEADERS = {
 // GEMINI API
 // ============================================================================
 
+function listModel() {
+  // Use your existing helper function to get the key from Script Properties
+  const apiKey = getGeminiKey();
+
+  if (!apiKey) {
+    console.error("API Key not found in Script Properties.");
+    return [];
+  }
+
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models?key=' + apiKey;
+
+  try {
+    const response = UrlFetchApp.fetch(url);
+    const json = JSON.parse(response.getContentText());
+
+    // This will log the full list to your Execution Log so you can see them
+    if (json.models) {
+      const modelNames = json.models.map(model => model.name);
+      console.log("Available Models:", modelNames);
+      return modelNames;
+    }
+  } catch (e) {
+    console.error("Error fetching models: " + e.toString());
+  }
+  return [];
+}
 function callGeminiAPI(transcript) {
   const key = getGeminiKey();
   if (!key) throw new Error('API Key missing');
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${key}`;
+  const model = getLatestFlashModel();
+  const url = `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${key}`;
 
   const prompt = `You are a CRM Intelligence Agent.
 Analyze this call transcript and extract key data.
@@ -174,4 +202,44 @@ function oneTimeSetup() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   getOrCreateSheet(LOG_SHEET_NAME, HEADERS.LOGS);
   logToCloud('INFO', 'Setup complete. Sheets verified.');
+}
+
+/**
+ * Automatically selects the latest available Flash model.
+ */
+function getLatestFlashModel() {
+  try {
+    const models = listModel();
+    // Filter for standard 'flash' models
+    const flashModels = models.filter(name =>
+      name.includes('flash') &&
+      !name.includes('preview') &&
+      !name.includes('lite') &&
+      !name.includes('audio')
+    );
+
+    // Sort to get the highest version first (e.g., 2.5 > 2.0 > 1.5)
+    flashModels.sort().reverse();
+
+    const selected = flashModels[0] || 'models/gemini-1.5-flash';
+    console.log("Selected Model: " + selected);
+    return selected;
+  } catch (e) {
+    console.warn("Could not auto-select model, defaulting to 1.5-flash");
+    return 'models/gemini-1.5-flash';
+  }
+}
+
+function testGeminiConnection() {
+  const fakeTranscript = "Caller: Hello, I'd like to order a pizza. Agent: Sure, what kind? Caller: Pepperoni.";
+
+  console.log("Testing Gemini connection...");
+  try {
+    const result = callGeminiAPI(fakeTranscript);
+    console.log("SUCCESS! Gemini returned:", JSON.stringify(result));
+    return { status: 'success', data: result };
+  } catch (e) {
+    console.error("TEST FAILED: " + e.message);
+    return { status: 'error', message: e.message };
+  }
 }

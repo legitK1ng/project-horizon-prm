@@ -1,20 +1,49 @@
-
 import fs from 'fs';
 import fetch from 'node-fetch';
+import path from 'path';
+
+// Manual .env.local parsing to avoid external dependencies
+const envPath = path.resolve(process.cwd(), '.env.local');
+let envConfig = {};
+
+try {
+    if (fs.existsSync(envPath)) {
+        console.log(`Loading configuration from ${envPath}`);
+        const envFile = fs.readFileSync(envPath, 'utf-8');
+        envFile.split('\n').forEach(line => {
+            const trimmed = line.trim();
+            if (trimmed && !trimmed.startsWith('#')) {
+                const [key, ...values] = trimmed.split('=');
+                if (key && values.length > 0) {
+                    envConfig[key.trim()] = values.join('=').trim();
+                }
+            }
+        });
+    }
+} catch (e) {
+    console.warn("Warning: Could not read .env.local", e.message);
+}
 
 // Will execute against the new deployment (@31)
-// REPLACE THIS WITH YOUR NEW DEPLOYMENT URL
-const WEB_APP_URL = 'YOUR_WEB_APP_URL_HERE';
+const WEB_APP_URL = process.env.VITE_BACKEND_URL || envConfig.VITE_BACKEND_URL;
+
+if (!WEB_APP_URL) {
+    console.error("❌ ERROR: VITE_BACKEND_URL is not defined in .env.local");
+    process.exit(1);
+}
+
 const LOGS_PATH = './parsed_logs.json';
-const CHUNK_SIZE = 50;
+const CHUNK_SIZE = 10;
 
 async function ingestLogs() {
     console.log("🚀 Starting Bulk Ingestion (Batch Mode)...");
 
+    /* 
     if (WEB_APP_URL.includes('YOUR_WEB_APP_URL')) {
         console.error("❌ ERROR: You must update WEB_APP_URL in scripts/ingest_acr_logs.js with your new Web App URL.");
         return;
-    }
+    } 
+    */
 
     if (!fs.existsSync(LOGS_PATH)) {
         console.error("❌ parsed_logs.json not found.");
@@ -50,7 +79,9 @@ async function ingestLogs() {
             }
 
         } catch (error) {
-            console.error(`   ❌ Batch ${chunkCount} Error: ${error.message}`);
+            console.error(`   ❌ Batch ${chunkCount} Error:`, error.message);
+            if (error.code) console.error(`       Code: ${error.code}`);
+            if (error.cause) console.error(`       Cause:`, error.cause);
         }
 
         // Short delay to avoid rate limits

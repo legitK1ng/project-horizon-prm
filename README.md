@@ -43,20 +43,24 @@ horizon-prm-fixed/
 ### Installation
 
 1. **Clone and install dependencies:**
+
 ```bash
 npm install
 ```
 
-2. **Configure environment variables:**
+1. **Configure environment variables:**
+
 ```bash
 cp .env.example .env.local
 ```
 
 Edit `.env.local` and add:
+
 - `VITE_GEMINI_API_KEY` - Your Gemini API key
 - `VITE_BACKEND_URL` - Your deployed Google Apps Script URL
 
-3. **Run development server:**
+1. **Run development server:**
+
 ```bash
 npm run dev
 ```
@@ -77,6 +81,7 @@ Visit `http://localhost:3000`
 ### Required Google APIs
 
 Enable these in Google Cloud Console:
+
 - Google Sheets API
 - People API (Google Contacts)
 - Secret Manager API (for API keys)
@@ -127,6 +132,13 @@ The Processing Lab supports multiple AI personas:
 ### Google Apps Script Endpoint
 
 **GET** `/exec` - Fetch all logs and contacts
+**GET** `/exec?action=list_models` - Fetch available Gemini models
+**GET** `/exec?action=run_tests` - Run backend integrity tests
+**GET** `/exec?action=test_gemini` - Verify Gemini API connectivity
+**GET** `/exec?action=trigger_processing` - Force trigger background processing
+
+**POST** `/exec` - Webhook for call ingestion
+
 ```json
 {
   "status": "success",
@@ -136,6 +148,7 @@ The Processing Lab supports multiple AI personas:
 ```
 
 **POST** `/exec` - Webhook for call ingestion
+
 ```json
 {
   "contact_name": "John Doe",
@@ -152,6 +165,7 @@ The Processing Lab supports multiple AI personas:
 The Google Apps Script deployment permissions are incorrect.
 
 **Fix:**
+
 1. Go to Apps Script Editor → Deploy → Manage Deployments
 2. Click Edit (pencil icon) on current deployment
 3. Set "Who has access" to **Anyone**
@@ -160,6 +174,7 @@ The Google Apps Script deployment permissions are incorrect.
 ### Mock Data Showing Instead of Live Data
 
 Check:
+
 1. `VITE_BACKEND_URL` is set correctly in `.env.local`
 2. Apps Script is deployed with correct permissions
 3. CORS is enabled (automatic with Apps Script)
@@ -167,6 +182,7 @@ Check:
 ### Gemini API Errors
 
 Verify:
+
 1. API key is valid and has Gemini API enabled
 2. Billing is enabled on Google Cloud project
 3. Rate limits haven't been exceeded
@@ -174,6 +190,7 @@ Verify:
 ## 📊 Data Schema
 
 ### Call Log Structure
+
 ```typescript
 {
   id: string;
@@ -215,8 +232,9 @@ MIT License - see LICENSE file for details
 ## 📞 Support
 
 For issues or questions:
+
 - Create an issue on GitHub
-- Email: support@horizonprm.example.com
+- Email: <support@horizonprm.example.com>
 
 ---
 

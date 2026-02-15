@@ -27,11 +27,11 @@ const ConnectionDebugLog: React.FC = () => {
             <button
                 onClick={toggleOpen}
                 className={`flex items-center gap-2 px-4 py-2 rounded-full shadow-lg transition-colors ${isOpen
-                        ? 'bg-slate-800 text-white'
-                        : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50'
+                    ? 'bg-slate-800 text-white'
+                    : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50'
                     }`}
             >
-                {logs.length > 0 && logs[0].type === 'error' ? (
+                {logs.length > 0 && logs[0]?.details?.error ? (
                     <WifiOff size={18} className="text-red-500" />
                 ) : (
                     <Wifi size={18} className={logs.length > 0 ? "text-green-500" : "text-slate-400"} />
@@ -78,6 +78,11 @@ const ConnectionDebugLog: React.FC = () => {
                                     </div>
                                     <p className="text-xs text-slate-800 dark:text-slate-200 break-words mb-1">
                                         {log.message}
+                                        {log.details?.error && (
+                                            <span className="block text-red-500 mt-1 font-mono text-[10px]">
+                                                {log.details.error}
+                                            </span>
+                                        )}
                                     </p>
                                     <div className="text-[10px] text-slate-400 font-mono truncate" title={log.url}>
                                         {log.url.split('?')[0]}...

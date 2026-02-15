@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '@/hooks/useData';
 import { ICONS } from '@/constants';
-import { Calendar, CheckSquare, Copy, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, CheckSquare, Copy, ChevronDown, ChevronUp } from 'lucide-react';
 
 const ActionsLog: React.FC = () => {
     const { calls } = useData();

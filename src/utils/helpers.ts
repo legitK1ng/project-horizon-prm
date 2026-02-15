@@ -36,6 +36,12 @@ export const normalizeDate = (value: string | number | undefined): string => {
     return new Date().toISOString();
   }
 
+  // Handle Excel Serial Date (e.g. 46046.58)
+  if (typeof value === 'number' && value > 40000 && value < 100000) {
+    const date = new Date((value - 25569) * 86400 * 1000);
+    return date.toISOString();
+  }
+
   const date = new Date(value);
   return isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
 };

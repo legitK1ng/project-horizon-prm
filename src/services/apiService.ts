@@ -71,10 +71,11 @@ const transformLog = (log: RawLog, index: number): CallRecord => {
     id: `log-${index}-${Date.now()}`,
     timestamp: normalizeDate(log.timestamp),
     contactName: String(log.contact_name || 'Unknown Caller'),
-    phoneNumber: log.phone?.toString() || '',
+    phoneNumber: log.phone_number?.toString() || log.phone?.toString() || '',
     duration: formatDuration(log.duration),
     transcript: String(log.transcript || ''),
     executiveBrief: brief as CallRecord['executiveBrief'],
+    tags: brief?.tags || rawTags,
     status,
   };
 };
@@ -193,5 +194,113 @@ export const postCallData = async (call: CallRecord): Promise<boolean> => {
     console.error('POST Error:', error);
     connectionLogger.addLog('error', method, API_URL, `Network Error: ${msg}`, error);
     return false;
+  }
+};
+
+/**
+ * Fetch available Gemini models
+ */
+export const fetchModels = async (): Promise<{ models: { name: string; displayName: string }[] } | null> => {
+  if (!API_URL) return null;
+  try {
+    const response = await fetch(`${API_URL}?action=list_models`);
+    if (!response.ok) throw new Error('Failed to fetch models');
+    return await response.json();
+  } catch (e) {
+    console.error(e);
+    return null;
+  }
+};
+
+/**
+ * Run backend diagnostics
+ */
+export const runBackendDiagnostics = async (): Promise<{ status: string; results: any[] } | null> => {
+  if (!API_URL) return null;
+  try {
+    const response = await fetch(`${API_URL}?action=run_tests`);
+    if (!response.ok) throw new Error('Failed to run diagnostics');
+    return await response.json();
+  } catch (e) {
+    console.error(e);
+    return null;
+  }
+};
+
+export const testGeminiConnection = async (): Promise<any> => {
+  if (!API_URL) return null;
+  const method = 'testGeminiConnection';
+  const startTime = Date.now();
+
+  try {
+    connectionLogger.log({
+      type: 'info',
+      method,
+      url: `${API_URL}?action=test_gemini`,
+      message: 'Testing Gemini Connection...'
+    });
+
+    const response = await fetch(`${API_URL}?action=test_gemini`);
+    const data = await response.json();
+
+    connectionLogger.log({
+      type: response.ok ? 'success' : 'error',
+      method,
+      url: `${API_URL}?action=test_gemini`,
+      message: 'Gemini Test Complete',
+      details: data,
+      duration: Date.now() - startTime
+    });
+
+    return data;
+  } catch (e: any) {
+    connectionLogger.log({
+      type: 'error',
+      method,
+      url: `${API_URL}?action=test_gemini`,
+      message: 'Gemini Test Failed',
+      details: e.message,
+      duration: Date.now() - startTime
+    });
+    return { status: 'error', message: e.message };
+  }
+};
+
+export const triggerProcessing = async (): Promise<any> => {
+  if (!API_URL) return null;
+  const method = 'triggerProcessing';
+  const startTime = Date.now();
+
+  try {
+    connectionLogger.log({
+      type: 'info',
+      method,
+      url: `${API_URL}?action=trigger_processing`,
+      message: 'Triggering background processing...'
+    });
+
+    const response = await fetch(`${API_URL}?action=trigger_processing`);
+    const data = await response.json();
+
+    connectionLogger.log({
+      type: response.ok ? 'success' : 'error',
+      method,
+      url: `${API_URL}?action=trigger_processing`,
+      message: 'Processing Triggered',
+      details: data,
+      duration: Date.now() - startTime
+    });
+
+    return data;
+  } catch (e: any) {
+    connectionLogger.log({
+      type: 'error',
+      method,
+      url: `${API_URL}?action=trigger_processing`,
+      message: 'Trigger Failed',
+      details: e.message,
+      duration: Date.now() - startTime
+    });
+    return { status: 'error', message: e.message };
   }
 };
