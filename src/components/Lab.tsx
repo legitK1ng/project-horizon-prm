@@ -3,7 +3,7 @@ import { CallRecord, Persona } from '@/types';
 import { BRAIN_PERSONAS, ICONS } from '@/constants';
 import { Brain, Play, RefreshCw, Save, Activity, Server, CheckCircle, AlertTriangle } from 'lucide-react';
 import { generateId } from '@/utils/helpers';
-import { fetchModels, runBackendDiagnostics, testGeminiConnection, triggerProcessing } from '@/services/apiService';
+import { fetchModels, runBackendDiagnostics, testGeminiConnection, triggerProcessing, analyzeText } from '@/services/apiService';
 import { connectionLogger, LogEntry as ServiceLogEntry } from '@/utils/connectionLogger';
 import Console, { LogEntry } from './Console';
 
@@ -66,17 +66,16 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
         setIsProcessing(true);
         setResult(null);
 
-        // Simulate AI processing delay
-        setTimeout(() => {
-            setResult({
-                title: 'Strategic Brief',
-                summary: "Executive brief generated from the manual transcript.",
-                actionItems: ["Follow up with the client", "Schedule a review meeting"],
-                tags: ["manual-entry", "review"],
-                sentiment: "Neutral"
-            });
+        try {
+            const analysis = await analyzeText(transcript);
+            setResult(analysis);
+        } catch (error) {
+            console.error(error);
+            // Error handling is actually done inside analyzeText returning a fallback object, 
+            // but if it throws we catch it here.
+        } finally {
             setIsProcessing(false);
-        }, 2000);
+        }
     };
 
     const handleSave = () => {

@@ -16,7 +16,7 @@ const ContactList: React.FC<ContactListProps> = ({ contacts }) => {
     const [showSortMenu, setShowSortMenu] = useState(false);
 
     const filteredAndSortedContacts = useMemo(() => {
-        let result = contacts.filter(contact =>
+        const result = contacts.filter(contact =>
             contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             contact.phone.includes(searchTerm)
         );

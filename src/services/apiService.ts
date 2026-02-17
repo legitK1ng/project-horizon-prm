@@ -21,7 +21,18 @@ const transformLog = (log: RawLog, index: number): CallRecord => {
 
     if (trimmed.startsWith('{')) {
       // JSON format - AI processed
-      const parsed = JSON.parse(trimmed);
+      let parsed;
+      try {
+        parsed = JSON.parse(trimmed);
+        // Handle double-encoded JSON (common in GAS)
+        if (typeof parsed === 'string') {
+          parsed = JSON.parse(parsed);
+        }
+      } catch (e) {
+        console.warn('JSON Parse Error:', e);
+        parsed = {};
+      }
+
       brief = {
         title: parsed.title || 'Strategic Brief',
         summary: parsed.summary || 'No summary available.',
@@ -233,35 +244,33 @@ export const testGeminiConnection = async (): Promise<any> => {
   const startTime = Date.now();
 
   try {
-    connectionLogger.log({
-      type: 'info',
+    connectionLogger.addLog(
+      'info',
       method,
-      url: `${API_URL}?action=test_gemini`,
-      message: 'Testing Gemini Connection...'
-    });
+      `${API_URL}?action=test_gemini`,
+      'Testing Gemini Connection...'
+    );
 
     const response = await fetch(`${API_URL}?action=test_gemini`);
     const data = await response.json();
 
-    connectionLogger.log({
-      type: response.ok ? 'success' : 'error',
+    connectionLogger.addLog(
+      response.ok ? 'success' : 'error',
       method,
-      url: `${API_URL}?action=test_gemini`,
-      message: 'Gemini Test Complete',
-      details: data,
-      duration: Date.now() - startTime
-    });
+      `${API_URL}?action=test_gemini`,
+      'Gemini Test Complete',
+      { details: data, duration: Date.now() - startTime }
+    );
 
     return data;
   } catch (e: any) {
-    connectionLogger.log({
-      type: 'error',
+    connectionLogger.addLog(
+      'error',
       method,
-      url: `${API_URL}?action=test_gemini`,
-      message: 'Gemini Test Failed',
-      details: e.message,
-      duration: Date.now() - startTime
-    });
+      `${API_URL}?action=test_gemini`,
+      'Gemini Test Failed',
+      { details: e.message, duration: Date.now() - startTime }
+    );
     return { status: 'error', message: e.message };
   }
 };
@@ -272,35 +281,106 @@ export const triggerProcessing = async (): Promise<any> => {
   const startTime = Date.now();
 
   try {
-    connectionLogger.log({
-      type: 'info',
+    connectionLogger.addLog(
+      'info',
       method,
-      url: `${API_URL}?action=trigger_processing`,
-      message: 'Triggering background processing...'
-    });
+      `${API_URL}?action=trigger_processing`,
+      'Triggering background processing...'
+    );
 
     const response = await fetch(`${API_URL}?action=trigger_processing`);
     const data = await response.json();
 
-    connectionLogger.log({
-      type: response.ok ? 'success' : 'error',
+    connectionLogger.addLog(
+      response.ok ? 'success' : 'error',
       method,
-      url: `${API_URL}?action=trigger_processing`,
-      message: 'Processing Triggered',
-      details: data,
-      duration: Date.now() - startTime
-    });
+      `${API_URL}?action=trigger_processing`,
+      'Processing Triggered',
+      { details: data, duration: Date.now() - startTime }
+    );
 
     return data;
   } catch (e: any) {
-    connectionLogger.log({
-      type: 'error',
+    connectionLogger.addLog(
+      'error',
       method,
-      url: `${API_URL}?action=trigger_processing`,
-      message: 'Trigger Failed',
-      details: e.message,
-      duration: Date.now() - startTime
-    });
+      `${API_URL}?action=trigger_processing`,
+      'Trigger Failed',
+      { details: e.message, duration: Date.now() - startTime }
+    );
     return { status: 'error', message: e.message };
+  }
+};
+
+export const searchPerson = async (query: string): Promise<any> => {
+  if (!API_URL) return { found: false };
+  try {
+    const response = await fetch(`${API_URL}?action=search_person&query=${encodeURIComponent(query)}`);
+    if (!response.ok) throw new Error('Failed to search person');
+    return await response.json();
+  } catch (e: any) {
+    console.error('Person Search Error:', e);
+    return { found: false, error: e.message };
+  }
+};
+
+export const updatePerson = async (personData: any): Promise<any> => {
+  if (!API_URL) return { status: 'error', message: 'API URL not configured' };
+
+  try {
+    const payload = {
+      action: 'update_person',
+      ...personData
+    };
+
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      mode: 'cors',
+      headers: { 'Content-Type': 'text/plain' }, // Use text/plain to avoid options preflight issues in GAS
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) throw new Error('Failed to update person');
+    const result = await response.json();
+    return result;
+  } catch (e: any) {
+    console.error('Person Update Error:', e);
+    return { status: 'error', message: e.message };
+  }
+};
+
+export const analyzeText = async (transcript: string): Promise<any> => {
+  if (!API_URL) return { title: 'Error', summary: 'API URL not configured', actionItems: [], tags: ['#error'], sentiment: 'Neutral' };
+
+  try {
+    const payload = {
+      action: 'analyze_text',
+      transcript: transcript
+    };
+
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      mode: 'cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) throw new Error('Failed to analyze text');
+
+    const result = await response.json();
+    if (result.status === 'success' && result.data) {
+      return result.data;
+    } else {
+      throw new Error(result.message || 'Analysis failed');
+    }
+  } catch (e: any) {
+    console.error('Analysis Error:', e);
+    return {
+      title: 'Analysis Failed',
+      summary: `Error: ${e.message}. Please check backend logs.`,
+      actionItems: [],
+      tags: ['#error'],
+      sentiment: 'Negative'
+    };
   }
 };

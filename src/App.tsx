@@ -17,9 +17,10 @@ import LoadingScreen from '@/components/LoadingScreen';
 const AppContent: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>(APP_VIEW.DASHBOARD);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
 
   const { isDarkMode, toggleTheme } = useTheme();
-  const { calls, contacts, isLoading, connectionStatus, refreshData, addCall } =
+  const { calls, contacts, isLoading, connectionStatus, refreshData, addCall, tags } =
     useData();
 
   // Show loading screen on initial load
@@ -38,6 +39,9 @@ const AppContent: React.FC = () => {
         onRefresh={refreshData}
         isRefreshing={isLoading}
         connectionStatus={connectionStatus}
+        tags={tags}
+        activeTag={activeTag}
+        onTagSelect={setActiveTag}
       />
 
       {/* Mobile Header */}
@@ -74,6 +78,12 @@ const AppContent: React.FC = () => {
             onRefresh={refreshData}
             isRefreshing={isLoading}
             connectionStatus={connectionStatus}
+            tags={tags}
+            activeTag={activeTag}
+            onTagSelect={(tag) => {
+              setActiveTag(tag);
+              setIsMobileMenuOpen(false);
+            }}
           />
         </div>
       )}
@@ -91,7 +101,7 @@ const AppContent: React.FC = () => {
           )}
 
           {currentView === APP_VIEW.LOGS && (
-            <CallLog calls={calls} />
+            <CallLog calls={calls} activeTag={activeTag} />
           )}
 
           {currentView === APP_VIEW.CONTACTS && <ContactList contacts={contacts} />}

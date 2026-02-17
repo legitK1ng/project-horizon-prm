@@ -37,7 +37,14 @@ function doPost(e) {
             const pPhone = item.phone_number || '';
             const pDur = item.duration || 0;
             const pTrans = item.transcript || item.note || '';
-            const pNotes = item.strategic_notes ? JSON.stringify(item.strategic_notes) : '';
+
+            // Fix: Check if it's already a string (double encoding prevention)
+            let pNotes = '';
+            if (item.strategic_notes) {
+              pNotes = typeof item.strategic_notes === 'string'
+                ? item.strategic_notes
+                : JSON.stringify(item.strategic_notes);
+            }
 
             rows.push([
               pDate, pName, pPhone, pDur, pTrans, pNotes, '#batch_import', 'QUEUED', ''
@@ -59,7 +66,27 @@ function doPost(e) {
       params = e.parameter || {};
     }
 
+    // UPDATE PERSON ACTION
+    if (params.action === 'update_person') {
+      const result = updatePerson(params);
+      return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+    }
+
     // ORIGINAL SINGLE RECORD LOGIC FOLLOWS...
+
+    // ANALYZE TEXT ACTION (Gemini)
+    if (params.action === 'analyze_text') {
+      const transcript = params.transcript || '';
+      try {
+        const analysis = callGeminiAPI(transcript);
+        return ContentService.createTextOutput(JSON.stringify({ status: 'success', data: analysis }))
+          .setMimeType(ContentService.MimeType.JSON);
+      } catch (e) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: e.message }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
     // ROUTING: Check for Call Report signature & Map to Logs
     // ...
 
@@ -86,7 +113,7 @@ function doPost(e) {
         params.number || '', // phone
         params.duration || 0, // duration
         transcriptText, // transcript
-        JSON.stringify(noteData), // strategic_notes
+        typeof noteData === 'string' ? noteData : JSON.stringify(noteData), // strategic_notes
         '#call_report', // tags
         'COMPLETED', // status
         rawDate // external_id
@@ -239,6 +266,14 @@ function doGet(e) {
         status: 'success',
         processed: result
       })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'search_person') {
+      const query = e.parameter.query;
+      // Note: Requires "People API" Advanced Service enabled in Apps Script
+      const result = searchPerson(query);
+      return ContentService.createTextOutput(JSON.stringify(result))
+        .setMimeType(ContentService.MimeType.JSON);
     }
 
     // Moved sheet fetching inside try/catch or keep it specific?
@@ -657,4 +692,97 @@ function isJsonString(str) {
     if (o && typeof o === "object") return true;
   } catch (e) { }
   return false;
+}
+
+// ============================================================================
+// PEOPLE API (Advanced Service)
+// ============================================================================
+
+function searchPerson(query) {
+  if (!query) return { found: false };
+
+  try {
+    // Search for contacts
+    // readMask: names, photos, emailAddresses, phoneNumbers, organizations
+    const people = People.People.searchContacts({
+      query: query,
+      readMask: 'names,photos,emailAddresses,phoneNumbers,organizations',
+      pageSize: 1
+    });
+
+    if (people.results && people.results.length > 0) {
+      const person = people.results[0].person;
+
+      const name = person.names ? person.names[0].displayName : '';
+      const photoUrl = person.photos ? person.photos[0].url : '';
+      const email = person.emailAddresses ? person.emailAddresses[0].value : '';
+      const org = person.organizations ? person.organizations[0].name : '';
+      const title = person.organizations ? person.organizations[0].title : '';
+
+      return {
+        found: true,
+        name: name,
+        photoUrl: photoUrl,
+        email: email,
+        organization: org,
+        title: title,
+        resourceName: person.resourceName,
+        etag: person.etag
+      };
+    }
+  } catch (e) {
+    console.error('People Search Error:', e);
+    return {
+      found: false,
+      error: e.message,
+      note: 'Ensure People API Advanced Service is enabled in Apps Script'
+    };
+  }
+
+  return { found: false };
+}
+
+function updatePerson(params) {
+  const resourceName = params.resourceName;
+  const etag = params.etag;
+
+  if (!resourceName || !etag) {
+    return { status: 'error', message: 'Missing resourceName or etag' };
+  }
+
+  const person = {
+    etag: etag,
+    names: params.name ? [{ givenName: params.name.split(' ')[0], familyName: params.name.split(' ').slice(1).join(' ') }] : undefined,
+    organizations: (params.organization || params.title) ? [{ name: params.organization, title: params.title }] : undefined,
+    emailAddresses: params.email ? [{ value: params.email }] : undefined,
+    phoneNumbers: params.phone ? [{ value: params.phone }] : undefined
+  };
+
+  // Construct update mask based on provided fields
+  const updateFields = [];
+  if (params.name) updateFields.push('names');
+  if (params.organization || params.title) updateFields.push('organizations');
+  if (params.email) updateFields.push('emailAddresses');
+  if (params.phone) updateFields.push('phoneNumbers');
+
+  if (updateFields.length === 0) {
+    return { status: 'success', message: 'No fields to update' };
+  }
+
+  try {
+    const updatedContact = People.People.updateContact(person, resourceName, {
+      updatePersonFields: updateFields.join(',')
+    });
+
+    return {
+      status: 'success',
+      person: {
+        name: updatedContact.names ? updatedContact.names[0].displayName : '',
+        etag: updatedContact.etag
+      }
+    };
+  } catch (e) {
+    console.error('People Update Error:', e);
+    return { status: 'error', message: e.message };
+  }
 }

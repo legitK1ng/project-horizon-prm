@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { CallRecord, Contact, ConnectionStatus } from '@/types';
 import { fetchProjectHorizonData, postCallData } from '@/services/apiService';
 import { MOCK_CALLS, MOCK_CONTACTS } from '@/services/mockData';
@@ -14,6 +14,8 @@ interface UseDataReturn {
   refreshData: () => Promise<void>;
   addCall: (call: CallRecord) => void;
   updateCalls: (calls: CallRecord[]) => void;
+  updateCall: (call: CallRecord) => Promise<void>;
+  tags: string[];
 }
 
 export const useData = (): UseDataReturn => {
@@ -22,6 +24,20 @@ export const useData = (): UseDataReturn => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('offline');
+
+  // Derive unique tags from calls
+  const tags = useMemo(() => {
+    const allTags = new Set<string>();
+    calls.forEach((call) => {
+      if (Array.isArray(call.tags)) {
+        call.tags.forEach((tag) => {
+          const cleanTag = tag.trim();
+          if (cleanTag) allTags.add(cleanTag);
+        });
+      }
+    });
+    return Array.from(allTags).sort();
+  }, [calls]);
 
   const loadMocksOrCached = useCallback(() => {
     const savedCalls = localStorage.getItem(APP_CONFIG.localStorage.callsKey);
@@ -52,7 +68,7 @@ export const useData = (): UseDataReturn => {
         localStorage.setItem(APP_CONFIG.localStorage.callsKey, JSON.stringify(data.calls));
       } else {
         // API URL not configured - use mocks
-        console.log('Using mock data (API not configured)');
+        console.warn('Using mock data (API not configured)');
         setConnectionStatus('offline');
         loadMocksOrCached();
       }
@@ -94,6 +110,18 @@ export const useData = (): UseDataReturn => {
     localStorage.setItem(APP_CONFIG.localStorage.callsKey, JSON.stringify(newCalls));
   }, []);
 
+  const updateCall = useCallback(async (updatedCall: CallRecord) => {
+    setCalls((prev) => {
+      const newCalls = prev.map((c) => c.id === updatedCall.id ? updatedCall : c);
+      localStorage.setItem(APP_CONFIG.localStorage.callsKey, JSON.stringify(newCalls));
+      return newCalls;
+    });
+
+    // Sync with backend (Not fully implemented for updates yet, but keeping structure)
+    // await postCallData(updatedCall); // This creates new, doesn't update.
+    // For now, local update is fine as per current backend constraints.
+  }, []);
+
   // Initial load
   useEffect(() => {
     refreshData();
@@ -108,5 +136,7 @@ export const useData = (): UseDataReturn => {
     refreshData,
     addCall,
     updateCalls,
+    updateCall,
+    tags,
   };
 };

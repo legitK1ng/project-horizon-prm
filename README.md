@@ -1,4 +1,4 @@
-# 🚀 Project Horizon PRM
+# 🚀 Project Horizon PRM v2.0
 
 **Intelligent Personal Relationship Management System**
 
@@ -7,7 +7,10 @@ Transform raw call transcripts into strategic executive briefs using AI-powered 
 ## 📋 Features
 
 - 📞 **Call Intelligence** - Automated transcript analysis with AI
+- 📋 **Executive Briefs** - Strategic summaries, action items, and sentiment analysis for every call
 - 👥 **Contact Management** - Synced with Google Contacts API
+- 🏷️ **Smart Tagging** - Organize calls with dynamic, editable tags
+- 🔍 **Advanced Filtering** - Filter by Date Range, Tags, or Contact
 - 📊 **Analytics Dashboard** - Visual insights into communication patterns
 - 🧪 **AI Processing Lab** - Multiple analysis personas (Consultant, Finance, Technical, etc.)
 - 📝 **Action Tracking** - Audit log with reversible operations
@@ -71,11 +74,11 @@ Visit `http://localhost:3000`
 
 1. Create a new Google Apps Script project
 2. Copy files from `backend/` folder:
-   - `Code.gs`
-   - `Config.gs`
+    - `Code.gs`
+    - `Config.gs`
 3. Deploy as Web App:
-   - Execute as: **User deploying**
-   - Who has access: **Anyone** (for webhook support)
+    - Execute as: **User deploying**
+    - Who has access: **Anyone** (for webhook support)
 4. Copy the deployment URL to your `.env.local`
 
 ### Required Google APIs
@@ -94,10 +97,10 @@ This system integrates with **ACR Phone** call recording app:
 1. Configure webhook in ACR Phone settings
 2. Point to your Google Apps Script URL
 3. Map fields:
-   - `contact_name` → Contact Name
-   - `phone_number` → Phone
-   - `note` → Transcript
-   - `duration` → Call Duration
+    - `contact_name` → Contact Name
+    - `phone_number` → Phone
+    - `note` → Transcript
+    - `duration` → Call Duration
 
 ## 🎨 Available Scripts
 
@@ -107,6 +110,7 @@ npm run build        # Build for production
 npm run preview      # Preview production build
 npm run lint         # Run ESLint
 npm run type-check   # TypeScript validation
+npx playwright test  # Run E2E tests
 ```
 
 ## 🔐 Environment Variables
@@ -137,7 +141,7 @@ The Processing Lab supports multiple AI personas:
 **GET** `/exec?action=test_gemini` - Verify Gemini API connectivity
 **GET** `/exec?action=trigger_processing` - Force trigger background processing
 
-**POST** `/exec` - Webhook for call ingestion
+**POST** `/exec` - Webhook for call ingestion payload
 
 ```json
 {
@@ -204,6 +208,7 @@ Verify:
     summary: string;
     actionItems: string[];
     tags: string[];
+    sentiment: 'Positive' | 'Neutral' | 'Negative';
   };
   status: 'pending' | 'processing' | 'completed' | 'error';
 }
@@ -228,6 +233,7 @@ MIT License - see LICENSE file for details
 - [ ] Calendar event creation from action items
 - [ ] Email integration
 - [ ] CRM exports (Salesforce, HubSpot)
+- [ ] Mobile App (Expo/React Native)
 
 ## 📞 Support
 

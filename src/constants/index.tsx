@@ -31,6 +31,7 @@ import {
   CheckSquare,
   Undo2,
   RefreshCw,
+  Pencil,
 } from 'lucide-react';
 
 export const ICONS = {
@@ -56,6 +57,7 @@ export const ICONS = {
   Check: <CheckSquare size={16} />,
   Undo: <Undo2 size={16} />,
   Refresh: <RefreshCw size={18} />,
+  Edit: <Pencil size={18} />,
 } as const;
 
 export const APP_CONFIG = {
