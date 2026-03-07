@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { CallRecord, Contact, AppView, ConnectionStatus } from '@/types';
 import { APP_VIEW, ICONS } from '@/constants';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Search, Command } from 'lucide-react';
 
 interface DashboardProps {
   calls: CallRecord[];
@@ -90,7 +90,21 @@ const Dashboard: React.FC<DashboardProps> = ({
             Intelligent relationship management at your fingertips.
           </p>
         </div>
-        <div className="flex space-x-3">
+        <div className="flex items-center space-x-3">
+          {/* Inline Search Trigger */}
+          <button
+            onClick={() => {
+              const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true });
+              window.dispatchEvent(event);
+            }}
+            className="hidden md:flex items-center gap-2.5 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors group min-w-[200px]"
+          >
+            <Search size={15} className="opacity-60" />
+            <span className="flex-1 text-left">Search...</span>
+            <kbd className="text-[10px] px-1.5 py-0.5 bg-white dark:bg-slate-700 text-slate-500 rounded font-mono border border-slate-200 dark:border-slate-600 flex items-center gap-0.5">
+              <Command size={10} />K
+            </kbd>
+          </button>
           <button
             onClick={() => onNavigate(APP_VIEW.LAB)}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition shadow-md shadow-blue-100 dark:shadow-none flex items-center space-x-2"
@@ -135,7 +149,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div
             key={idx}
             onClick={() => onNavigate(stat.view)}
-            className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all cursor-pointer group active:scale-[0.98]"
+            className="card card-interactive p-6 cursor-pointer group"
           >
             <div className="flex justify-between items-start mb-4">
               <div className={`p-3 rounded-xl ${stat.bg} ${stat.color} group-hover:bg-opacity-80 transition`}>{stat.icon}</div>
@@ -154,7 +168,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Activity Chart */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+        <div className="card p-6">
           <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center space-x-2">
             <span>Weekly Engagement</span>
             <span
@@ -193,7 +207,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Recent Briefs */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col">
+        <div className="card p-6 flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-bold text-slate-800 dark:text-white">Latest Briefs</h3>
             <button
@@ -235,8 +249,11 @@ const Dashboard: React.FC<DashboardProps> = ({
             ))}
             {recentBriefs.length === 0 && (
               <div className="text-center py-12 flex flex-col items-center justify-center h-full">
-                <div className="text-slate-300 mb-2">{ICONS.Logs}</div>
-                <p className="text-slate-400 text-sm">No briefings generated yet.</p>
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-900/20 text-blue-500 dark:text-blue-400 mb-3">
+                  {ICONS.Logs}
+                </div>
+                <h4 className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-1">No briefs yet</h4>
+                <p className="text-slate-400 text-xs max-w-[200px]">Process calls in the Lab to generate executive briefings.</p>
               </div>
             )}
           </div>

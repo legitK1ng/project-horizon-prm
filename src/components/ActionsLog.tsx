@@ -1,16 +1,23 @@
 import React, { useState } from 'react';
 import { useData } from '@/hooks/useData';
 import { ICONS } from '@/constants';
-import { Calendar, CheckSquare, Copy, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, CheckSquare, Copy, ChevronDown, ChevronUp, ClipboardList } from 'lucide-react';
+import { useToast } from '@/components/common/Toast';
 
 const ActionsLog: React.FC = () => {
     const { calls } = useData();
+    const { toast } = useToast();
     const [expandedCallId, setExpandedCallId] = useState<string | null>(null);
 
     // Filter calls that have action items
     const actionableCalls = calls
         .filter(call => call.executiveBrief?.actionItems && call.executiveBrief.actionItems.length > 0)
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    const totalItems = actionableCalls.reduce(
+        (sum, call) => sum + (call.executiveBrief?.actionItems?.length || 0),
+        0
+    );
 
     const toggleExpand = (id: string) => {
         setExpandedCallId(expandedCallId === id ? null : id);
@@ -21,35 +28,49 @@ const ActionsLog: React.FC = () => {
         const details = encodeURIComponent(`From Call on ${new Date(date).toLocaleString()}`);
         const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}`;
         window.open(url, '_blank');
+        toast('Added to Google Calendar');
     };
 
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
-        // Could fetch/toast here
+        toast('Copied to clipboard');
     };
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
-            <div>
-                <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Actions Log</h2>
-                <p className="text-slate-500 dark:text-slate-400">Manage action items and tasks extracted from your calls.</p>
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Actions Log</h2>
+                    <p className="text-slate-500 dark:text-slate-400 mt-1">Manage action items and tasks extracted from your calls.</p>
+                </div>
+                {actionableCalls.length > 0 && (
+                    <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                        <ClipboardList size={16} />
+                        <span><strong className="text-slate-700 dark:text-slate-200">{totalItems}</strong> items across <strong className="text-slate-700 dark:text-slate-200">{actionableCalls.length}</strong> calls</span>
+                    </div>
+                )}
             </div>
 
             <div className="space-y-4">
                 {actionableCalls.length === 0 ? (
-                    <div className="p-12 text-center text-slate-400 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
-                        {ICONS.Actions}
-                        <p className="mt-2">No actionable items found.</p>
+                    <div className="card p-16 text-center">
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-purple-50 dark:bg-purple-900/20 text-purple-500 dark:text-purple-400 mb-4">
+                            <ClipboardList size={28} />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300 mb-2">No action items yet</h3>
+                        <p className="text-slate-400 text-sm max-w-sm mx-auto">
+                            Process calls in the Processing Lab to extract actionable items automatically.
+                        </p>
                     </div>
                 ) : (
                     actionableCalls.map((call) => (
-                        <div key={call.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+                        <div key={call.id} className="card overflow-hidden">
                             <div
                                 onClick={() => toggleExpand(call.id)}
                                 className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                             >
                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg flex items-center justify-center">
+                                    <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl flex items-center justify-center">
                                         {ICONS.Action}
                                     </div>
                                     <div>
@@ -71,7 +92,7 @@ const ActionsLog: React.FC = () => {
                             </div>
 
                             {expandedCallId === call.id && (
-                                <div className="border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-4 space-y-3 animation-in slide-in-from-top-2 duration-200">
+                                <div className="border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-4 space-y-3 animate-in slide-in-from-top-2 duration-200">
                                     {call.executiveBrief?.actionItems.map((item, idx) => (
                                         <div key={idx} className="flex items-start gap-3 p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-800 group hover:shadow-sm transition-shadow">
                                             <CheckSquare className="mt-0.5 text-slate-400" size={18} />

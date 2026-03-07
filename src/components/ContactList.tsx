@@ -1,8 +1,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { Contact } from '@/types';
-import { ICONS } from '@/constants';
-import { Search, Phone, Mail, Clock, ArrowUpDown } from 'lucide-react';
+import { Search, Phone, Mail, Clock, ArrowUpDown, Users } from 'lucide-react';
+import ContactDetailDrawer from '@/components/common/ContactDetailDrawer';
 
 interface ContactListProps {
     contacts: Contact[];
@@ -14,6 +14,7 @@ const ContactList: React.FC<ContactListProps> = ({ contacts }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState<SortOption>('alpha');
     const [showSortMenu, setShowSortMenu] = useState(false);
+    const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
 
     const filteredAndSortedContacts = useMemo(() => {
         let result = contacts.filter(contact =>
@@ -95,13 +96,23 @@ const ContactList: React.FC<ContactListProps> = ({ contacts }) => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredAndSortedContacts.length === 0 ? (
-                    <div className="col-span-full p-12 text-center text-slate-400">
-                        {ICONS.Contacts}
-                        <p className="mt-2">No contacts found.</p>
+                    <div className="col-span-full card p-16 text-center">
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 dark:text-emerald-400 mb-4">
+                            <Users size={28} />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300 mb-2">
+                            {searchTerm ? 'No matches found' : 'No contacts yet'}
+                        </h3>
+                        <p className="text-slate-400 text-sm max-w-sm mx-auto">
+                            {searchTerm
+                                ? `No contacts match "${searchTerm}". Try a different search.`
+                                : 'Contacts are synced automatically from Google Contacts when calls are processed.'
+                            }
+                        </p>
                     </div>
                 ) : (
                     filteredAndSortedContacts.map((contact) => (
-                        <div key={contact.id} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 hover:shadow-md transition-shadow group relative">
+                        <div key={contact.id} onClick={() => setSelectedContact(contact)} className="card card-interactive p-6 cursor-pointer group relative">
                             {/* Initials Avatar */}
                             <div className="flex items-start justify-between mb-4">
                                 <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center font-bold text-xl">
@@ -136,6 +147,14 @@ const ContactList: React.FC<ContactListProps> = ({ contacts }) => {
                     ))
                 )}
             </div>
+
+            {/* Contact Detail Drawer */}
+            {selectedContact && (
+                <ContactDetailDrawer
+                    contact={selectedContact}
+                    onClose={() => setSelectedContact(null)}
+                />
+            )}
         </div>
     );
 };

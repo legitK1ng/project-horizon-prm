@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { CallRecord, Persona } from '@/types';
 import { BRAIN_PERSONAS, ICONS } from '@/constants';
-import { Brain, Play, RefreshCw, Save, Activity, Server, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Brain, Play, RefreshCw, Save, Activity, Server, CheckCircle, AlertTriangle, Upload } from 'lucide-react';
 import { generateId } from '@/utils/helpers';
-import { fetchModels, runBackendDiagnostics, testGeminiConnection, triggerProcessing } from '@/services/apiService';
+import { fetchModels, runBackendDiagnostics, testGeminiConnection, triggerProcessing, analyzeText } from '@/services/apiService';
 import { connectionLogger, LogEntry as ServiceLogEntry } from '@/utils/connectionLogger';
 import Console, { LogEntry } from './Console';
 
@@ -18,6 +18,7 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [result, setResult] = useState<CallRecord['executiveBrief'] | null>(null);
     const [activeTab, setActiveTab] = useState<'analysis' | 'diagnostics'>('analysis');
+    const [isDragging, setIsDragging] = useState(false);
 
     // Diagnostics State
     const [models, setModels] = useState<any[]>([]);
@@ -60,23 +61,69 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
         setLogs(prev => [...prev, newLog]);
     };
 
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const file = files.item(0);
+            if (!file) return;
+            if (file.type.startsWith('text/') || file.name.endsWith('.txt') || file.name.endsWith('.json') || file.name.endsWith('.csv') || file.name.endsWith('.md')) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const text = event.target?.result as string;
+                    if (text) {
+                        setTranscript(text);
+                        addLog('SUCCESS', `Loaded file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
+                    }
+                };
+                reader.onerror = () => {
+                    addLog('ERROR', `Failed to read file: ${file.name}`);
+                };
+                reader.readAsText(file);
+            } else {
+                addLog('WARNING', `Unsupported file type: ${file.type || file.name}. Only text files are supported.`);
+            }
+        }
+
+        // Also handle dragged text
+        const droppedText = e.dataTransfer.getData('text/plain');
+        if (droppedText && files.length === 0) {
+            setTranscript(droppedText);
+            addLog('SUCCESS', 'Loaded dropped text');
+        }
+    };
+
     const handleProcess = async () => {
         if (!transcript.trim()) return;
 
         setIsProcessing(true);
         setResult(null);
 
-        // Simulate AI processing delay
-        setTimeout(() => {
-            setResult({
-                title: 'Strategic Brief',
-                summary: "Executive brief generated from the manual transcript.",
-                actionItems: ["Follow up with the client", "Schedule a review meeting"],
-                tags: ["manual-entry", "review"],
-                sentiment: "Neutral"
-            });
+        try {
+            const analysis = await analyzeText(transcript);
+            setResult(analysis);
+        } catch (error) {
+            console.error(error);
+            // Error handling is actually done inside analyzeText returning a fallback object, 
+            // but if it throws we catch it here.
+        } finally {
             setIsProcessing(false);
-        }, 2000);
+        }
     };
 
     const handleSave = () => {
@@ -179,12 +226,26 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
                             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                                 Raw Call Transcript
                             </label>
-                            <textarea
-                                className="w-full h-64 p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none font-mono text-sm"
-                                placeholder="Paste transcript here..."
-                                value={transcript}
-                                onChange={(e) => setTranscript(e.target.value)}
-                            />
+                            <div
+                                className={`relative rounded-xl transition-all ${isDragging ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-slate-900' : ''}`}
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onDrop={handleDrop}
+                            >
+                                <textarea
+                                    className="w-full h-64 p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none font-mono text-sm"
+                                    placeholder="Paste transcript here or drag & drop a text file..."
+                                    value={transcript}
+                                    onChange={(e) => setTranscript(e.target.value)}
+                                />
+                                {isDragging && (
+                                    <div className="absolute inset-0 bg-blue-50/90 dark:bg-blue-900/40 rounded-xl flex flex-col items-center justify-center pointer-events-none animate-in fade-in duration-150">
+                                        <Upload size={32} className="text-blue-600 dark:text-blue-400 mb-2" />
+                                        <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">Drop file here</p>
+                                        <p className="text-xs text-blue-500">.txt, .json, .csv, .md</p>
+                                    </div>
+                                )}
+                            </div>
 
                             <div className="mt-4 flex flex-wrap gap-2">
                                 {BRAIN_PERSONAS.map(persona => (

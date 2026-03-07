@@ -78,6 +78,18 @@ export interface ApiResponse {
     contacts?: RawContact[];
 }
 
+export interface PersonData {
+    found: boolean;
+    name?: string;
+    photoUrl?: string;
+    email?: string;
+    organization?: string;
+    title?: string;
+    resourceName?: string;
+    etag?: string;
+    error?: string;
+}
+
 export interface GeminiResponse {
     text: () => string;
 }
