@@ -1,0 +1,75 @@
+```mermaid
+graph TB
+  subgraph Frontend ["React Frontend (Vite + TypeScript)"]
+    UI[App.tsx / Pages]
+    TQ[TanStack Query Hooks]
+    ZOD[Zod API Client]
+    CP[CommandPalette]
+    UCD[UnifiedContactDrawer]
+    DASH[Dashboard]
+    LAB[Intelligence Workbench]
+    AC[AssistantChat]
+  end
+
+  subgraph Backend ["FastAPI Backend (Cloud Run)"]
+    direction TB
+    ROUTER["/api/v1/ Router"]
+    INGEST[IngestService\n/api/v1/calls]
+    QUERY[QueryAPI\n/api/v1/contacts\n/api/v1/calls\n/api/v1/digest]
+    ENRICH[EnrichmentService\n/api/v1/enrichments]
+    AI[AIBriefingService\n/api/v1/analyze]
+    SYNC[SyncService\n/api/v1/sync]
+    SECURITY[FieldEncryption\nAES-256-GCM]
+  end
+
+  subgraph Queue ["Async Job Queue (Cloud Tasks)"]
+    JQ[EnrichmentJobQueue]
+    DLQ[Dead Letter Queue]
+  end
+
+  subgraph DB ["Supabase PostgreSQL"]
+    CONTACTS[(contacts)]
+    CALLS[(call_records)]
+    ENTITIES[(entities)]
+    RELS[(relationships)]
+    TOUCH[(touchpoints)]
+    JOBS[(enrichment_jobs)]
+    ORGS[(organizations)]
+    SIGNALS[(social_signals)]
+  end
+
+  subgraph External ["External APIs"]
+    GEMINI[Gemini 2.5 Flash]
+    NUMV[NumVerify]
+    HUNTER[Hunter.io]
+    CLEARBIT[Clearbit]
+    TWITTER[X / Twitter API v2]
+    PEOPLE[Google People API]
+  end
+
+  UI --> TQ --> ZOD --> ROUTER
+  CP --> ZOD
+  UCD --> ZOD
+  DASH --> ZOD
+  LAB --> ZOD
+  AC --> ZOD
+
+  ROUTER --> INGEST
+  ROUTER --> QUERY
+  ROUTER --> ENRICH
+  ROUTER --> AI
+  ROUTER --> SYNC
+
+  INGEST --> SECURITY --> CALLS
+  QUERY --> CONTACTS & CALLS & ENTITIES & TOUCH
+  ENRICH --> JQ --> JOBS
+  JQ --> NUMV & HUNTER & CLEARBIT & TWITTER
+  JQ --> GEMINI
+  JQ -.-> DLQ
+
+  AI --> GEMINI
+  SYNC --> PEOPLE --> CONTACTS
+
+  INGEST --> AI --> CALLS
+  ENRICH --> ENTITIES & RELS & SIGNALS
+```

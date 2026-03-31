@@ -3,35 +3,48 @@ export type AppView = 'DASHBOARD' | 'LOGS' | 'CONTACTS' | 'ACTIONS' | 'LAB';
 export type ConnectionStatus = 'connected' | 'offline' | 'error';
 
 export interface ExecutiveBrief {
-    title: string;
-    summary: string;
-    actionItems: string[];
-    tags: string[];
-    sentiment: 'Positive' | 'Neutral' | 'Negative';
+    title?: string;
+    summary?: string;
+    action_items?: string[];
+    tags?: string[];
+    sentiment?: 'Positive' | 'Neutral' | 'Negative';
 }
 
 export interface CallRecord {
-    id: string; // Mapped from external_id
+    id: string; 
+    contact_name: string;
+    phone_number?: string | null;
+    duration?: string | number | null;
+    transcript?: string;
+    executive_brief?: ExecutiveBrief | null;
+    status?: 'QUEUED' | 'COMPLETED' | 'SKIPPED_SHORT' | 'ERROR';
+    sentiment?: 'Positive' | 'Neutral' | 'Negative' | null;
+    tags?: string[];
+    recommended_followup_date?: string | null;
+    draft_followup_message?: string | null;
     timestamp: string;
-    contactName: string;
-    phoneNumber: string;
-    duration: string | number;
-    transcript: string;
-    executiveBrief?: ExecutiveBrief; // Mapped from strategic_notes
-    tags: string[];
-    status: 'QUEUED' | 'COMPLETED' | 'SKIPPED_SHORT' | 'ERROR';
+    created_at?: string;
 }
 
 export interface Contact {
     id: string;
-    name: string;
-    phone: string;
-    email?: string;
-    organization?: string;
-    lastContacted: string;
-    notes?: string;
+    first_name: string;
+    last_name?: string | null;
+    birthdate?: string | null;
+    name?: string | null; // Placeholder or computed
+    phone?: string | null;
+    email?: string | null;
+    organization?: string | null;
+    organization_id?: string | null;
+    company_id?: string | null;
+    notes?: string | null;
     tags?: string[];
-    totalCalls: number;
+    health_score?: number | null;
+    last_contact_at?: string | null;
+    photo_url?: string | null;
+    total_calls?: number | null;
+    created_at?: string;
+    updated_at?: string;
 }
 
 export interface Persona {
@@ -89,6 +102,35 @@ export interface PersonData {
     etag?: string;
     error?: string;
 }
+
+export interface Nudge {
+    contact_id: string;
+    name: string;
+    score?: number | null | undefined;
+    reason: string;
+    suggested_action: string;
+    // UI helper fields
+    nudge_type?: string;
+    priority_score?: number;
+    health_score?: number;
+}
+
+export interface EnrichmentJob {
+    id: string;
+    contact_id: string;
+    stage: number;
+    status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETE' | 'FAILED' | 'DEAD_LETTER';
+    attempts: number;
+    result_json?: any;
+    source_name?: string;
+    confidence?: 'HIGH' | 'MEDIUM' | 'LOW';
+    error_message?: string;
+    fetched_at?: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export type Enrichment = EnrichmentJob; 
 
 export interface GeminiResponse {
     text: () => string;

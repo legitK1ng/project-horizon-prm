@@ -4,32 +4,38 @@ import { Contact } from '@/types';
 import { Search, Phone, Mail, Clock, ArrowUpDown, Users } from 'lucide-react';
 import ContactDetailDrawer from '@/components/common/ContactDetailDrawer';
 
+import { useContacts } from '@/hooks/useHorizonData';
+
 interface ContactListProps {
-    contacts: Contact[];
+    // No props needed as we use the hook directly
 }
 
 type SortOption = 'alpha' | 'recent' | 'stats';
 
-const ContactList: React.FC<ContactListProps> = ({ contacts }) => {
+const ContactList: React.FC<ContactListProps> = () => {
+    const { data: contacts = [] } = useContacts();
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState<SortOption>('alpha');
     const [showSortMenu, setShowSortMenu] = useState(false);
     const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
 
     const filteredAndSortedContacts = useMemo(() => {
-        let result = contacts.filter(contact =>
-            contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            contact.phone.includes(searchTerm)
-        );
+        let result = contacts.filter(contact => {
+            const fullName = `${contact.first_name} ${contact.last_name || ''}`.toLowerCase();
+            const searchLower = searchTerm.toLowerCase();
+            return fullName.includes(searchLower) || (contact.phone && contact.phone.includes(searchTerm));
+        });
 
         return result.sort((a, b) => {
             switch (sortBy) {
                 case 'alpha':
-                    return a.name.localeCompare(b.name);
+                    const nameA = `${a.first_name} ${a.last_name || ''}`;
+                    const nameB = `${b.first_name} ${b.last_name || ''}`;
+                    return nameA.localeCompare(nameB);
                 case 'recent':
-                    return new Date(b.lastContacted).getTime() - new Date(a.lastContacted).getTime();
+                    return new Date(b.last_contact_at || 0).getTime() - new Date(a.last_contact_at || 0).getTime();
                 case 'stats':
-                    return (b.totalCalls || 0) - (a.totalCalls || 0);
+                    return (b.health_score || 0) - (a.health_score || 0);
                 default:
                     return 0;
             }
@@ -116,15 +122,15 @@ const ContactList: React.FC<ContactListProps> = ({ contacts }) => {
                             {/* Initials Avatar */}
                             <div className="flex items-start justify-between mb-4">
                                 <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center font-bold text-xl">
-                                    {contact.name.charAt(0)}
+                                    {contact.first_name.charAt(0)}
                                 </div>
                                 <div className="text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-1 rounded-full">
-                                    {contact.totalCalls} Calls
+                                    {contact.health_score || 0}% Health
                                 </div>
                             </div>
 
                             <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-1 group-hover:text-blue-600 transition-colors">
-                                {contact.name}
+                                {contact.first_name} {contact.last_name}
                             </h3>
 
                             <div className="space-y-2 mt-4">
@@ -140,7 +146,7 @@ const ContactList: React.FC<ContactListProps> = ({ contacts }) => {
                                 )}
                                 <div className="flex items-center gap-3 text-slate-400 text-xs mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
                                     <Clock size={12} />
-                                    <span>Last contacted: {new Date(contact.lastContacted).toLocaleDateString()}</span>
+                                    <span>Last contacted: {contact.last_contact_at ? new Date(contact.last_contact_at).toLocaleDateString() : 'Never'}</span>
                                 </div>
                             </div>
                         </div>

@@ -8,29 +8,36 @@
 
 @layer base {
   :root {
-    /* Brand Colors (HSL) */
-    --horizon-primary: 221 83% 53%;
-    --horizon-primary-hover: 221 83% 46%;
-    --horizon-accent: 160 84% 39%;
+    /* Monochromatic Base (HSL) */
+    --surface-base: 0 0% 100%;
+    --surface-raised: 210 20% 98%;
+    --surface-overlay: 210 20% 96%;
+    
+    /* Monochromatic Text */
+    --text-primary: 220 20% 10%;
+    --text-secondary: 220 10% 45%;
+    --text-muted: 220 10% 65%;
+    
+    /* Primary Accent: Electric Blue (#0057FF) */
+    --horizon-primary: 221 100% 50%;
+    --horizon-primary-hover: 221 100% 45%;
+    
+    /* Functional Colors (kept subtle) */
+    --horizon-success: 160 84% 39%;
     --horizon-warn: 38 92% 50%;
     --horizon-danger: 0 84% 60%;
 
-    /* Surface Colors */
-    --surface-base: 0 0% 100%;
-    --surface-raised: 210 40% 98%;
-    --surface-overlay: 210 40% 96%;
-    --text-primary: 222 47% 11%;
-    --text-secondary: 215 16% 47%;
-    --text-muted: 215 20% 65%;
-    --border-default: 214 32% 91%;
+    /* Borders */
+    --border-default: 220 13% 91%;
+    --border-subtle: 220 13% 95%;
 
-    /* Shadows (layered for depth) */
+    /* Shadows (layered for depth - monochromatic) */
     --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
     --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-    --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.15);
+    --shadow-glow: 0 0 20px rgba(0, 87, 255, 0.1);
 
     /* Transition Curves */
     --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -47,20 +54,24 @@
   }
 
   .dark {
-    --surface-base: 222 47% 6%;
-    --surface-raised: 217 33% 10%;
-    --surface-overlay: 217 33% 14%;
-    --text-primary: 210 40% 98%;
-    --text-secondary: 215 20% 65%;
-    --text-muted: 217 19% 35%;
-    --border-default: 217 33% 17%;
+    /* Deep Monochromatic Dark Mode */
+    --surface-base: 220 30% 4%;
+    --surface-raised: 220 25% 7%;
+    --surface-overlay: 220 25% 10%;
+    
+    --text-primary: 210 20% 98%;
+    --text-secondary: 215 15% 75%;
+    --text-muted: 217 10% 45%;
+    
+    --border-default: 220 20% 12%;
+    --border-subtle: 220 20% 8%;
 
     --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.25);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
     --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.35);
-    --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.2);
+    --shadow-glow: 0 0 20px rgba(0, 87, 255, 0.15);
   }
 
   body {
@@ -80,56 +91,72 @@
    ═══════════════════════════════════════════════════════ */
 
 @layer components {
-  /* Premium Card */
+  /* Premium Card - Monochromatic */
   .card {
-    @apply bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800;
+    @apply bg-white dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800/50;
+    background-color: hsl(var(--surface-base));
+    border-color: hsl(var(--border-default));
     box-shadow: var(--shadow-sm);
-    transition: box-shadow 0.2s var(--ease-smooth), transform 0.2s var(--ease-smooth);
+    transition: all 0.2s var(--ease-smooth);
   }
 
   .card:hover {
     box-shadow: var(--shadow-md);
+    border-color: hsl(var(--border-default) / 0.8);
   }
 
   .card-interactive:hover {
     box-shadow: var(--shadow-lg);
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    border-color: hsl(var(--horizon-primary) / 0.3);
   }
 
   .card-interactive:active {
-    transform: translateY(0) scale(0.995);
+    transform: translateY(0) scale(0.99);
   }
 
-  /* Skeleton Shimmer */
-  .skeleton {
-    @apply bg-slate-200 dark:bg-slate-800 rounded-lg;
-    background-image: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.4) 50%,
-      transparent 100%
-    );
-    background-size: 200% 100%;
-    animation: shimmer 1.5s ease-in-out infinite;
-  }
-
-  .dark .skeleton {
-    background-image: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.06) 50%,
-      transparent 100%
-    );
-  }
-
-  /* Glass Effect */
+  /* Glass Effect - Monochromatic */
   .glass {
-    @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    @apply backdrop-blur-xl;
+    background-color: hsl(var(--surface-base) / 0.8);
+    border: 1px solid hsl(var(--border-default) / 0.3);
   }
 
   .dark .glass {
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background-color: hsl(var(--surface-base) / 0.7);
+    border: 1px solid hsl(var(--border-default) / 0.2);
+  }
+
+  /* Button - Electric Blue Accent */
+  .btn-primary {
+    @apply px-4 py-2.5 text-white rounded-xl font-semibold;
+    background-color: hsl(var(--horizon-primary));
+    transition: all 0.2s var(--ease-spring);
+    box-shadow: 0 4px 12px hsl(var(--horizon-primary) / 0.2);
+  }
+
+  .btn-primary:hover {
+    background-color: hsl(var(--horizon-primary-hover));
+    box-shadow: 0 6px 16px hsl(var(--horizon-primary) / 0.3);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0) scale(0.98);
+  }
+
+  /* Skeleton Shimmer - Monochromatic */
+  .skeleton {
+    @apply rounded-lg;
+    background-color: hsl(var(--surface-overlay));
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      hsl(var(--surface-base) / 0.4) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite linear;
   }
 
   /* Status Dot Pulse */
@@ -138,21 +165,9 @@
   }
 
   .status-dot-online {
-    @apply bg-emerald-500;
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    background-color: hsl(var(--horizon-success));
+    box-shadow: 0 0 0 0 hsl(var(--horizon-success) / 0.4);
     animation: pulse-dot 2s infinite;
-  }
-
-  /* Button base with micro-interaction */
-  .btn-primary {
-    @apply px-4 py-2.5 bg-blue-600 text-white rounded-xl font-semibold;
-    @apply hover:bg-blue-700 active:scale-[0.97];
-    @apply transition-all duration-200;
-    box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3), 0 1px 2px rgba(37, 99, 235, 0.2);
-  }
-
-  .btn-primary:hover {
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35), 0 2px 4px rgba(37, 99, 235, 0.2);
   }
 
   /* Thin scrollbar */
@@ -161,7 +176,8 @@
   }
 
   .thin-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-slate-300/50 dark:bg-slate-700/50 rounded-full;
+    @apply rounded-full;
+    background-color: hsl(var(--text-muted) / 0.3);
   }
 }
 

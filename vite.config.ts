@@ -12,6 +12,13 @@ export default defineConfig(({ mode }) => {
       port: 3000,
       host: true,
       open: true,
+      proxy: {
+        '/api': {
+          target: 'http://localhost:8000',
+          changeOrigin: true,
+          secure: false,
+        },
+      },
     },
     
     resolve: {
@@ -28,8 +35,7 @@ export default defineConfig(({ mode }) => {
     },
     
     define: {
-      // Make env variables available to the app
-      'import.meta.env.VITE_GEMINI_API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY),
+      // REQ-027: VITE_GEMINI_API_KEY intentionally removed — Gemini calls are backend-only
       'import.meta.env.VITE_BACKEND_URL': JSON.stringify(env.VITE_BACKEND_URL),
     },
     

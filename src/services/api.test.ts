@@ -18,7 +18,7 @@ describe('API Service', () => {
         if (!data || !data.calls) throw new Error('Data or calls is null');
 
         expect(data.calls).toHaveLength(1);
-        expect(data.calls![0]!.contactName).toBe('Test User');
+        expect(data.calls![0]!.contact_name).toBe('Test User');
         expect(data.calls![0]!.tags).toContain('#test');
         expect(data.calls![0]!.status).toBe('COMPLETED');
     });

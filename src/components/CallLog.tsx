@@ -3,20 +3,27 @@ import { CallRecord } from '@/types';
 import { ICONS } from '@/constants';
 import { formatDuration } from '@/utils/helpers';
 import { ChevronDown, ChevronUp, Search, Plus, Calendar, Users, Phone } from 'lucide-react';
-import { useData } from '@/hooks/useData';
+import { useCalls } from '@/hooks/useHorizonData';
 import TagPicker from '@/components/common/TagPicker';
 import DateRangePicker from '@/components/common/DateRangePicker';
 import ContactHoverCard from '@/components/common/ContactHoverCard';
 import TranscriptView from '@/components/common/TranscriptView';
 
 interface CallLogProps {
-    calls: CallRecord[];
     activeTag?: string | null;
     onContactClick?: (contactName: string) => void;
 }
 
-const CallLog: React.FC<CallLogProps> = ({ calls, activeTag, onContactClick }) => {
-    const { tags: availableTags, updateCall } = useData();
+const CallLog: React.FC<CallLogProps> = ({ activeTag, onContactClick }) => {
+    // Real Production Data Hook
+    const { data: calls = [], isLoading } = useCalls();
+    
+    // updateCall is temporarily disabled here until we have a dedicated mutation hook for it
+    const updateCall = async (_updatedCall: any) => {
+        console.warn('updateCall mutation not yet implemented in production hook.');
+    };
+    
+    const availableTags: string[] = []; // Will be fetched from backend in future phase
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [editingTagsId, setEditingTagsId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -47,14 +54,12 @@ const CallLog: React.FC<CallLogProps> = ({ calls, activeTag, onContactClick }) =
             : [...currentTags, tag];
 
         // Update local and backend
-        // Note: CallRecord interface might need 'tags' if it was missing? 
-        // apiService.ts transformLog ensures it has tags.
         const updatedCall = { ...call, tags: newTags };
 
-        // Also update executiveBrief tags if they exist to keep in sync?
-        if (updatedCall.executiveBrief) {
-            updatedCall.executiveBrief = {
-                ...updatedCall.executiveBrief,
+        // Also update executive_brief tags if they exist to keep in sync
+        if (updatedCall.executive_brief) {
+            updatedCall.executive_brief = {
+                ...updatedCall.executive_brief,
                 tags: newTags
             };
         }
@@ -71,7 +76,7 @@ const CallLog: React.FC<CallLogProps> = ({ calls, activeTag, onContactClick }) =
         }
     };
 
-    const filteredCalls = calls.filter(call => {
+    const filteredCalls = (calls || []).filter(call => {
         // Tag Filter
         if (activeTag) {
             const hasTag = call.tags?.some(tag => tag.toLowerCase() === activeTag.toLowerCase());
@@ -93,8 +98,8 @@ const CallLog: React.FC<CallLogProps> = ({ calls, activeTag, onContactClick }) =
         }
 
         // Search Filter
-        const contactName = call.contactName || '';
-        const transcript = call.transcript || '';
+        const contactName = call.contact_name || '';
+        const transcript = (call as any).transcript || '';
         return contactName.toLowerCase().includes(searchTerm.toLowerCase()) ||
             transcript.toLowerCase().includes(searchTerm.toLowerCase());
     });
@@ -105,7 +110,7 @@ const CallLog: React.FC<CallLogProps> = ({ calls, activeTag, onContactClick }) =
 
         const groups: Record<string, CallRecord[]> = {};
         filteredCalls.forEach(call => {
-            const name = call.contactName || 'Unknown';
+            const name = call.contact_name || 'Unknown';
             if (!groups[name]) groups[name] = [];
             groups[name].push(call);
         });
@@ -173,9 +178,9 @@ const CallLog: React.FC<CallLogProps> = ({ calls, activeTag, onContactClick }) =
                 {/* Main List */}
                 <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
                     {filteredCalls.length === 0 ? (
-                        <div className="p-12 text-center text-slate-400">
+                        <div className="p-12 text-center text-slate-500 dark:text-slate-400">
                             {ICONS.Logs}
-                            <p className="mt-2">No calls found matching your search.</p>
+                            <p className="mt-2">{isLoading ? 'Loading calls from Horizon...' : 'No calls found matching your search.'}</p>
                         </div>
                     ) : (
                         <div className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -192,15 +197,15 @@ const CallLog: React.FC<CallLogProps> = ({ calls, activeTag, onContactClick }) =
                                                     {ICONS.Logs}
                                                 </div>
                                                 <div>
-                                                    <ContactHoverCard contactName={call.contactName || 'Unknown'} phoneNumber={call.phoneNumber}>
+                                                    <ContactHoverCard contactName={call.contact_name || 'Unknown'} phoneNumber={call.phone_number || undefined}>
                                                         <h4 className="font-semibold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                                                            {call.contactName}
+                                                            {call.contact_name}
                                                         </h4>
                                                     </ContactHoverCard>
                                                     <div className="flex items-center gap-2 text-sm text-slate-500">
                                                         <span>{new Date(call.timestamp).toLocaleString()}</span>
                                                         <span>•</span>
-                                                        <span>{formatDuration(call.duration)}</span>
+                                                        <span>{formatDuration(call.duration || 0)}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -215,14 +220,14 @@ const CallLog: React.FC<CallLogProps> = ({ calls, activeTag, onContactClick }) =
 
                                         {expandedId === call.id && (
                                             <div className="px-4 pb-4 pl-[4.5rem] animate-in slide-in-from-top-2 duration-200">
-                                                {call.executiveBrief && (
+                                                {call.executive_brief && (
                                                     <div className="mb-4 bg-blue-50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-800">
                                                         <h5 className="font-bold text-blue-900 dark:text-blue-300 mb-2 flex items-center gap-2">
                                                             {ICONS.Dashboard} Executive Brief
                                                         </h5>
-                                                        <p className="text-slate-700 dark:text-slate-300 mb-3">{call.executiveBrief.summary}</p>
+                                                        <p className="text-slate-700 dark:text-slate-300 mb-3">{call.executive_brief.summary}</p>
                                                         <div className="flex flex-wrap gap-2">
-                                                            {call.executiveBrief.tags.map(tag => (
+                                                            {call.executive_brief.tags?.map((tag: string) => (
                                                                 <span key={tag} className="px-2 py-0.5 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs rounded border border-slate-200 dark:border-slate-700">
                                                                     #{tag}
                                                                 </span>
@@ -257,8 +262,8 @@ const CallLog: React.FC<CallLogProps> = ({ calls, activeTag, onContactClick }) =
                                                 )}
 
                                                 <TranscriptView
-                                                    transcript={call.transcript}
-                                                    contactName={call.contactName || 'Unknown'}
+                                                    transcript={(call as any).transcript || ''}
+                                                    contactName={call.contact_name || 'Unknown'}
                                                 />
                                             </div>
                                         )}
@@ -277,7 +282,7 @@ const CallLog: React.FC<CallLogProps> = ({ calls, activeTag, onContactClick }) =
                                                 onClick={() => toggleGroup(contactName)}
                                             >
                                                 <div className="flex items-center gap-4">
-                                                    <ContactHoverCard contactName={contactName} phoneNumber={calls[0] ? calls[0].phoneNumber : undefined} onContactClick={onContactClick}>
+                                                    <ContactHoverCard contactName={contactName} phoneNumber={calls[0]?.phone_number || undefined} onContactClick={onContactClick}>
                                                         <div className="flex items-center gap-4">
                                                             <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-sm border border-blue-200 dark:border-blue-800">
                                                                 {contactName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
@@ -358,7 +363,7 @@ const CallLog: React.FC<CallLogProps> = ({ calls, activeTag, onContactClick }) =
                                                                                         </div>
                                                                                     </div>
                                                                                     <div className="text-xs text-slate-400 mt-0.5">
-                                                                                        {formatDuration(call.duration)}
+                                                                                        {formatDuration(call.duration || 0)}
                                                                                     </div>
                                                                                 </div>
                                                                             </div>
@@ -371,11 +376,11 @@ const CallLog: React.FC<CallLogProps> = ({ calls, activeTag, onContactClick }) =
                                                                         {/* EXPANDED DETAILS (Reused from Date view, simplified) */}
                                                                         {expandedId === call.id && (
                                                                             <div className="px-4 pb-4 animate-in slide-in-from-top-2 duration-200">
-                                                                                {call.executiveBrief && (
+                                                                                {call.executive_brief && (
                                                                                     <div className="mb-4 bg-blue-50 dark:bg-blue-900/10 p-3 rounded-xl border border-blue-100 dark:border-blue-800">
-                                                                                        <p className="text-slate-700 dark:text-slate-300 text-sm mb-2">{call.executiveBrief.summary}</p>
+                                                                                        <p className="text-slate-700 dark:text-slate-300 text-sm mb-2">{call.executive_brief.summary}</p>
                                                                                         <div className="flex flex-wrap gap-2">
-                                                                                            {call.executiveBrief.tags.map(tag => (
+                                                                                            {call.executive_brief.tags?.map((tag: string) => (
                                                                                                 <span key={tag} className="px-2 py-0.5 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs rounded border border-slate-200 dark:border-slate-700">
                                                                                                     #{tag}
                                                                                                 </span>
@@ -407,8 +412,8 @@ const CallLog: React.FC<CallLogProps> = ({ calls, activeTag, onContactClick }) =
                                                                                     </div>
                                                                                 )}
                                                                                 <TranscriptView
-                                                                                    transcript={call.transcript}
-                                                                                    contactName={call.contactName || 'Unknown'}
+                                                                                    transcript={(call as any).transcript || ''}
+                                                                                    contactName={call.contact_name || 'Unknown'}
                                                                                 />
                                                                             </div>
                                                                         )}

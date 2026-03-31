@@ -16,7 +16,7 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
     const [phoneNumber, setPhoneNumber] = useState('');
     const [selectedPersona, setSelectedPersona] = useState<Persona['id']>(BRAIN_PERSONAS[0].id);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [result, setResult] = useState<CallRecord['executiveBrief'] | null>(null);
+    const [result, setResult] = useState<CallRecord['executive_brief'] | null>(null);
     const [activeTab, setActiveTab] = useState<'analysis' | 'diagnostics'>('analysis');
     const [isDragging, setIsDragging] = useState(false);
 
@@ -131,13 +131,13 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
             const newCall: CallRecord = {
                 id: generateId('call'),
                 timestamp: new Date().toISOString(),
-                contactName: 'Manual Entry', // Backend will resolve this if phone matches
-                phoneNumber: phoneNumber,
+                contact_name: 'Manual Entry', // Backend will resolve this if phone matches
+                phone_number: phoneNumber,
                 duration: 0,
                 transcript: transcript,
                 tags: result.tags || [],
                 status: 'COMPLETED',
-                executiveBrief: result
+                executive_brief: result
             };
             onSaveLog(newCall);
             // Reset
@@ -308,7 +308,7 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
                                     <div>
                                         <h4 className="font-semibold text-slate-700 dark:text-slate-300 mb-2 text-sm uppercase">Action Items</h4>
                                         <ul className="space-y-2">
-                                            {result.actionItems.map((item: string, i: number) => (
+                                            {(result.action_items || []).map((item: string, i: number) => (
                                                 <li key={i} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
                                                     <div className="min-w-[4px] h-[4px] rounded-full bg-blue-500 mt-2" />
                                                     {item}

@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useCallback, Suspense, memo } from 'react';
-import { AppView } from '@/types';
+import { AppView, ConnectionStatus } from '@/types';
 import { APP_VIEW } from '@/constants';
 import { HistoryProvider } from '@/contexts/HistoryContext';
-import { useData } from '@/hooks/useData';
+import { useQuery } from '@tanstack/react-query';
+import { useContacts, useCalls } from '@/hooks/useHorizonData';
+import { healthApi } from '@/services/apiClient';
 import { useTheme } from '@/hooks/useTheme';
 
 // Core Components
 import Navigation from '@/components/Navigation';
 import LoadingScreen from '@/components/LoadingScreen';
 import CommandPalette from '@/components/CommandPalette';
-import ContactDrawer from '@/components/common/ContactDrawer';
+import UnifiedContactDrawer from '@/components/common/UnifiedContactDrawer';
+import AssistantChat from '@/components/AssistantChat';
 import { ToastProvider } from '@/components/common/Toast';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
@@ -57,7 +60,32 @@ const MainLayout: React.FC = () => {
   const [drawerContact, setDrawerContact] = useState<string | null>(null);
 
   const { isDarkMode, toggleTheme } = useTheme();
-  const { calls, contacts, isLoading, connectionStatus, refreshData, addCall, tags } = useData();
+  
+  // Real Production Data Hooks
+  const { data: contactsData, isLoading: isContactsLoading } = useContacts();
+  const { data: callsData, isLoading: isCallsLoading } = useCalls();
+  const { data: healthData } = useQuery({ queryKey: ['health'], queryFn: () => healthApi.check() });
+
+  const contacts = Array.isArray(contactsData) ? contactsData : (contactsData as any)?.data || [];
+  const calls = Array.isArray(callsData) ? callsData : (callsData as any)?.data || [];
+  
+  // REQ-024: Improved loading logic — only block if we have 0 data and are currently fetching
+  const isLoading = (isContactsLoading && contacts.length === 0) || (isCallsLoading && calls.length === 0);
+  
+  const connectionStatus: ConnectionStatus = healthData?.status === 'online' ? 'connected' : 'offline';
+  
+  // Dummy tags for now, will be replaced with real tags from backend if needed
+  const tags: string[] = []; 
+  
+  const refreshData = () => {
+    // TanStack Query handles background refresh automatically, 
+    // but we can trigger a manual refetch if the user hits the button.
+    window.location.reload(); 
+  };
+
+  const addCall = () => {
+    console.warn('Direct addCall from App.tsx is deprecated. Use Lab or ACR sync.');
+  };
 
   // ⌘K / Ctrl+K shortcut
   const handleGlobalKeyDown = useCallback((e: KeyboardEvent) => {
@@ -82,8 +110,8 @@ const MainLayout: React.FC = () => {
     setIsMobileMenuOpen(false);
   }, []);
 
-  // Show loading screen on initial load
-  if (isLoading && calls.length === 0) {
+  // Show loading screen on initial load only if we have NO data yet
+  if (isLoading) {
     return <LoadingScreen />;
   }
 
@@ -139,16 +167,14 @@ const MainLayout: React.FC = () => {
             <Suspense fallback={<FallbackLoader />}>
               {currentView === APP_VIEW.DASHBOARD && (
                 <Dashboard
-                  calls={calls}
-                  contacts={contacts}
                   onNavigate={setCurrentView}
                   connectionStatus={connectionStatus}
                 />
               )}
               {currentView === APP_VIEW.LOGS && (
-                <CallLog calls={calls} activeTag={activeTag} onContactClick={setDrawerContact} />
+                <CallLog activeTag={activeTag} onContactClick={setDrawerContact} />
               )}
-              {currentView === APP_VIEW.CONTACTS && <ContactList contacts={contacts} />}
+              {currentView === APP_VIEW.CONTACTS && <ContactList />}
               {currentView === APP_VIEW.ACTIONS && <ActionsLog />}
               {currentView === APP_VIEW.LAB && <Lab onSaveLog={addCall} />}
             </Suspense>
@@ -164,11 +190,14 @@ const MainLayout: React.FC = () => {
         contacts={contacts}
       />
 
-      <ContactDrawer
+      <UnifiedContactDrawer
         contactName={drawerContact}
         onClose={() => setDrawerContact(null)}
         calls={calls}
+        contacts={contacts}
       />
+
+      <AssistantChat />
     </div>
   );
 };

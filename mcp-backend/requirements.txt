@@ -2,6 +2,11 @@ fastapi
 uvicorn
 supabase
 mcp
-pydantic
 pydantic-settings
+# Security & Cryptography
+cryptography
 python-dotenv
+
+google-api-python-client
+google-auth
+google-auth-oauthlib

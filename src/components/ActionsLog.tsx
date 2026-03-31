@@ -1,21 +1,27 @@
 import React, { useState } from 'react';
-import { useData } from '@/hooks/useData';
+import { useCalls } from '@/hooks/useHorizonData';
 import { ICONS } from '@/constants';
 import { Calendar, CheckSquare, Copy, ChevronDown, ChevronUp, ClipboardList } from 'lucide-react';
 import { useToast } from '@/components/common/Toast';
 
 const ActionsLog: React.FC = () => {
-    const { calls } = useData();
+    const { data: calls = [], isLoading } = useCalls();
     const { toast } = useToast();
     const [expandedCallId, setExpandedCallId] = useState<string | null>(null);
 
     // Filter calls that have action items
     const actionableCalls = calls
-        .filter(call => call.executiveBrief?.actionItems && call.executiveBrief.actionItems.length > 0)
+        .filter(call => {
+            const items = call.executive_brief?.action_items;
+            return Array.isArray(items) && items.length > 0;
+        })
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     const totalItems = actionableCalls.reduce(
-        (sum, call) => sum + (call.executiveBrief?.actionItems?.length || 0),
+        (sum, call) => {
+            const items = call.executive_brief?.action_items;
+            return sum + (Array.isArray(items) ? items.length : 0);
+        },
         0
     );
 
@@ -52,7 +58,11 @@ const ActionsLog: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-                {actionableCalls.length === 0 ? (
+                {isLoading ? (
+                    <div className="flex items-center justify-center p-20">
+                        <div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+                    </div>
+                ) : actionableCalls.length === 0 ? (
                     <div className="card p-16 text-center">
                         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-purple-50 dark:bg-purple-900/20 text-purple-500 dark:text-purple-400 mb-4">
                             <ClipboardList size={28} />
@@ -75,15 +85,15 @@ const ActionsLog: React.FC = () => {
                                     </div>
                                     <div>
                                         <h3 className="font-bold text-slate-900 dark:text-white">
-                                            {call.executiveBrief?.title || 'Untitled Brief'}
+                                            {call.executive_brief?.title || 'Untitled Brief'}
                                         </h3>
                                         <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                                            <span className="font-medium">{call.contactName}</span>
+                                            <span className="font-medium">{call.contact_name}</span>
                                             <span>•</span>
                                             <span>{new Date(call.timestamp).toLocaleDateString()}</span>
                                             <span>•</span>
                                             <span className="text-purple-600 dark:text-purple-400 font-medium">
-                                                {call.executiveBrief?.actionItems.length} Items
+                                                {(call.executive_brief?.action_items as string[]).length} Items
                                             </span>
                                         </div>
                                     </div>
@@ -93,7 +103,7 @@ const ActionsLog: React.FC = () => {
 
                             {expandedCallId === call.id && (
                                 <div className="border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-4 space-y-3 animate-in slide-in-from-top-2 duration-200">
-                                    {call.executiveBrief?.actionItems.map((item, idx) => (
+                                    {(call.executive_brief?.action_items as string[]).map((item: string, idx: number) => (
                                         <div key={idx} className="flex items-start gap-3 p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-800 group hover:shadow-sm transition-shadow">
                                             <CheckSquare className="mt-0.5 text-slate-400" size={18} />
                                             <div className="flex-1">

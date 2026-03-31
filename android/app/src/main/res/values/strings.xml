@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">HorizonPRM</string>
+    <string name="title_activity_main">HorizonPRM</string>
+    <string name="package_name">com.legitk1ng.horizon</string>
+    <string name="custom_url_scheme">com.legitk1ng.horizon</string>
+</resources>

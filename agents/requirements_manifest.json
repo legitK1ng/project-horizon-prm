@@ -1,0 +1,338 @@
+{
+  "agent": "RequirementsAnalysisAgent",
+  "version": "1.0.0",
+  "timestamp": "2026-03-25T20:47:49-05:00",
+  "status": "COMPLETE",
+  "source_document": "horizon_prm_architecture_review.md",
+  "total_requirements": 40,
+  "requirements": [
+    {
+      "id": "REQ-001", "domain": "UX", "status": "PARTIAL",
+      "description": "Design token layer as CSS custom properties",
+      "existing_artifact": "src/index.css (partial - has CSS vars but incomplete token system)",
+      "implementing_module": "src/index.css + tailwind.config.js",
+      "gap": "Tokens exist but not consumed systematically; hardcoded colors remain in components",
+      "test": "tests/design_tokens.spec.ts"
+    },
+    {
+      "id": "REQ-002", "domain": "UX", "status": "MISSING",
+      "description": "Headless component library (shadcn/ui or Radix)",
+      "existing_artifact": null,
+      "implementing_module": "src/components/ (all primary views)",
+      "gap": "No Radix or shadcn dependency exists in package.json",
+      "test": "tests/components.spec.ts"
+    },
+    {
+      "id": "REQ-003", "domain": "UX", "status": "PARTIAL",
+      "description": "Dark/light mode via CSS custom properties via useTheme hook",
+      "existing_artifact": "src/hooks/useTheme.ts",
+      "implementing_module": "src/hooks/useTheme.ts + src/index.css",
+      "gap": "useTheme exists but many components still use hardcoded dark: Tailwind classes",
+      "test": "tests/theme.spec.ts"
+    },
+    {
+      "id": "REQ-004", "domain": "UX", "status": "PARTIAL",
+      "description": "Relationship Health Score per contact on Dashboard",
+      "existing_artifact": "src/components/Dashboard.tsx (has mock health section)",
+      "implementing_module": "src/components/Dashboard.tsx + mcp-backend/services/health_score_service.py",
+      "gap": "Dashboard upgraded with Needs Attention panel, but health score is computed frontend-only with mock logic; backend endpoint /api/v1/contacts/health-scores does not exist",
+      "test": "tests/health_score.spec.ts"
+    },
+    {
+      "id": "REQ-005", "domain": "UX", "status": "PARTIAL",
+      "description": "'Needs Attention' panel: contacts with no interaction in 14/30/60 days",
+      "existing_artifact": "src/components/Dashboard.tsx (Needs Attention panel rendered)",
+      "implementing_module": "src/components/Dashboard.tsx + mcp-backend/services/query_api.py",
+      "gap": "Panel renders with mock data; backend staleness query not implemented",
+      "test": "tests/needs_attention.spec.ts"
+    },
+    {
+      "id": "REQ-006", "domain": "UX", "status": "MISSING",
+      "description": "AI Weekly Digest via Gemini backend call",
+      "existing_artifact": null,
+      "implementing_module": "mcp-backend/services/ai_briefing_service.py + /api/v1/digest endpoint",
+      "gap": "No weekly digest endpoint exists; AssistantChat has mock suggestions but no backend digest",
+      "test": "tests/weekly_digest.spec.ts"
+    },
+    {
+      "id": "REQ-007", "domain": "UX", "status": "PARTIAL",
+      "description": "Sparkline charts: call volume, sentiment trend, tag frequency",
+      "existing_artifact": "src/components/Dashboard.tsx (BarChart exists for call volume)",
+      "implementing_module": "src/components/Dashboard.tsx",
+      "gap": "Call volume bar chart exists; sentiment trend sparkline and tag frequency sparkline missing",
+      "test": "tests/sparklines.spec.ts"
+    },
+    {
+      "id": "REQ-008", "domain": "UX", "status": "COMPLETE",
+      "description": "Consolidated tabbed full-panel contact view (Overview, Timeline, Enrichment, Notes, Actions)",
+      "existing_artifact": "src/components/common/UnifiedContactDrawer.tsx",
+      "implementing_module": "src/components/common/UnifiedContactDrawer.tsx",
+      "gap": null,
+      "test": "tests/contact_drawer_tabs.spec.ts"
+    },
+    {
+      "id": "REQ-009", "domain": "UX", "status": "PARTIAL",
+      "description": "Timeline tab as chronological, scrollable feed",
+      "existing_artifact": "src/components/common/UnifiedContactDrawer.tsx (Timeline tab exists)",
+      "implementing_module": "src/components/common/UnifiedContactDrawer.tsx",
+      "gap": "Timeline renders calls only; calendar events and social signals not integrated",
+      "test": "tests/timeline_feed.spec.ts"
+    },
+    {
+      "id": "REQ-010", "domain": "UX", "status": "PARTIAL",
+      "description": "Enrichment tab with structured OSINT cards + staleness badge",
+      "existing_artifact": "src/components/common/UnifiedContactDrawer.tsx (OSINT tab exists)",
+      "implementing_module": "src/components/common/UnifiedContactDrawer.tsx",
+      "gap": "OSINT tab renders Google People data only; Phone Card, Email Card, Org Card, Location Card not implemented; no staleness badge",
+      "test": "tests/enrichment_tab.spec.ts"
+    },
+    {
+      "id": "REQ-011", "domain": "UX", "status": "PARTIAL",
+      "description": "CommandPalette semantic natural-language search via backend",
+      "existing_artifact": "src/components/CommandPalette.tsx (client-side search exists)",
+      "implementing_module": "src/components/CommandPalette.tsx + mcp-backend/services/query_api.py",
+      "gap": "Search is in-memory only; no backend semantic search endpoint",
+      "test": "tests/command_palette_search.spec.ts"
+    },
+    {
+      "id": "REQ-012", "domain": "UX", "status": "PARTIAL",
+      "description": "CommandPalette quick actions (Log call, Tag contact, Schedule, Run enrichment)",
+      "existing_artifact": "src/components/CommandPalette.tsx (quick actions: Capture Pulse, Log Manual Call, Run OSINT)",
+      "implementing_module": "src/components/CommandPalette.tsx",
+      "gap": "Quick actions are stubs; actions do not trigger real backend operations; 'Schedule follow-up' missing",
+      "test": "tests/command_palette_actions.spec.ts"
+    },
+    {
+      "id": "REQ-013", "domain": "UX", "status": "PARTIAL",
+      "description": "CommandPalette history persistence via HistoryContext + localStorage",
+      "existing_artifact": "src/contexts/HistoryContext.tsx",
+      "implementing_module": "src/contexts/HistoryContext.tsx + src/components/CommandPalette.tsx",
+      "gap": "HistoryContext exists but not wired into CommandPalette recent searches",
+      "test": "tests/command_palette_history.spec.ts"
+    },
+    {
+      "id": "REQ-014", "domain": "ARCH", "status": "PARTIAL",
+      "description": "FastAPI backend on Cloud Run with /api/v1/ RESTful endpoints",
+      "existing_artifact": "mcp-backend/main.py (FastAPI running locally on port 8000)",
+      "implementing_module": "mcp-backend/main.py",
+      "gap": "Routes are /health, /calls, /analyze, /search-person — not versioned under /api/v1/; Cloud Run deployment config (Dockerfile, cloudbuild.yaml) does not exist in repo",
+      "test": "tests/api_endpoints.py"
+    },
+    {
+      "id": "REQ-015", "domain": "ARCH", "status": "PARTIAL",
+      "description": "PostgreSQL via Supabase with all 8 required tables",
+      "existing_artifact": "mcp-backend/main.py (Supabase client initialized, call_records table used)",
+      "implementing_module": "mcp-backend/db/schema.sql + alembic/",
+      "gap": "Only call_records table confirmed; entities, relationships, touchpoints, enrichment_jobs, organizations tables not confirmed; no migration files exist",
+      "test": "tests/db_schema.py"
+    },
+    {
+      "id": "REQ-016", "domain": "ARCH", "status": "MISSING",
+      "description": "All routes versioned under /api/v1/",
+      "existing_artifact": null,
+      "implementing_module": "mcp-backend/main.py",
+      "gap": "All existing routes are unversioned (/health, /calls, /analyze)",
+      "test": "tests/api_versioning.py"
+    },
+    {
+      "id": "REQ-017", "domain": "ARCH", "status": "PARTIAL",
+      "description": "Secrets injected as env vars at deploy time",
+      "existing_artifact": "mcp-backend/.env (local env file)",
+      "implementing_module": "mcp-backend/main.py + cloud run deploy config",
+      "gap": "Secrets loaded via dotenv locally; no Cloud Run env var injection config (cloudbuild.yaml / --set-env-vars) defined",
+      "test": "tests/secrets_injection.py"
+    },
+    {
+      "id": "REQ-018", "domain": "ARCH", "status": "MISSING",
+      "description": "Entity model: unified identity record with confidence scores",
+      "existing_artifact": null,
+      "implementing_module": "mcp-backend/db/schema.sql + mcp-backend/models/entity.py",
+      "gap": "No entity model or table exists",
+      "test": "tests/entity_model.py"
+    },
+    {
+      "id": "REQ-019", "domain": "ARCH", "status": "MISSING",
+      "description": "Relationship Graph junction model with typed relationships",
+      "existing_artifact": null,
+      "implementing_module": "mcp-backend/db/schema.sql + mcp-backend/models/relationship.py",
+      "gap": "No relationship graph model exists",
+      "test": "tests/relationship_model.py"
+    },
+    {
+      "id": "REQ-020", "domain": "ARCH", "status": "MISSING",
+      "description": "Organization as top-level PostgreSQL model",
+      "existing_artifact": null,
+      "implementing_module": "mcp-backend/db/schema.sql + mcp-backend/models/organization.py",
+      "gap": "Organization is a string field on contact; no top-level table",
+      "test": "tests/organization_model.py"
+    },
+    {
+      "id": "REQ-021", "domain": "ARCH", "status": "MISSING",
+      "description": "Touchpoint model normalizing interactions across channels",
+      "existing_artifact": null,
+      "implementing_module": "mcp-backend/db/schema.sql + mcp-backend/models/touchpoint.py",
+      "gap": "No touchpoint model exists",
+      "test": "tests/touchpoint_model.py"
+    },
+    {
+      "id": "REQ-022", "domain": "ARCH", "status": "MISSING",
+      "description": "Service decomposition: IngestService, EnrichmentService, AIBriefingService, SyncService, QueryAPI",
+      "existing_artifact": "mcp-backend/main.py (monolith — all logic in one file)",
+      "implementing_module": "mcp-backend/services/",
+      "gap": "All logic in main.py monolith; no services/ directory exists",
+      "test": "tests/service_isolation.py"
+    },
+    {
+      "id": "REQ-023", "domain": "ARCH", "status": "MISSING",
+      "description": "Async job queue with retry, DLQ, status tracking",
+      "existing_artifact": null,
+      "implementing_module": "mcp-backend/services/enrichment_service.py + job_queue.py",
+      "gap": "No job queue implementation exists",
+      "test": "tests/job_queue.py"
+    },
+    {
+      "id": "REQ-024", "domain": "ARCH", "status": "MISSING",
+      "description": "TanStack Query v5 replacing useData monolith",
+      "existing_artifact": "src/hooks/useData.ts (monolithic hook)",
+      "implementing_module": "src/hooks/ (useContacts.ts, useCalls.ts, useEnrichments.ts)",
+      "gap": "@tanstack/react-query not in package.json; useData.ts is a monolith",
+      "test": "tests/tanstack_query.spec.ts"
+    },
+    {
+      "id": "REQ-025", "domain": "ARCH", "status": "MISSING",
+      "description": "Zod API client with schema validation at all boundaries",
+      "existing_artifact": null,
+      "implementing_module": "src/services/apiClient.ts + src/schemas/",
+      "gap": "No Zod schemas at API boundaries; apiService.ts has no runtime validation",
+      "test": "tests/zod_validation.spec.ts"
+    },
+    {
+      "id": "REQ-026", "domain": "ARCH", "status": "MISSING",
+      "description": "mockData migrated to MSW fixture layer",
+      "existing_artifact": "src/services/mockData.ts (active in production build path)",
+      "implementing_module": "src/mocks/ (MSW handlers)",
+      "gap": "mockData.ts is directly imported in apiService.ts with no production guard",
+      "test": "tests/msw_fixtures.spec.ts"
+    },
+    {
+      "id": "REQ-027", "domain": "ARCH", "status": "PARTIAL",
+      "description": "Gemini API calls removed from frontend; route through backend",
+      "existing_artifact": "src/services/apiService.ts (calls backend /analyze)",
+      "implementing_module": "mcp-backend/main.py (/analyze endpoint)",
+      "gap": "Frontend calls backend /analyze — good. But VITE_GEMINI_API_KEY is still defined in vite.config.ts define block, exposing key to frontend bundle",
+      "test": "tests/gemini_key_exposure.spec.ts"
+    },
+    {
+      "id": "REQ-028", "domain": "ENRICH", "status": "MISSING",
+      "description": "6-stage enrichment pipeline (Entity Detection → AI Synthesis)",
+      "existing_artifact": null,
+      "implementing_module": "mcp-backend/services/enrichment_service.py",
+      "gap": "No enrichment pipeline exists",
+      "test": "tests/enrichment_pipeline.py"
+    },
+    {
+      "id": "REQ-029", "domain": "ENRICH", "status": "MISSING",
+      "description": "Per-field user override with override_by + override_at",
+      "existing_artifact": null,
+      "implementing_module": "mcp-backend/services/enrichment_service.py + entities table schema",
+      "gap": "No override mechanism exists",
+      "test": "tests/enrichment_override.py"
+    },
+    {
+      "id": "REQ-030", "domain": "ENRICH", "status": "MISSING",
+      "description": "Frontend enrichment cards with confidence badge + staleness + Refresh button",
+      "existing_artifact": null,
+      "implementing_module": "src/components/common/EnrichmentCard.tsx",
+      "gap": "OSINT tab shows raw data; no confidence badge, staleness, or refresh action",
+      "test": "tests/enrichment_card.spec.ts"
+    },
+    {
+      "id": "REQ-031", "domain": "SOCIAL", "status": "PARTIAL",
+      "description": "Bidirectional Google People API sync (photo, birthday, notes, custom fields)",
+      "existing_artifact": "src/services/apiService.ts (searchPerson calls backend /search-person)",
+      "implementing_module": "mcp-backend/services/sync_service.py",
+      "gap": "/search-person returns {found: false}; no real People API sync; no bidirectional write; no scheduled job",
+      "test": "tests/people_sync.py"
+    },
+    {
+      "id": "REQ-032", "domain": "SOCIAL", "status": "MISSING",
+      "description": "Read-only X/Twitter profile monitoring surfaced in Timeline",
+      "existing_artifact": null,
+      "implementing_module": "mcp-backend/services/social_service.py",
+      "gap": "No Twitter/X integration exists",
+      "test": "tests/twitter_monitoring.py"
+    },
+    {
+      "id": "REQ-033", "domain": "SOCIAL", "status": "MISSING",
+      "description": "Gemini social signal classifier (role_change, product_launch, etc.)",
+      "existing_artifact": null,
+      "implementing_module": "mcp-backend/services/ai_briefing_service.py",
+      "gap": "No social signal classification exists",
+      "test": "tests/signal_classifier.py"
+    },
+    {
+      "id": "REQ-034", "domain": "SOCIAL", "status": "MISSING",
+      "description": "'Reply with Context' personalized response suggestion",
+      "existing_artifact": null,
+      "implementing_module": "mcp-backend/services/ai_briefing_service.py + src/components/common/UnifiedContactDrawer.tsx",
+      "gap": "Feature does not exist",
+      "test": "tests/reply_with_context.py"
+    },
+    {
+      "id": "REQ-035", "domain": "AI", "status": "MISSING",
+      "description": "Proactive AI: followup_date, draft_message, open_commitments, deadline_alerts",
+      "existing_artifact": "mcp-backend/main.py (/analyze generates summary+actionItems only)",
+      "implementing_module": "mcp-backend/services/ai_briefing_service.py",
+      "gap": "No followup_date, draft_followup_message, or commitment deadline alerts generated",
+      "test": "tests/proactive_ai.py"
+    },
+    {
+      "id": "REQ-036", "domain": "AI", "status": "MISSING",
+      "description": "Relationship Strength Score (0-100) recalculated per touchpoint",
+      "existing_artifact": "src/components/common/UnifiedContactDrawer.tsx (mock health score frontend only)",
+      "implementing_module": "mcp-backend/services/health_score_service.py",
+      "gap": "Score is computed with mock frontend logic; no real backend scoring service",
+      "test": "tests/strength_score.py"
+    },
+    {
+      "id": "REQ-037", "domain": "AI", "status": "MISSING",
+      "description": "Relationship Graph visualization (D3.js or react-force-graph)",
+      "existing_artifact": null,
+      "implementing_module": "src/components/RelationshipGraph.tsx",
+      "gap": "No graph visualization exists",
+      "test": "tests/relationship_graph.spec.ts"
+    },
+    {
+      "id": "REQ-038", "domain": "AI", "status": "MISSING",
+      "description": "Intelligence Workbench in Lab view",
+      "existing_artifact": "src/components/ProcessingLab.tsx (Lab view exists)",
+      "implementing_module": "src/components/ProcessingLab.tsx",
+      "gap": "Lab exists for transcript processing; no prompt sandbox, enrichment preview, or scoring experimentation",
+      "test": "tests/intelligence_workbench.spec.ts"
+    },
+    {
+      "id": "REQ-039", "domain": "SECURITY", "status": "MISSING",
+      "description": "AES-256-GCM field-level encryption for transcripts, enrichment data, strategic notes",
+      "existing_artifact": null,
+      "implementing_module": "mcp-backend/security/field_encryption.py",
+      "gap": "Transcripts stored as plaintext in Supabase call_records.transcript",
+      "test": "tests/field_encryption.py"
+    },
+    {
+      "id": "REQ-040", "domain": "SECURITY", "status": "MISSING",
+      "description": "Decryption server-side only; frontend never receives keys",
+      "existing_artifact": null,
+      "implementing_module": "mcp-backend/security/field_encryption.py",
+      "gap": "No encryption layer exists; applies when REQ-039 is implemented",
+      "test": "tests/encryption_boundary.py"
+    }
+  ],
+  "gap_summary": {
+    "COMPLETE": ["REQ-008"],
+    "PARTIAL": ["REQ-001","REQ-003","REQ-004","REQ-005","REQ-007","REQ-009","REQ-010","REQ-011","REQ-012","REQ-013","REQ-014","REQ-015","REQ-017","REQ-027","REQ-031","REQ-036"],
+    "MISSING": ["REQ-002","REQ-006","REQ-016","REQ-018","REQ-019","REQ-020","REQ-021","REQ-022","REQ-023","REQ-024","REQ-025","REQ-026","REQ-028","REQ-029","REQ-030","REQ-032","REQ-033","REQ-034","REQ-035","REQ-037","REQ-038","REQ-039","REQ-040"],
+    "counts": { "COMPLETE": 1, "PARTIAL": 16, "MISSING": 23 }
+  },
+  "external_keys_required_before_agent5": ["E-001: GCP Project ID","E-002: Supabase URL + service_role key","E-003: NumVerify API key","E-004: Hunter.io API key","E-005: Clearbit Company API key","E-006: X/Twitter Bearer Token","E-007: Gemini API key (server-side injection only)"],
+  "checkpoint": "PASS — all 40 REQs mapped. No unresolvable ambiguity detected. Proceeding to AGENT-2."
+}

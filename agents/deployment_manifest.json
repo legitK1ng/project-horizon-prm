@@ -1,0 +1,41 @@
+{
+  "agent": "IntegrationAndDeploymentAgent",
+  "timestamp": "2026-03-25T23:33:45-05:00",
+  "connectivity_tests": {
+    "supabase": {
+      "status": "FAIL",
+      "error": "[Errno 11001] getaddrinfo failed"
+    },
+    "gemini": {
+      "status": "PASS",
+      "model": "gemini-2.5-flash"
+    },
+    "numverify": {
+      "status": "PASS",
+      "carrier": "AT&T Mobility LLC",
+      "valid": true
+    },
+    "hunter": {
+      "status": "PASS",
+      "plan": "Free",
+      "requests_used": 0
+    },
+    "clearbit": {
+      "status": "FAIL",
+      "error": "Invalid API key (401)"
+    },
+    "field_encryption": {
+      "status": "PASS",
+      "test": "roundtrip OK",
+      "ciphertext_len": 100
+    }
+  },
+  "overall_status": "PARTIAL",
+  "supabase_url": "https://jykucnzotuqingrhufdx.supabase.co",
+  "gcp_project": "5744119255",
+  "pending": [
+    "Cloud Run deploy (Dockerfile ready \u2014 requires gcloud CLI auth)",
+    "Twitter/X integration (E-006 not provided)"
+  ],
+  "checkpoint": "PARTIAL \u2014 Review failures above"
+}

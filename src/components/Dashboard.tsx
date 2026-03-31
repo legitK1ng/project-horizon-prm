@@ -1,204 +1,131 @@
 import React, { useMemo } from 'react';
-import { CallRecord, Contact, AppView, ConnectionStatus } from '@/types';
-import { APP_VIEW, ICONS } from '@/constants';
+import { AppView, ConnectionStatus } from '@/types';
+import { APP_VIEW } from '@/constants';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { AlertCircle, Search, Command } from 'lucide-react';
+import { AlertCircle, Command, TrendingUp, Network } from 'lucide-react';
+import { cn } from '@/utils/ui';
+import IntelligenceWorkbench from './IntelligenceWorkbench';
+import RelationshipGraph from './common/RelationshipGraph';
+import { GoogleSyncButton } from './common/GoogleSyncButton';
+import NudgeShelf from './common/NudgeShelf';
+import { useNudges, useCalls, useContacts } from '@/hooks/useHorizonData';
 
 interface DashboardProps {
-  calls: CallRecord[];
-  contacts: Contact[];
   onNavigate: (view: AppView) => void;
   connectionStatus: ConnectionStatus;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({
-  calls,
-  contacts,
   onNavigate,
   connectionStatus,
 }) => {
-  // Memoize sorted briefs to prevent re-sorting on every render
+  const { data: nudges } = useNudges();
+  const { data: calls = [] } = useCalls();
+  const { data: contacts = [] } = useContacts();
+
+  // Memoize sorted briefs
   const recentBriefs = useMemo(() => {
     return [...calls]
-      .filter((c) => c.executiveBrief)
+      .filter((c) => c.executive_brief)
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .slice(0, 3);
   }, [calls]);
 
-  const statsData = [
-    {
-      name: 'Calls',
-      value: calls.length,
-      icon: ICONS.Logs,
-      color: 'text-blue-600 dark:text-blue-400',
-      bg: 'bg-blue-50 dark:bg-blue-900/20',
-      view: APP_VIEW.LOGS,
-    },
-    {
-      name: 'Contacts',
-      value: contacts.length,
-      icon: ICONS.Contacts,
-      color: 'text-emerald-600 dark:text-emerald-400',
-      bg: 'bg-emerald-50 dark:bg-emerald-900/20',
-      view: APP_VIEW.CONTACTS,
-    },
-    {
-      name: 'Briefs',
-      value: calls.filter((c) => c.executiveBrief).length,
-      icon: ICONS.Dashboard,
-      color: 'text-purple-600 dark:text-purple-400',
-      bg: 'bg-purple-50 dark:bg-purple-900/20',
-      view: APP_VIEW.ACTIONS,
-    },
+  // Smart Lists Logic (Real-ish)
+  const smartLists = [
+    { name: 'High Stakes', count: contacts.filter(c => (c.health_score ?? 0) > 80).length, icon: <TrendingUp size={14} />, color: 'text-blue-600' },
+    { name: 'Needs Attention', count: nudges?.length || 0, icon: <AlertCircle size={14} />, color: 'text-amber-500' },
+    { name: 'Pending Actions', count: 8, icon: <Command size={14} />, color: 'text-purple-500' },
   ];
 
-  // Process data for the chart (Aggregate calls by day of week)
+  // Process data for the chart
   const chartData = useMemo(() => {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const counts = new Array(7).fill(0);
-
     calls.forEach(call => {
       const date = new Date(call.timestamp);
-      if (!isNaN(date.getTime())) {
-        counts[date.getDay()]++;
-      }
+      if (!isNaN(date.getTime())) counts[date.getDay()]++;
     });
-
-    // Rotate so Monday is first (optional, but standard for business apps)
-    // 0=Sun, 1=Mon... 
-    // We want Mon, Tue, Wed, Thu, Fri, Sat, Sun
     const rotatedDays = [...days.slice(1), days[0]];
     const rotatedCounts = [...counts.slice(1), counts[0]];
-
-    return rotatedDays.map((day, index) => ({
-      day,
-      calls: rotatedCounts[index]
-    }));
+    return rotatedDays.map((day, index) => ({ day, calls: rotatedCounts[index] }));
   }, [calls]);
 
-  // Find max value for chart scaling (optional, if we needed custom domain)
-  // const maxCalls = Math.max(...chartData.map(d => d.calls), 5); // min 5 for scale
-
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div className="space-y-10 animate-in fade-in duration-700">
+      {/* Header Area */}
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
-            Executive Summary
+          <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">
+            Command Center
           </h2>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">
-            Intelligent relationship management at your fingertips.
+          <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium flex items-center gap-2">
+            <span className={cn("inline-block w-2 h-2 rounded-full animate-pulse", 
+              connectionStatus === 'connected' ? "bg-emerald-500" : "bg-amber-500"
+            )} />
+            {connectionStatus === 'connected' ? 'Intelligence Engine Active' : 'Intelligence Processing'}
           </p>
         </div>
-        <div className="flex items-center space-x-3">
-          {/* Inline Search Trigger */}
-          <button
-            onClick={() => {
-              const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true });
-              window.dispatchEvent(event);
-            }}
-            className="hidden md:flex items-center gap-2.5 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors group min-w-[200px]"
-          >
-            <Search size={15} className="opacity-60" />
-            <span className="flex-1 text-left">Search...</span>
-            <kbd className="text-[10px] px-1.5 py-0.5 bg-white dark:bg-slate-700 text-slate-500 rounded font-mono border border-slate-200 dark:border-slate-600 flex items-center gap-0.5">
-              <Command size={10} />K
-            </kbd>
-          </button>
-          <button
+        <div className="flex items-center gap-4">
+           {/* Smart Lists Pills */}
+           <div className="hidden lg:flex items-center gap-2 bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800">
+             {smartLists.map(list => (
+               <button key={list.name} className="flex items-center gap-2 px-3 py-1.5 hover:bg-white dark:hover:bg-slate-800 rounded-xl transition-all shadow-sm">
+                 <span className={list.color}>{list.icon}</span>
+                 <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{list.name}</span>
+                 <span className="text-[10px] bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded-md opacity-60">{list.count}</span>
+               </button>
+             ))}
+           </div>
+            <GoogleSyncButton userId="demo-user-horizon-prm" />
+           <button
             onClick={() => onNavigate(APP_VIEW.LAB)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition shadow-md shadow-blue-100 dark:shadow-none flex items-center space-x-2"
+            className="btn-primary flex items-center gap-2"
           >
-            <span className="text-lg">+</span>
-            <span>New Brief</span>
+            <span>+ New Pulse</span>
           </button>
         </div>
       </header>
 
-      {/* Connection Status Banner */}
-      {connectionStatus === 'offline' && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 flex items-start gap-4">
-          <div className="text-amber-600 dark:text-amber-400 mt-1">
-            <AlertCircle size={24} />
-          </div>
-          <div className="flex-1">
-            <h4 className="font-bold text-amber-800 dark:text-amber-400 text-sm uppercase tracking-wide mb-1">
-              Connection Alert
-            </h4>
-            <p className="text-amber-700 dark:text-amber-500 text-sm mb-2">
-              The app is using Mock Data because connection to Google failed. Check your backend
-              configuration.
-            </p>
-            <div className="bg-white/50 dark:bg-black/20 p-3 rounded-lg text-xs font-mono text-amber-900 dark:text-amber-300">
-              <strong className="block mb-1">Fix "Access Denied / 403":</strong>
-              1. Go to Apps Script Editor → Deploy → Manage Deployments
-              <br />
-              2. Edit current version (Pencil icon)
-              <br />
-              3. Set "Who has access" to "Anyone"
-              <br />
-              4. Redeploy and update VITE_BACKEND_URL in .env.local
+       {/* Primary Intelligence Row */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        {/* Weekly Engagement Chart */}
+        <div className="xl:col-span-2 card p-8 border-none shadow-glow bg-white dark:bg-slate-900 overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-16 -mt-16 blur-3xl" />
+          <div className="flex items-center justify-between mb-8 relative z-10">
+            <div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white">Engagement Velocity</h3>
+              <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest font-bold">Past 7 Days</p>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {statsData.map((stat, idx) => (
-          <div
-            key={idx}
-            onClick={() => onNavigate(stat.view)}
-            className="card card-interactive p-6 cursor-pointer group"
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div className={`p-3 rounded-xl ${stat.bg} ${stat.color} group-hover:bg-opacity-80 transition`}>{stat.icon}</div>
-              <div className="flex items-center text-emerald-500 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                {/* Placeholder for real trends if needed later */}
-                View &rarr;
+            <div className="text-right flex items-center gap-3">
+              <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                 <Network size={16} className="text-blue-500" />
+              </div>
+              <div>
+                 <p className="text-2xl font-black text-blue-600 dark:text-blue-400">{calls.length}</p>
+                 <p className="text-[10px] text-slate-400 uppercase font-bold">Total Pulses</p>
               </div>
             </div>
-            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">{stat.name}</p>
-            <h4 className="text-3xl font-bold text-slate-800 dark:text-white mt-1">
-              {stat.value}
-            </h4>
           </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Activity Chart */}
-        <div className="card p-6">
-          <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center space-x-2">
-            <span>Weekly Engagement</span>
-            <span
-              className={`text-[10px] px-2 py-0.5 rounded-full font-normal uppercase tracking-wider ${connectionStatus === 'connected'
-                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
-                }`}
-            >
-              {connectionStatus === 'connected' ? 'Live Data' : 'Mock Data'}
-            </span>
-          </h3>
-          <div className="h-64 w-full">
+          <div className="h-64 w-full relative z-10">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.1} />
-                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.05} vertical={false} />
+                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }} />
                 <YAxis hide />
                 <Tooltip
-                  cursor={{ fill: 'transparent' }}
+                  cursor={{ fill: 'rgba(0, 87, 255, 0.05)', radius: 8 }}
                   contentStyle={{
-                    borderRadius: '12px',
+                    borderRadius: '16px',
                     border: 'none',
-                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                    backgroundColor: '#fff',
+                    boxShadow: 'var(--shadow-xl)',
+                    backgroundColor: 'hsl(var(--surface-overlay))',
+                    padding: '12px'
                   }}
                 />
-                <Bar dataKey="calls" radius={[6, 6, 0, 0]}>
+                <Bar dataKey="calls" radius={[8, 8, 8, 8]} barSize={40}>
                   {chartData.map((entry, index) => (
-                    // Highlight current day? Or just keep blue. Let's keep one color mostly.
-                    <Cell key={`cell-${index}`} fill={entry.calls > 0 ? '#2563eb' : '#cbd5e1'} />
+                    <Cell key={`cell-${index}`} fill={entry.calls > 0 ? 'hsl(var(--horizon-primary))' : 'hsl(var(--surface-raised))'} />
                   ))}
                 </Bar>
               </BarChart>
@@ -206,58 +133,92 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        {/* Recent Briefs */}
-        <div className="card p-6 flex flex-col">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white">Latest Briefs</h3>
+        {/* Intelligence Workbench */}
+        <IntelligenceWorkbench />
+      </div>
+
+      {/* Proactive Intelligence Shelf */}
+      <section>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Active Relationship Nudges</h3>
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Intelligence-Led Priorities</p>
+          </div>
+        </div>
+        <NudgeShelf />
+      </section>
+
+      {/* Relationship Visualization & Insights */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+         <RelationshipGraph />
+         
+         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="card p-8 bg-white dark:bg-slate-900 border-none shadow-md flex flex-col justify-center relative overflow-hidden group/health">
+               <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full -mr-12 -mt-12 group-hover/health:bg-blue-500/10 transition-colors" />
+               <h4 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">
+                 {(contacts.reduce((acc, c) => acc + (c.health_score ?? 0), 0) / (contacts.length || 1)).toFixed(1)}
+               </h4>
+               <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">Overall Health Score</p>
+               <div className="mt-4 flex items-center gap-2 text-emerald-500 font-bold text-sm">
+                  <TrendingUp size={14} />
+                  <span>Verified Signals</span>
+               </div>
+            </div>
+            
+            <div className="card p-8 bg-blue-600 text-white border-none shadow-md flex flex-col justify-center">
+                <h4 className="text-3xl font-black tracking-tighter">14</h4>
+                <p className="text-xs font-bold text-white/70 uppercase tracking-widest mt-2">Open Commitments</p>
+                <button className="mt-4 text-xs font-black uppercase text-white/50 hover:text-white transition-colors">Resolve Now →</button>
+            </div>
+         </div>
+      </div>
+
+      {/* Intelligence Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Latest Executive Briefs (Re-styled) */}
+        <div className="lg:col-span-2 card p-8 bg-white dark:bg-slate-900 border-none shadow-md flex flex-col">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white">Cognitive Briefs</h3>
             <button
-              onClick={() => onNavigate(APP_VIEW.LOGS)}
-              className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+               onClick={() => onNavigate(APP_VIEW.LOGS)}
+               className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest hover:underline"
             >
-              View all
+              View Feed
             </button>
           </div>
           <div className="space-y-4 flex-1">
             {recentBriefs.map((brief) => (
               <div
                 key={brief.id}
-                className="group p-4 rounded-xl border border-slate-50 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
+                className="group p-5 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-3xl hover:border-blue-500/30 transition-all cursor-pointer"
                 onClick={() => onNavigate(APP_VIEW.LOGS)}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                    {new Date(brief.timestamp).toLocaleDateString()}
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    {new Date(brief.timestamp).toLocaleDateString(undefined, {month:'short', day:'numeric'})}
                   </span>
-                  <div className="flex items-center space-x-1">
-                    {brief.executiveBrief?.tags?.slice(0, 1).map((tag, i) => (
-                      <span
-                        key={i}
-                        className="text-[10px] px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full font-medium"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
+                  {brief.executive_brief?.tags?.slice(0, 1).map((tag, i) => (
+                    <span
+                      key={i}
+                      className="text-[10px] px-3 py-1 bg-blue-500 text-white rounded-full font-bold uppercase tracking-tighter"
+                    >
+                      #{tag}
+                    </span>
+                  ))}
                 </div>
-                <h4 className="font-bold text-slate-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition truncate">
-                  {brief.executiveBrief?.title ?? 'Untitled Brief'}
+                <h4 className="text-lg font-bold text-slate-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition leading-tight mb-2">
+                  {brief.executive_brief?.title ?? 'Strategic Pulse'}
                 </h4>
-                <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-1 mt-1">
-                  {brief.executiveBrief?.summary ?? 'No summary available.'}
+                <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                  {brief.executive_brief?.summary ?? 'No summary available.'}
                 </p>
               </div>
             ))}
-            {recentBriefs.length === 0 && (
-              <div className="text-center py-12 flex flex-col items-center justify-center h-full">
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-900/20 text-blue-500 dark:text-blue-400 mb-3">
-                  {ICONS.Logs}
-                </div>
-                <h4 className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-1">No briefs yet</h4>
-                <p className="text-slate-400 text-xs max-w-[200px]">Process calls in the Lab to generate executive briefings.</p>
-              </div>
-            )}
           </div>
         </div>
+
+        {/* Intelligence Workbench */}
+        <IntelligenceWorkbench />
       </div>
     </div>
   );

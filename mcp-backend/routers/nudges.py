@@ -1,0 +1,59 @@
+from fastapi import APIRouter, Request, HTTPException
+from typing import List, Dict, Any
+from datetime import datetime, timezone
+from services.health_service import update_contact_health, calculate_health_score
+
+router = APIRouter()
+
+@router.get("/")
+@router.get("")
+async def get_active_nudges(req: Request):
+    """
+    REQ-035: GET /api/v1/nudges — Fetch contacts needing immediate attention.
+    Scans for low health scores or stale relationships.
+    """
+    db = getattr(req.app.state, "supabase", None)
+    if not db:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    try:
+        response = db.table("contacts") \
+            .select("id, first_name, last_name, health_score, last_contact_at, email, phone") \
+            .or_("health_score.lt.40, last_contact_at.lt.now()-interval '21 days'") \
+            .order("health_score", desc=False) \
+            .limit(10) \
+            .execute()
+        
+        nudges = []
+        for contact in response.data:
+            first_name = contact.get("first_name", "Unknown")
+            last_name = contact.get("last_name", "")
+            full_name = f"{first_name} {last_name}".strip()
+            
+            nudge = {
+                "contact_id": contact["id"],
+                "name": full_name, # Maintain compatibility with Nudge interface
+                "first_name": first_name,
+                "last_name": last_name,
+                "score": contact["health_score"],
+                "reason": "Low relationship health" if contact["health_score"] < 40 else "Stale relationship",
+                "suggested_action": "Reach out via email" if contact["email"] else "Send a follow-up text"
+            }
+            nudges.append(nudge)
+
+        return {
+            "status": "success", 
+            "data": nudges, 
+            "count": len(nudges)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/refresh/{contact_id}")
+async def refresh_nudge_status(req: Request, contact_id: str):
+    """Recalculate health for a specific contact."""
+    try:
+        update_contact_health(contact_id)
+        return {"status": "success", "new_score": calculate_health_score(contact_id)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -53,37 +53,46 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
         { id: 'nav-lab', type: 'view' as const, icon: <FlaskConical size={16} />, title: 'Processing Lab', subtitle: 'AI analysis & diagnostics', onSelect: () => { onNavigate(APP_VIEW.LAB); onClose(); } },
     ], [onNavigate, onClose]);
 
-    // Search results (filtered by query)
+    // Quick Actions results (Semantic shortcuts)
+    const quickActions: SearchResult[] = useMemo(() => [
+        { id: 'act-new-pulse', type: 'action' as const, icon: <FlaskConical size={16} />, title: 'Capture New Pulse', subtitle: 'Analyze a fresh call transcript', onSelect: () => { onNavigate(APP_VIEW.LAB); onClose(); } },
+        { id: 'act-log-call', type: 'action' as const, icon: <Phone size={16} />, title: 'Log Manual Call', subtitle: 'Record an interaction without transcription', onSelect: () => { onClose(); } },
+        { id: 'act-osint', type: 'action' as const, icon: <Search size={16} />, title: 'Run OSINT Enrichment', subtitle: 'Scrape professional signals for a contact', onSelect: () => { onClose(); } },
+    ], [onNavigate, onClose]);
+
+    // Grouping logic for "Semantic" Search
     const results: SearchResult[] = useMemo(() => {
         const q = query.toLowerCase().trim();
+        
+        // Always include matched actions at the top if there's a query
+        const actionMatches = quickActions.filter(a => a.title.toLowerCase().includes(q) || a.subtitle?.toLowerCase().includes(q));
+        
         if (!q) {
-            // Show views as quick navigation
-            return viewResults;
+            return [...viewResults, ...quickActions];
         }
 
-        const matches: SearchResult[] = [];
+        const matches: SearchResult[] = [...actionMatches];
 
         // Search views
         viewResults.forEach(v => {
-            if (v.title.toLowerCase().includes(q) || (v.subtitle?.toLowerCase().includes(q))) {
+            if (v.title.toLowerCase().includes(q) || v.subtitle?.toLowerCase().includes(q)) {
                 matches.push(v);
             }
         });
 
-        // Search calls (by contact name, transcript snippet, brief title)
+        // Search calls
         calls.forEach(call => {
-            const contactName = (call.contactName || '').toLowerCase();
-            const transcript = (call.transcript || '').toLowerCase();
-            const briefTitle = (call.executiveBrief?.title || '').toLowerCase();
-            const briefSummary = (call.executiveBrief?.summary || '').toLowerCase();
+            const contactName = (call.contact_name || '').toLowerCase();
+            const briefTitle = (call.executive_brief?.title || '').toLowerCase();
+            const tags = (call.tags || []).join(' ').toLowerCase();
 
-            if (contactName.includes(q) || transcript.includes(q) || briefTitle.includes(q) || briefSummary.includes(q)) {
+            if (contactName.includes(q) || briefTitle.includes(q) || tags.includes(q)) {
                 matches.push({
                     id: `call-${call.id}`,
                     type: 'call',
                     icon: <FileText size={16} />,
-                    title: call.executiveBrief?.title || call.contactName || 'Unknown Call',
-                    subtitle: `${call.contactName} · ${new Date(call.timestamp).toLocaleDateString()}`,
+                    title: call.executive_brief?.title || call.contact_name || 'Strategic Pulse',
+                    subtitle: `${call.contact_name} · ${new Date(call.timestamp).toLocaleDateString()}`,
                     onSelect: () => {
                         onNavigate(APP_VIEW.LOGS);
                         if (onSelectCall) onSelectCall(call.id);
@@ -95,18 +104,16 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
 
         // Search contacts
         contacts.forEach(contact => {
-            const name = contact.name.toLowerCase();
-            const phone = contact.phone.toLowerCase();
-            const email = (contact.email || '').toLowerCase();
-            const org = (contact.organization || '').toLowerCase();
-
-            if (name.includes(q) || phone.includes(q) || email.includes(q) || org.includes(q)) {
+            const displayName = contact.name || `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || 'Unknown Contact';
+            const org = (contact.organization_id || '').toLowerCase();
+            
+            if (displayName.toLowerCase().includes(q) || org.includes(q)) {
                 matches.push({
                     id: `contact-${contact.id}`,
                     type: 'contact',
                     icon: <Users size={16} />,
-                    title: contact.name,
-                    subtitle: [contact.phone, contact.organization].filter(Boolean).join(' · '),
+                    title: displayName,
+                    subtitle: contact.organization_id || 'Professional Connection',
                     onSelect: () => {
                         onNavigate(APP_VIEW.CONTACTS);
                         onClose();
@@ -115,9 +122,8 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
             }
         });
 
-        // Limit results
-        return matches.slice(0, 12);
-    }, [query, calls, contacts, viewResults, onNavigate, onClose, onSelectCall]);
+        return matches.slice(0, 15);
+    }, [query, calls, contacts, viewResults, quickActions, onNavigate, onClose, onSelectCall]);
 
     // Keep selected index in bounds
     useEffect(() => {

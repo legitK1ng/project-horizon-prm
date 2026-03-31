@@ -1,10 +1,11 @@
-import { CallRecord, Contact, ApiResponse, RawLog, RawContact } from '@/types';
-import { formatDuration, normalizeDate, getEnvVar } from '@/utils/helpers';
+import { CallRecord, Contact, ApiResponse, RawLog } from '@/types';
+import { formatDuration, normalizeDate } from '@/utils/helpers';
 import { connectionLogger } from '@/utils/connectionLogger';
 
 
 
-const API_URL = getEnvVar('VITE_BACKEND_URL');
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_V1 = API_URL.includes('/api/v1') ? API_URL : `${API_URL}/api/v1`;
 
 /**
  * Transform raw log data from Google Sheets to CallRecord format
@@ -25,7 +26,7 @@ const transformLog = (log: RawLog, index: number): CallRecord => {
       brief = {
         title: parsed.title || 'Strategic Brief',
         summary: parsed.summary || 'No summary available.',
-        actionItems: Array.isArray(parsed.actionItems) ? parsed.actionItems : [],
+        action_items: Array.isArray(parsed.action_items) ? parsed.action_items : (Array.isArray(parsed.actionItems) ? parsed.actionItems : []),
         tags: Array.isArray(parsed.tags) && parsed.tags.length > 0 ? parsed.tags : rawTags,
         sentiment: parsed.sentiment || 'Neutral',
       };
@@ -35,7 +36,7 @@ const transformLog = (log: RawLog, index: number): CallRecord => {
       brief = {
         title: 'Executive Summary',
         summary: trimmed,
-        actionItems: [],
+        action_items: [],
         tags: rawTags,
         sentiment: 'Neutral',
       };
@@ -47,7 +48,7 @@ const transformLog = (log: RawLog, index: number): CallRecord => {
     brief = {
       title: 'Processing Error',
       summary: 'Raw data could not be parsed.',
-      actionItems: [],
+      action_items: [],
       tags: ['#error'],
       sentiment: 'Negative',
     };
@@ -68,13 +69,13 @@ const transformLog = (log: RawLog, index: number): CallRecord => {
   }
 
   return {
-    id: `log-${index}-${Date.now()}`,
+    id: (log as any).id || `log-${index}-${Date.now()}`,
     timestamp: normalizeDate(log.timestamp),
-    contactName: String(log.contact_name || 'Unknown Caller'),
-    phoneNumber: log.phone_number?.toString() || log.phone?.toString() || '',
-    duration: formatDuration(log.duration),
-    transcript: String(log.transcript || ''),
-    executiveBrief: brief as CallRecord['executiveBrief'],
+    contact_name: String(log.contact_name || 'Unknown Caller'),
+    phone_number: (log.phone_number?.toString() || log.phone?.toString() || ''),
+    duration: typeof log.duration === 'number' ? formatDuration(log.duration) : String(log.duration || '0:00'),
+    transcript: String(log.transcript || (log as any).note || ''),
+    executive_brief: brief as CallRecord['executive_brief'],
     tags: brief?.tags || rawTags,
     status,
   };
@@ -83,14 +84,20 @@ const transformLog = (log: RawLog, index: number): CallRecord => {
 /**
  * Transform raw contact data to Contact format
  */
-const transformContact = (contact: RawContact, index: number): Contact => {
+const transformContact = (contact: any, index: number): Contact => {
   return {
-    id: `contact-${index}-${Date.now()}`,
-    name: contact.full_name || 'Unknown Contact',
-    phone: contact.phone?.toString() || '',
-    organization: contact.organization || contact.company || '',
-    lastContacted: normalizeDate(contact.last_synced),
-    totalCalls: typeof contact.call_count === 'number' ? contact.call_count : 0,
+    id: contact.id || `contact-${index}-${Date.now()}`,
+    first_name: contact.first_name || contact.name?.split(' ')[0] || 'Unknown',
+    last_name: contact.last_name || contact.name?.split(' ').slice(1).join(' ') || '',
+    birthdate: contact.birthdate || null,
+    name: contact.name || `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || 'Unknown Contact',
+    phone: contact.phone || contact.phone_number || '',
+    email: contact.email || '',
+    organization_id: contact.organization_id || contact.company_id || '',
+    last_contact_at: normalizeDate(contact.last_contact_at || contact.last_synced),
+    total_calls: typeof contact.call_count === 'number' ? contact.call_count : 0,
+    health_score: contact.health_score || 0,
+    photo_url: contact.photo_url || null,
   };
 };
 
@@ -113,7 +120,7 @@ export const fetchProjectHorizonData = async (): Promise<{
   try {
     connectionLogger.addLog('info', method, API_URL, 'Fetching data...');
 
-    const response = await fetch(API_URL, {
+    const response = await fetch(`${API_V1}/data`, {
       method: 'GET',
       mode: 'cors',
       credentials: 'omit',
@@ -122,7 +129,7 @@ export const fetchProjectHorizonData = async (): Promise<{
 
     const contentType = response.headers.get('content-type');
     if (contentType?.includes('text/html')) {
-      throw new Error('Access Denied: Received HTML instead of JSON. Check GAS permissions.');
+      throw new Error(`Access Denied: Received HTML instead of JSON. Ensure FastAPI backend is running at ${API_URL}.`);
     }
 
     if (!response.ok) {
@@ -163,22 +170,22 @@ export const postCallData = async (call: CallRecord): Promise<boolean> => {
   }
 
   const payload = {
-    contact_name: call.contactName,
-    phone_number: call.phoneNumber,
+    contact_name: call.contact_name,
+    phone_number: call.phone_number,
     transcript: call.transcript,
     duration: typeof call.duration === 'string' ? 0 : call.duration,
-    strategic_notes: call.executiveBrief ? JSON.stringify(call.executiveBrief) : '',
-    tags: call.executiveBrief?.tags.join(',') || '',
+    strategic_notes: call.executive_brief ? JSON.stringify(call.executive_brief) : '',
+    tags: call.executive_brief?.tags?.join(',') || '',
     status: call.status,
   };
 
   try {
-    connectionLogger.addLog('info', method, API_URL, `Transmitting call: ${call.contactName}`);
+    connectionLogger.addLog('info', method, API_URL, `Transmitting call: ${call.contact_name}`);
 
-    const response = await fetch(API_URL, {
+    const response = await fetch(`${API_V1}/calls`, {
       method: 'POST',
       mode: 'cors',
-      headers: { 'Content-Type': 'text/plain' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
 
@@ -203,7 +210,7 @@ export const postCallData = async (call: CallRecord): Promise<boolean> => {
 export const fetchModels = async (): Promise<{ models: { name: string; displayName: string }[] } | null> => {
   if (!API_URL) return null;
   try {
-    const response = await fetch(`${API_URL}?action=list_models`);
+    const response = await fetch(`${API_V1}/models`);
     if (!response.ok) throw new Error('Failed to fetch models');
     return await response.json();
   } catch (e) {
@@ -218,7 +225,7 @@ export const fetchModels = async (): Promise<{ models: { name: string; displayNa
 export const runBackendDiagnostics = async (): Promise<{ status: string; results: any[] } | null> => {
   if (!API_URL) return null;
   try {
-    const response = await fetch(`${API_URL}?action=run_tests`);
+    const response = await fetch(`${API_V1}/diagnostics`);
     if (!response.ok) throw new Error('Failed to run diagnostics');
     return await response.json();
   } catch (e) {
@@ -236,17 +243,17 @@ export const testGeminiConnection = async (): Promise<any> => {
     connectionLogger.addLog(
       'info',
       method,
-      `${API_URL}?action=test_gemini`,
+      `${API_URL}/test-gemini`,
       'Testing Gemini Connection...'
     );
 
-    const response = await fetch(`${API_URL}?action=test_gemini`);
+    const response = await fetch(`${API_V1}/test-gemini`);
     const data = await response.json();
 
     connectionLogger.addLog(
       response.ok ? 'success' : 'error',
       method,
-      `${API_URL}?action=test_gemini`,
+      `${API_URL}/test-gemini`,
       'Gemini Test Complete',
       { details: data, duration: Date.now() - startTime }
     );
@@ -256,7 +263,7 @@ export const testGeminiConnection = async (): Promise<any> => {
     connectionLogger.addLog(
       'error',
       method,
-      `${API_URL}?action=test_gemini`,
+      `${API_URL}/test-gemini`,
       'Gemini Test Failed',
       { details: e.message, duration: Date.now() - startTime }
     );
@@ -273,17 +280,17 @@ export const triggerProcessing = async (): Promise<any> => {
     connectionLogger.addLog(
       'info',
       method,
-      `${API_URL}?action=trigger_processing`,
+      `${API_URL}/trigger-processing`,
       'Triggering background processing...'
     );
 
-    const response = await fetch(`${API_URL}?action=trigger_processing`);
+    const response = await fetch(`${API_V1}/trigger-processing`);
     const data = await response.json();
 
     connectionLogger.addLog(
       response.ok ? 'success' : 'error',
       method,
-      `${API_URL}?action=trigger_processing`,
+      `${API_URL}/trigger-processing`,
       'Processing Triggered',
       { details: data, duration: Date.now() - startTime }
     );
@@ -293,7 +300,7 @@ export const triggerProcessing = async (): Promise<any> => {
     connectionLogger.addLog(
       'error',
       method,
-      `${API_URL}?action=trigger_processing`,
+      `${API_URL}/trigger-processing`,
       'Trigger Failed',
       { details: e.message, duration: Date.now() - startTime }
     );
@@ -304,7 +311,7 @@ export const triggerProcessing = async (): Promise<any> => {
 export const searchPerson = async (query: string): Promise<any> => {
   if (!API_URL) return { found: false };
   try {
-    const response = await fetch(`${API_URL}?action=search_person&query=${encodeURIComponent(query)}`);
+    const response = await fetch(`${API_V1}/search-person?query=${encodeURIComponent(query)}`);
     if (!response.ok) throw new Error('Failed to search person');
     return await response.json();
   } catch (e: any) {
@@ -325,7 +332,7 @@ export const updatePerson = async (personData: any): Promise<any> => {
     const response = await fetch(API_URL, {
       method: 'POST',
       mode: 'cors',
-      headers: { 'Content-Type': 'text/plain' }, // Use text/plain to avoid options preflight issues in GAS
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
 
@@ -347,10 +354,10 @@ export const analyzeText = async (transcript: string): Promise<any> => {
       transcript: transcript
     };
 
-    const response = await fetch(API_URL, {
+    const response = await fetch(`${API_V1}/analyze`, {
       method: 'POST',
       mode: 'cors',
-      headers: { 'Content-Type': 'text/plain' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
 
