@@ -56,6 +56,26 @@ async def list_enrichments(req: Request, contact_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/{contact_id}/photos")
+async def get_contact_photo_candidates(req: Request, contact_id: str):
+    """REQ-028: GET /api/v1/enrichments/{contact_id}/photos — Get candidate photos for a contact."""
+    db = getattr(req.app.state, "supabase", None)
+    if not db:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    try:
+        from services.photo_enrichment_service import collect_photo_candidates
+        contact_resp = db.table("contacts").select("*").eq("id", contact_id).single().execute()
+        if not contact_resp.data:
+            raise HTTPException(status_code=404, detail="Contact not found")
+        
+        result = await collect_photo_candidates(contact_resp.data)
+        return {"status": "success", "photos": result["candidates"], "dork_links": result["dork_links"]}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.patch("/override")
 async def override_enrichment(req: Request, body: EnrichmentOverrideRequest):
     """REQ-029: PATCH /api/v1/enrichments/override — User manual overrides enriched fields."""

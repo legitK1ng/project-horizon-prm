@@ -1,10 +1,11 @@
 
 import React, { useState, useMemo } from 'react';
 import { Contact } from '@/types';
-import { Search, Phone, Mail, Clock, ArrowUpDown, Users } from 'lucide-react';
+import { Search, Phone, Mail, Clock, ArrowUpDown, Users, Star, ImagePlus } from 'lucide-react';
 import ContactDetailDrawer from '@/components/common/ContactDetailDrawer';
 
-import { useContacts } from '@/hooks/useHorizonData';
+import { useContacts, useToggleFavorite } from '@/hooks/useHorizonData';
+import { api } from '@/services/apiClient';
 
 interface ContactListProps {
     // No props needed as we use the hook directly
@@ -14,10 +15,33 @@ type SortOption = 'alpha' | 'recent' | 'stats';
 
 const ContactList: React.FC<ContactListProps> = () => {
     const { data: contacts = [] } = useContacts();
+    const { mutate: toggleFavorite } = useToggleFavorite();
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState<SortOption>('alpha');
     const [showSortMenu, setShowSortMenu] = useState(false);
     const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+
+    // Photo enrichment state
+    const [enrichingId, setEnrichingId] = useState<string | null>(null);
+
+    const handleEnrichPhotos = async (e: React.MouseEvent, contact: Contact) => {
+        e.stopPropagation();
+        if (enrichingId) return;
+        setEnrichingId(contact.id);
+        try {
+            // First trigger the OSINT pipeline
+            await api.triggerEnrichment(contact.id);
+            // Then fetch the resulting photos
+            const photos = await api.getContactPhotos(contact.id);
+            if (photos && photos.length > 0) {
+                // Just cycle to the first new photo that isn't the current one (if available)
+                const nextPhoto = photos.find(p => p !== contact.photo_url) || photos[0];
+                await api.setContactPhoto(contact.id, nextPhoto);
+            }
+        } finally {
+            setEnrichingId(null);
+        }
+    };
 
     const filteredAndSortedContacts = useMemo(() => {
         let result = contacts.filter(contact => {
@@ -117,51 +141,112 @@ const ContactList: React.FC<ContactListProps> = () => {
                         </p>
                     </div>
                 ) : (
-                    filteredAndSortedContacts.map((contact) => (
-                        <div key={contact.id} onClick={() => setSelectedContact(contact)} className="card card-interactive p-6 cursor-pointer group relative">
-                            {/* Initials Avatar */}
-                            <div className="flex items-start justify-between mb-4">
-                                <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center font-bold text-xl">
-                                    {contact.first_name.charAt(0)}
-                                </div>
-                                <div className="text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-1 rounded-full">
-                                    {contact.health_score || 0}% Health
-                                </div>
-                            </div>
+                    filteredAndSortedContacts.map((contact) => {
+                        const health = contact.health_score || 0;
+                        const isStale = contact.last_contact_at &&
+                            (new Date().getTime() - new Date(contact.last_contact_at).getTime() > 30 * 24 * 60 * 60 * 1000);
 
-                            <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-1 group-hover:text-blue-600 transition-colors">
-                                {contact.first_name} {contact.last_name}
-                            </h3>
+                        const healthColorClass =
+                            health >= 80 ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800/30' :
+                                health >= 40 ? 'text-amber-600 bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800/30' :
+                                    health === 0 ? 'text-slate-500 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700' :
+                                        'text-rose-600 bg-rose-50 dark:bg-rose-900/20 border-rose-100 dark:border-rose-800/30';
 
-                            <div className="space-y-2 mt-4">
-                                <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 text-sm">
-                                    <Phone size={14} />
-                                    <span>{contact.phone}</span>
-                                </div>
-                                {contact.email && (
-                                    <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 text-sm">
-                                        <Mail size={14} />
-                                        <span>{contact.email}</span>
-                                    </div>
+                        // Detect if the name is actually an email address
+                        const isEmail = (s: string) => s?.includes('@');
+                        const displayLetter = isEmail(contact.first_name) ? '✉' : contact.first_name?.charAt(0) || '?';
+
+                        return (
+                            <div key={contact.id} onClick={() => setSelectedContact(contact)} className="card card-interactive p-6 cursor-pointer group relative overflow-hidden">
+                                {isStale && (
+                                    <div className="absolute top-0 right-0 w-20 h-20 -mr-10 -mt-10 bg-rose-500/10 rotate-45 pointer-events-none" title="Relationship needs attention" />
                                 )}
-                                <div className="flex items-center gap-3 text-slate-400 text-xs mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-                                    <Clock size={12} />
-                                    <span>Last contacted: {contact.last_contact_at ? new Date(contact.last_contact_at).toLocaleDateString() : 'Never'}</span>
+
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className="relative w-12 h-12">
+                                        <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl flex items-center justify-center font-bold text-xl group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 group-hover:text-blue-600 transition-all overflow-hidden ring-2 ring-transparent group-hover:ring-blue-500/20">
+                                            {contact.photo_url ? (
+                                                <img src={contact.photo_url} alt={contact.first_name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                            ) : (
+                                                <span className="text-lg">{displayLetter}</span>
+                                            )}
+                                        </div>
+                                        <button
+                                            onClick={(e) => handleEnrichPhotos(e, contact)}
+                                            disabled={enrichingId === contact.id}
+                                            className="absolute -bottom-2 -right-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full p-1 shadow-md opacity-0 group-hover:opacity-100 transition-opacity disabled:bg-slate-400"
+                                            title="Find Photos (OSINT)"
+                                        >
+                                            <ImagePlus size={12} className={enrichingId === contact.id ? "animate-pulse" : ""} />
+                                        </button>
+                                    </div>
+
+                                    <div className="flex flex-col items-end gap-1">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                toggleFavorite(contact.id);
+                                            }}
+                                            className={`p-1.5 rounded-full transition-colors ${contact.is_favorite ? 'text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20' : 'text-slate-300 dark:text-slate-600 hover:text-amber-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                                            title={contact.is_favorite ? "Unfavorite" : "Favorite"}
+                                        >
+                                            <Star size={18} fill={contact.is_favorite ? "currentColor" : "none"} />
+                                        </button>
+
+                                        <div className={`text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-lg border ${healthColorClass} animate-in fade-in duration-300`}>
+                                            {health === 0 ? 'New' : (!contact.is_favorite ? 'Active' : `${health}% Health`)}
+                                        </div>
+                                    </div>
+                                </div>
+
+
+                                <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-1 group-hover:text-blue-600 transition-colors flex items-center gap-2">
+                                    {contact.first_name} {contact.last_name}
+                                    {isStale && <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />}
+                                </h3>
+
+                                {
+                                    contact.organization && (
+                                        <p className="text-xs font-medium text-slate-400 dark:text-slate-500 mb-4">{contact.organization}</p>
+                                    )
+                                }
+
+                                <div className="space-y-2.5">
+                                    <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 text-sm">
+                                        <div className="w-5 h-5 rounded-md bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+                                            <Phone size={12} className="text-slate-400" />
+                                        </div>
+                                        <span className="font-medium">{contact.phone || 'No phone'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 text-sm">
+                                        <div className="w-5 h-5 rounded-md bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+                                            <Mail size={12} className="text-slate-400" />
+                                        </div>
+                                        <span className="font-medium truncate max-w-[180px]">{contact.email || 'No email'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-slate-400 text-xs mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/50">
+                                        <Clock size={12} />
+                                        <span className={isStale ? 'text-rose-500 font-medium' : ''}>
+                                            {contact.last_contact_at ? `Last contacted ${new Date(contact.last_contact_at).toLocaleDateString()}` : 'No interaction yet'}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
             </div>
 
             {/* Contact Detail Drawer */}
-            {selectedContact && (
-                <ContactDetailDrawer
-                    contact={selectedContact}
-                    onClose={() => setSelectedContact(null)}
-                />
-            )}
-        </div>
+            {
+                selectedContact && (
+                    <ContactDetailDrawer
+                        contact={selectedContact}
+                        onClose={() => setSelectedContact(null)}
+                    />
+                )
+            }
+        </div >
     );
 };
 

@@ -31,13 +31,16 @@ async def get_active_nudges(req: Request):
             full_name = f"{first_name} {last_name}".strip()
             
             nudge = {
+                "id": contact["id"],
                 "contact_id": contact["id"],
-                "name": full_name, # Maintain compatibility with Nudge interface
-                "first_name": first_name,
-                "last_name": last_name,
-                "score": contact["health_score"],
-                "reason": "Low relationship health" if contact["health_score"] < 40 else "Stale relationship",
-                "suggested_action": "Reach out via email" if contact["email"] else "Send a follow-up text"
+                "contact_name": full_name,
+                "type": "FOLLOW_UP" if contact["health_score"] < 40 else "RECONNECT",
+                "reason": "Relationship score dropping" if contact["health_score"] < 40 else "Last engagement was >3 weeks ago",
+                "suggested_action": "Reach out via email" if contact["email"] else "Send a follow-up text",
+                "due_in": "2h" if contact["health_score"] < 20 else "1d",
+                "priority_score": 100 - contact["health_score"],
+                "email": contact.get("email"),
+                "phone": contact.get("phone")
             }
             nudges.append(nudge)
 
@@ -55,5 +58,15 @@ async def refresh_nudge_status(req: Request, contact_id: str):
     try:
         update_contact_health(contact_id)
         return {"status": "success", "new_score": calculate_health_score(contact_id)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/refresh-all")
+async def refresh_all_nudges(req: Request):
+    """Recalculate health for all contacts."""
+    from services.health_service import refresh_all_health_scores
+    try:
+        refresh_all_health_scores()
+        return {"status": "success", "message": "Global health refresh complete"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

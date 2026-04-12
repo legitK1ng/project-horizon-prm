@@ -8,7 +8,8 @@ from fastapi import APIRouter, Request
 
 router = APIRouter()
 
-@router.get("/health")
+@router.get("")
+@router.get("/")
 def health_check(request: Request):
     """REQ-014: Required health endpoint for Cloud Run readiness probe."""
     supabase = getattr(request.app.state, "supabase", None)

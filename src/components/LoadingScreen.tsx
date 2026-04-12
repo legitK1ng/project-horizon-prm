@@ -1,6 +1,8 @@
-import React from 'react';
+interface LoadingScreenProps {
+  message?: string;
+}
 
-const LoadingScreen: React.FC = () => {
+const LoadingScreen: React.FC<LoadingScreenProps> = ({ message = "Connecting to Horizon..." }) => {
   return (
     <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950 transition-colors">
       {/* Simulated Sidebar */}
@@ -72,7 +74,7 @@ const LoadingScreen: React.FC = () => {
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 glass rounded-full px-6 py-3 flex items-center gap-3 z-50 shadow-lg">
           <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
           <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
-            Connecting to Horizon...
+            {message}
           </span>
         </div>
       </div>

@@ -1,171 +1,141 @@
-/**
- * TanStack Query Hooks — AGENT-3b | REQ-024
- * Replaces the monolithic useData.ts hook.
- * Each resource has its own query key, staleTime, and gcTime.
- */
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { contactsApi, callsApi, enrichmentsApi, digestApi, healthApi, syncApi, nudgesApi, authApi } from '../services/apiClient';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "../services/apiClient";
+import { Contact, CallRecord, Nudge, DashboardStats } from "../types";
 
-// ─── Query Key Factory ──────────────────────────────────────────────
+// REQ-022: Unified Query Keys
 export const queryKeys = {
   contacts: {
-    all: ['contacts'] as const,
-    detail: (id: string) => ['contacts', id] as const,
+    all: ["contacts"] as const,
+    list: () => [...queryKeys.contacts.all, "list"] as const,
+    detail: (id: string) => [...queryKeys.contacts.all, "detail", id] as const,
   },
   calls: {
-    all: ['calls'] as const,
-    list: (limit: number, offset: number) => ['calls', { limit, offset }] as const,
+    all: ["calls"] as const,
+    list: () => [...queryKeys.calls.all, "list"] as const,
   },
-  enrichments: {
-    forContact: (contactId: string) => ['enrichments', contactId] as const,
+  nudges: {
+    all: ["nudges"] as const,
   },
-  digest: {
-    weekly: ['digest', 'weekly'] as const,
+  stats: {
+    all: ["stats"] as const,
   },
   health: {
-    nudges: ['health', 'nudges'] as const,
-    score: (contactId: string) => ['health', 'score', contactId] as const,
+    check: ["health"] as const,
   },
+  enrichments: {
+    all: ["enrichments"] as const,
+    byContact: (id: string) => [...queryKeys.enrichments.all, id] as const,
+  }
 };
 
-// ─── Contacts ──────────────────────────────────────────────────────
+// --- QUERIES ---
 
-export function useContacts() {
+export const useCheckHealth = () => {
   return useQuery({
-    queryKey: queryKeys.contacts.all,
-    queryFn: () => contactsApi.list(),
-    staleTime: 1000 * 60 * 2,       // 2 minutes
-    gcTime: 1000 * 60 * 10,          // 10 minutes
+    queryKey: queryKeys.health.check,
+    queryFn: () => api.checkHealth(),
+    refetchInterval: 30000,
   });
-}
+};
 
-export function useContact(id: string) {
+export const useHealth = useCheckHealth;
+
+export const useContacts = () => {
+  return useQuery<Contact[]>({
+    queryKey: queryKeys.contacts.list(),
+    queryFn: () => api.getAllContacts(), // Auto-paginates all pages to load full 1822+ contacts
+    staleTime: 1000 * 60 * 10, // Contacts change infrequently — 10 min cache
+  });
+};
+
+export const useToggleFavorite = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (contactId: string) => api.toggleFavorite(contactId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.contacts.list() }),
+  });
+};
+
+export const useCalls = () => {
+  return useQuery<CallRecord[]>({
+    queryKey: queryKeys.calls.list(),
+    queryFn: () => api.getCalls().catch(() => []),
+  });
+};
+
+export const useNudges = () => {
+  return useQuery<Nudge[]>({
+    queryKey: queryKeys.nudges.all,
+    queryFn: () => api.getNudges().catch(() => []),
+  });
+};
+
+export const useStats = () => {
+  return useQuery<DashboardStats>({
+    queryKey: queryKeys.stats.all,
+    queryFn: () => api.getStats(),
+  });
+};
+
+export const useEnrichments = (contactId: string) => {
   return useQuery({
-    queryKey: queryKeys.contacts.detail(id),
-    queryFn: () => contactsApi.get(id),
-    enabled: !!id,
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 15,
+    queryKey: queryKeys.enrichments.byContact(contactId),
+    queryFn: () => api.getEnrichmentJobs(contactId),
+    enabled: !!contactId,
   });
-}
+};
 
-export function useCreateContact() {
+// --- MUTATIONS ---
+
+export const useRefreshHealth = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: contactsApi.create,
+    mutationFn: (id?: string) => api.refreshHealth(id),
     onSuccess: () => {
+      // Invalidate all relationship data
       queryClient.invalidateQueries({ queryKey: queryKeys.contacts.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.stats.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.nudges.all });
     },
   });
-}
+};
 
-export function useSyncGoogleContacts() {
+export const useIngestCall = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ userId, accessToken }: { userId: string; accessToken?: string }) =>
-      syncApi.triggerGoogle(userId, accessToken || ""),
+    mutationFn: (payload: any) => api.ingestCall(payload),
     onSuccess: () => {
-      // REQ-031: Invalidate everything that depends on fresh contact data
-      queryClient.invalidateQueries({ queryKey: queryKeys.contacts.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.health.nudges });
-      queryClient.invalidateQueries({ queryKey: queryKeys.digest.weekly });
-      console.log('[HORIZON] Global cache invalidated after successful Google sync.');
-    },
-  });
-}
-
-// ─── Auth ──────────────────────────────────────────────────────────
-
-export function useGoogleAuth() {
-  return useMutation({
-    mutationFn: ({ code, userId, redirectUri }: { code: string; userId: string; redirectUri?: string }) =>
-      authApi.googleCallback(code, userId, redirectUri),
-  });
-}
-
-// ─── Calls ─────────────────────────────────────────────────────────
-
-export function useCalls(limit = 50, offset = 0) {
-  return useQuery({
-    queryKey: queryKeys.calls.list(limit, offset),
-    queryFn: () => callsApi.list(limit, offset),
-    staleTime: 1000 * 30,            // 30 seconds (calls are frequent)
-    gcTime: 1000 * 60 * 5,
-  });
-}
-
-export function useIngestCall() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: callsApi.create,
-    onSuccess: () => {
+      // REQ-035: Invalidate logs to show new brief
       queryClient.invalidateQueries({ queryKey: queryKeys.calls.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.nudges.all });
     },
   });
-}
+};
 
-// ─── Enrichments ───────────────────────────────────────────────────
-
-export function useEnrichments(contactId: string) {
-  return useQuery({
-    queryKey: queryKeys.enrichments.forContact(contactId),
-    queryFn: () => enrichmentsApi.listForContact(contactId),
-    enabled: !!contactId,
-    staleTime: 1000 * 60 * 10,      // 10 minutes — enrichment data is semi-static
-    gcTime: 1000 * 60 * 30,
-  });
-}
-
-export function useTriggerEnrichment() {
+export const useTriggerEnrichment = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (contactId: string) => enrichmentsApi.trigger(contactId),
-    onSuccess: (_data, contactId) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.enrichments.forContact(contactId) });
+    mutationFn: (contactId: string) => api.triggerEnrichment(contactId),
+    onSuccess: (_, contactId) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.enrichments.byContact(contactId) });
     },
   });
-}
+};
 
-// ─── Weekly Digest ─────────────────────────────────────────────────
-
-export function useWeeklyDigest() {
-  return useQuery({
-    queryKey: queryKeys.digest.weekly,
-    queryFn: () => digestApi.getWeeklyDigest(),
-    staleTime: 1000 * 60 * 60,      // 1 hour — digest is generated server-side
-    gcTime: 1000 * 60 * 120,
+export const useGoogleAuth = () => {
+  return useMutation({
+    mutationFn: (data: { code: string; userId: string; redirectUri: string }) =>
+      api.exchangeGoogleCode(data.code, data.userId, data.redirectUri),
   });
-}
+};
 
-// ─── Health & Nudges ───────────────────────────────────────────────
-
-export function useNudges() {
-  return useQuery({
-    queryKey: queryKeys.health.nudges,
-    queryFn: () => nudgesApi.getActive().then(r => r.data),
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 15,
-  });
-}
-
-export function useRefreshHealth() {
+export const useSyncGoogleContacts = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (contactId: string) => nudgesApi.refresh(contactId),
-    onSuccess: (_data, contactId) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.health.score(contactId) });
+    mutationFn: (data: { userId: string; accessToken: string }) =>
+      api.syncGoogleContacts(data.userId, data.accessToken),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.contacts.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.health.nudges });
     },
   });
-}
-
-export function useHealth(contactId: string) {
-  return useQuery({
-    queryKey: queryKeys.health.score(contactId),
-    queryFn: () => healthApi.getContactHealth(contactId),
-    enabled: !!contactId,
-    staleTime: 1000 * 60 * 10,
-    gcTime: 1000 * 60 * 30,
-  });
-}
+};

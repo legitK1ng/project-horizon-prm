@@ -1,0 +1,12 @@
+{
+    "mcpServers": {
+        "virtualtabs": {
+            "command": "node",
+            "args": [
+                "c:/Users/owner/AppData/Roaming/Antigravity/User/globalStorage/winterdrive.virtual-tabs/mcp/index.js",
+                "--workspace-root",
+                "c:/Users/owner/OneDrive/Desktop/horizon"
+            ]
+        }
+    }
+}

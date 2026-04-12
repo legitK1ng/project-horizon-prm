@@ -1,6 +1,6 @@
-import { CallRecord, Contact, ApiResponse, RawLog } from '@/types';
-import { formatDuration, normalizeDate } from '@/utils/helpers';
-import { connectionLogger } from '@/utils/connectionLogger';
+import { CallRecord, Contact, ApiResponse, RawLog } from '../types';
+import { formatDuration, normalizeDate } from '../utils/helpers';
+import { connectionLogger } from '../utils/connectionLogger';
 
 
 
@@ -12,7 +12,7 @@ const API_V1 = API_URL.includes('/api/v1') ? API_URL : `${API_URL}/api/v1`;
  */
 const transformLog = (log: RawLog, index: number): CallRecord => {
   const rawNotes = log.strategic_notes || '';
-  const rawTags = log.tags ? log.tags.split(',').map((t) => t.trim()).filter(Boolean) : [];
+  const rawTags = log.tags ? log.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [];
 
   let brief = undefined;
   let status: CallRecord['status'] = 'QUEUED';

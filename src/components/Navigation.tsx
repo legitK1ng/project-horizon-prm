@@ -1,204 +1,113 @@
-import React, { useState } from 'react';
-import { AppView, ConnectionStatus } from '@/types';
-import { ICONS } from '@/constants';
-import LabelManager from '@/components/common/LabelManager';
+import React from 'react';
+import { NavLink } from 'react-router-dom';
+import { 
+  LayoutDashboard, 
+  Users, 
+  FlaskConical, 
+  Terminal, 
+  Menu,
+  X,
+  Zap,
+  ZapOff
+} from 'lucide-react';
+import { cn } from '@/utils/ui';
 
 interface NavigationProps {
-    currentView: AppView;
-    onNavigate: (view: AppView) => void;
-    isDarkMode: boolean;
-    toggleTheme: () => void;
-    onRefresh: () => void;
-    isRefreshing: boolean;
-    connectionStatus: ConnectionStatus;
-    isMobile?: boolean; // Mobile mode
-    closeMobileMenu?: () => void;
-    // Tags
-    tags?: string[];
-    activeTag?: string | null;
-    onTagSelect?: (tag: string | null) => void;
+  isOnline: boolean;
 }
 
-const Navigation: React.FC<NavigationProps> = ({
-    currentView,
-    onNavigate,
-    isDarkMode,
-    toggleTheme,
-    onRefresh,
-    isRefreshing,
-    connectionStatus,
-    tags = [],
-    activeTag,
-    onTagSelect,
-    isMobile,
-    closeMobileMenu,
-}) => {
-    // Collapsible state - default to expanded
-    const [isExpanded, setIsExpanded] = React.useState(true);
-    const [showLabelManager, setShowLabelManager] = useState(false);
+const Navigation: React.FC<NavigationProps> = ({ isOnline }) => {
+  const [isOpen, setIsOpen] = React.useState(false);
 
-    const handleDeleteLabel = (label: string) => {
-        // Remove tag from all calls by deselecting it if active
-        if (activeTag === label && onTagSelect) {
-            onTagSelect(null);
-        }
-        // Note: Full label deletion would require backend support.
-        // For now, labels are derived from call tags, so this is a UI-only operation.
-    };
+  const navItems = [
+    { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/contacts', label: 'Contacts', icon: Users },
+    { to: '/lab', label: 'Processing Lab', icon: FlaskConical },
+    { to: '/console', label: 'System Console', icon: Terminal },
+  ];
 
-    const handleCreateLabel = (label: string) => {
-        // Labels are derived from call data tags. To add a label system-wide,
-        // we'd need to persist custom labels. For now, show it immediately via tag selection.
-        if (onTagSelect) {
-            onTagSelect(label);
-        }
-        setShowLabelManager(false);
-    };
-
-    const navItems = [
-        { id: 'DASHBOARD' as AppView, label: 'Dashboard', icon: ICONS.Dashboard },
-        { id: 'LOGS' as AppView, label: 'Call Logs', icon: ICONS.Logs },
-        { id: 'CONTACTS' as AppView, label: 'Contacts', icon: ICONS.Contacts },
-        { id: 'ACTIONS' as AppView, label: 'Actions', icon: ICONS.Actions },
-        { id: 'LAB' as AppView, label: 'Processing Lab', icon: ICONS.Lab },
-    ];
-
-    const handleNavClick = (view: AppView) => {
-        onNavigate(view);
-        if (onTagSelect) onTagSelect(null); // Clear tag filter when switching apps
-        if (isMobile && closeMobileMenu) closeMobileMenu();
-    };
-
-    const handleTagClick = (tag: string) => {
-        if (onTagSelect) {
-            onTagSelect(tag);
-            onNavigate('LOGS'); // Switch to Logs view to show filtered results
-        }
-        if (isMobile && closeMobileMenu) closeMobileMenu();
-    };
-
-    return (
-        <nav
-            className={`flex flex-col h-screen bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ${isExpanded ? 'w-64' : 'w-20'} ${isMobile ? 'w-full h-auto border-none' : 'hidden md:flex'}`}
-        >
-            {/* Header */}
-            {!isMobile && (
-                <div className={`p-4 flex items-center ${isExpanded ? 'gap-3' : 'justify-center'}`}>
-                    <div
-                        onClick={() => setIsExpanded(!isExpanded)}
-                        className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold cursor-pointer hover:bg-blue-700 transition"
-                    >
-                        H
-                    </div>
-                    {isExpanded && (
-                        <span className="font-bold text-xl text-slate-800 dark:text-white animate-in fade-in duration-200">
-                            Horizon PRM
-                        </span>
-                    )}
-                </div>
-            )}
-
-
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden thin-scrollbar py-2">
-                {/* Apps Section */}
-                <div className="px-3 space-y-1">
-                    {navItems.map((item) => (
-                        <button
-                            key={item.id}
-                            onClick={() => handleNavClick(item.id)}
-                            className={`w-full flex items-center ${isExpanded ? 'gap-4 px-4' : 'justify-center px-2'} py-3 rounded-r-full rounded-l-full transition-colors ${currentView === item.id && !activeTag
-                                ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 font-medium'
-                                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                                }`}
-                            title={!isExpanded ? item.label : undefined}
-                        >
-                            <div className={`${currentView === item.id && !activeTag ? 'text-blue-700 dark:text-blue-300' : ''}`}>
-                                {item.icon}
-                            </div>
-                            {isExpanded && <span className="text-sm tracking-wide">{item.label}</span>}
-                        </button>
-                    ))}
-                </div>
-
-                {/* Divider */}
-                <div className="my-4 border-t border-slate-200 dark:border-slate-800 mx-4"></div>
-
-                {/* Labels Section */}
-                <div className="px-3 space-y-1">
-                    {isExpanded && (
-                        <div className="px-4 py-2 flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                            <span>Labels</span>
-                            <button onClick={() => setShowLabelManager(true)} className="hover:text-slate-800 dark:hover:text-slate-200 transition-colors">Edit</button>
-                        </div>
-                    )}
-
-                    {tags.map((tag) => (
-                        <button
-                            key={tag}
-                            onClick={() => handleTagClick(tag)}
-                            className={`w-full flex items-center ${isExpanded ? 'gap-4 px-4' : 'justify-center px-2'} py-3 rounded-r-full rounded-l-full transition-colors ${activeTag === tag
-                                ? 'bg-amber-50 text-amber-900 dark:bg-amber-900/20 dark:text-amber-100 font-medium'
-                                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                                }`}
-                            title={!isExpanded ? tag : undefined}
-                        >
-                            <div className={`${activeTag === tag ? 'text-amber-600' : 'text-slate-400'}`}>
-                                {ICONS.Tag}
-                            </div>
-                            {isExpanded && <span className="text-sm truncate">{tag}</span>}
-                        </button>
-                    ))}
-
-                    <button
-                        onClick={() => setShowLabelManager(true)}
-                        className={`w-full flex items-center ${isExpanded ? 'gap-4 px-4' : 'justify-center px-2'} py-3 rounded-r-full rounded-l-full text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors`}
-                    >
-                        <div className="text-slate-400">{ICONS.Edit}</div>
-                        {isExpanded && <span className="text-sm">Edit labels</span>}
-                    </button>
-                </div>
+  return (
+    <nav className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50">
+      <div className="container mx-auto px-4 max-w-7xl">
+        <div className="flex items-center justify-between h-20">
+          {/* Logo */}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-600/20">
+              <span className="font-black text-xl">H</span>
             </div>
-
-            {/* Footer Actions */}
-            <div className="p-3 border-t border-slate-200 dark:border-slate-800 space-y-1">
-                <button
-                    onClick={onRefresh}
-                    className={`w-full flex items-center ${isExpanded ? 'gap-4 px-4' : 'justify-center px-2'} py-3 rounded-r-full rounded-l-full text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors`}
-                    title="Refresh Data"
-                >
-                    <span className={isRefreshing ? 'animate-spin' : ''}>{ICONS.Refresh}</span>
-                    {isExpanded && <span className="text-sm">Refresh</span>}
-                </button>
-
-                <button
-                    onClick={toggleTheme}
-                    className={`w-full flex items-center ${isExpanded ? 'gap-4 px-4' : 'justify-center px-2'} py-3 rounded-r-full rounded-l-full text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors`}
-                    title="Toggle Theme"
-                >
-                    {isDarkMode ? ICONS.Sun : ICONS.Moon}
-                    {isExpanded && <span className="text-sm">{isDarkMode ? 'Light' : 'Dark'}</span>}
-                </button>
-
-                {isExpanded && (
-                    <div className="px-4 py-2 text-xs text-slate-400 text-center flex items-center justify-center gap-2">
-                        <span className={`status-dot ${connectionStatus === 'connected' ? 'status-dot-online' : 'bg-slate-400'}`} />
-                        {connectionStatus === 'connected' ? 'Online' : 'Offline'}
-                    </div>
+            <div>
+              <span className="font-bold text-lg tracking-tight text-slate-900 dark:text-white leading-none block">Horizon</span>
+              <div className="flex items-center gap-1.5 mt-1">
+                {isOnline ? (
+                  <>
+                    <Zap size={10} className="text-emerald-500 fill-emerald-500" />
+                    <span className="text-[10px] font-black text-emerald-500 uppercase tracking-tighter">Engine Online</span>
+                  </>
+                ) : (
+                  <>
+                    <ZapOff size={10} className="text-slate-400" />
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Offline Mode</span>
+                  </>
                 )}
+              </div>
             </div>
+          </div>
 
-            {/* Label Manager Modal */}
-            {showLabelManager && (
-                <LabelManager
-                    labels={tags}
-                    onClose={() => setShowLabelManager(false)}
-                    onDeleteLabel={handleDeleteLabel}
-                    onCreateLabel={handleCreateLabel}
-                />
-            )}
-        </nav>
-    );
+          {/* Desktop Nav */}
+          <div className="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-2xl">
+            {navItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) => cn(
+                  "flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300",
+                  isActive 
+                    ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm" 
+                    : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                )}
+              >
+                <item.icon size={18} />
+                {item.label}
+              </NavLink>
+            ))}
+          </div>
+
+          {/* Mobile Toggle */}
+          <button 
+            onClick={() => setIsOpen(!isOpen)}
+            className="md:hidden p-2.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all"
+          >
+            {isOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Menu */}
+      <div className={cn(
+        "md:hidden absolute top-20 left-0 w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 transition-all duration-300 origin-top",
+        isOpen ? "scale-y-100 opacity-100 visible" : "scale-y-0 opacity-0 invisible"
+      )}>
+        <div className="flex flex-col gap-2">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              onClick={() => setIsOpen(false)}
+              className={({ isActive }) => cn(
+                "flex items-center gap-4 px-6 py-4 rounded-2xl text-base font-bold transition-all",
+                isActive 
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" 
+                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+              )}
+            >
+              <item.icon size={20} />
+              {item.label}
+            </NavLink>
+          ))}
+        </div>
+      </div>
+    </nav>
+  );
 };
 
 export default Navigation;

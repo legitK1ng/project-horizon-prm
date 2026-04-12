@@ -87,12 +87,12 @@ class GooglePeopleService:
             creds = Credentials(token=access_token)
             service = build('people', 'v1', credentials=creds)
 
-            # Fetch connections (contacts)
-            # We request names, emailAddresses, phoneNumbers, and organizations
+            # REQ-031: Fetch comprehensive data for OSINT/Enrichment
             results = service.people().connections().list(
                 resourceName='people/me',
-                pageSize=100,  # Adjustable
-                personFields='names,emailAddresses,phoneNumbers,organizations,photos,birthdays'
+                    pageSize=1000,
+                    personFields='names,emailAddresses,phoneNumbers,organizations,photos,birthdays,biographies,urls,addresses,userDefined,locales',
+                    pageToken=page_token
             ).execute()
 
             connections = results.get('connections', [])
@@ -145,6 +145,7 @@ class GooglePeopleService:
     def _map_person_to_contact(self, person: Dict[str, Any], user_id: str) -> Dict[str, Any]:
         """
         Maps a Google People API 'Person' object to our Supabase schema.
+        Includes advanced fields for OSINT/Enrichment.
         """
         resource_name = person.get('resourceName')
         names = person.get('names', [])
@@ -153,12 +154,15 @@ class GooglePeopleService:
         orgs = person.get('organizations', [])
         birthdays = person.get('birthdays', [])
         photos = person.get('photos', [])
+        bios = person.get('biographies', [])
+        urls = person.get('urls', [])
+        addresses = person.get('addresses', [])
 
         primary_name_obj = names[0] if names else {}
         first_name = primary_name_obj.get('givenName', 'Unknown')
         last_name = primary_name_obj.get('familyName', '')
         
-        # Extract birthdate if available
+        # Extract birthdate
         birthdate = None
         if birthdays:
             bday = birthdays[0].get('date', {})
@@ -166,10 +170,9 @@ class GooglePeopleService:
             month = bday.get('month')
             day = bday.get('day')
             if month and day:
-                # ISO YYYY-MM-DD format (year can be missing)
                 birthdate = f"{year if year else '1900'}-{month:02d}-{day:02d}"
 
-        # Robust extraction: find primary if available, otherwise take first
+        # Extract contact details
         primary_email = next((e.get('value') for e in emails if e.get('metadata', {}).get('primary')), 
                             emails[0].get('value') if emails else None)
         
@@ -179,18 +182,23 @@ class GooglePeopleService:
         primary_org = next((o.get('name') for o in orgs if o.get('metadata', {}).get('primary')), 
                           orgs[0].get('name') if orgs else None)
 
+        # OSINT/Enrichment Extras
+        bio_text = bios[0].get('value') if bios else None
+        
         return {
             "user_id": user_id,
             "first_name": first_name,
             "last_name": last_name,
+            "full_name": f"{first_name} {last_name}".strip(),
             "email": primary_email,
             "phone": primary_phone,
             "organization": primary_org,
             "birthdate": birthdate,
+            "notes": bio_text, # Map Google Bio to our internal notes
             "photo_url": photos[0].get('url') if photos else None,
             "google_resource_name": resource_name,
             "last_synced": datetime.now(timezone.utc).isoformat(),
             "updated_at": datetime.now(timezone.utc).isoformat(),
-            "raw_data": person
+            "raw_data": person # Keep entire object for UI flexibility
         }
 

@@ -10,3 +10,7 @@ python-dotenv
 google-api-python-client
 google-auth
 google-auth-oauthlib
+google-generativeai
+torch
+faster-whisper
+pyannote.audio

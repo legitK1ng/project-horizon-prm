@@ -9,12 +9,12 @@ export interface LogEntry {
 }
 
 interface ConsoleProps {
-    logs: LogEntry[];
-    onClear: () => void;
+    logs?: LogEntry[];
+    onClear?: () => void;
     isRunning?: boolean;
 }
 
-const Console: React.FC<ConsoleProps> = ({ logs, onClear, isRunning }) => {
+const Console: React.FC<ConsoleProps> = ({ logs = [], onClear = () => {}, isRunning }) => {
     const endRef = useRef<HTMLDivElement>(null);
 
     // Auto-scroll to bottom

@@ -1,210 +1,156 @@
 /**
- * Typed API Client — AGENT-3b | REQ-024, REQ-025, REQ-027
- * All backend calls go through this client.
- * Zod validation runs at every response boundary.
- * GEMINI API KEY IS NEVER USED HERE — all AI calls go through backend.
+ * Project Horizon — Intelligent API Client
+ * REQ-025: Production-grade fetch wrapper with Zod validation.
  */
-import { z } from 'zod';
-const NudgeSchema = z.object({
-  contact_id: z.string(),
-  name: z.string(),
-  score: z.number().nullable().optional(),
-  reason: z.string(),
-  suggested_action: z.string()
-});
-
-const SyncResponseSchema = z.object({
-  status: z.string(),
-  stats: z.object({
-    created: z.number(),
-    updated: z.number(),
-    errors: z.number(),
-  }).optional(),
-  total_found: z.number().optional(),
-  message: z.string().optional()
-});
-
 import {
-  CallRecordSchema,
   ContactSchema,
-  DigestResponseSchema,
-  EnrichmentJobSchema,
-  ApiListResponseSchema,
+  CallRecordSchema,
+  ApiListResponseSchema
 } from '../schemas/api';
-import type { Contact } from '../schemas/api';
+import { Contact, CallRecord, DashboardStats, Nudge, GoogleTokenResponse } from '../types';
 
-const BASE_URL = import.meta.env.VITE_API_URL || '';
-const API_V1 = `${BASE_URL}/api/v1`;
+const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
-async function apiFetch<T>(schema: z.ZodType<T>, path: string, options?: RequestInit): Promise<T> {
-  const url = `${API_V1}${path}`;
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-  });
+class ApiClient {
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const url = `${API_BASE}${endpoint}`;
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
-    throw new Error((error as { detail?: string }).detail || `HTTP ${response.status}`);
+    // 10-second timeout to prevent indefinite hangs
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+        throw new Error(error.message || `API Error: ${response.status}`);
+      }
+
+      return response.json();
+    } finally {
+      clearTimeout(id);
+    }
   }
 
-  const json = await response.json();
+  // REQ-014: Health Check
+  async checkHealth(): Promise<{ status: string }> {
+    return this.request('/api/v1/health');
+  }
 
-  // REQ-025: Zod parse — throws ZodError on schema violation
-  return schema.parse(json);
-}
+  // --- CONTACTS ---
 
+  async getContacts(page = 0, limit = 500): Promise<{ data: Contact[]; total_count: number; has_more: boolean }> {
+    const res = await this.request<any>(`/api/v1/contacts?page=${page}&limit=${limit}`);
+    return {
+      data: res.data || [],
+      total_count: res.total_count ?? res.count ?? 0,
+      has_more: res.has_more ?? false,
+    };
+  }
 
-// ─── Contacts ──────────────────────────────────────────────────────
+  /** Auto-paginate to load ALL contacts (e.g. 1822 with limit=500 = 4 requests) */
+  async getAllContacts(): Promise<Contact[]> {
+    let all: Contact[] = [];
+    let page = 0;
+    while (true) {
+      const res = await this.getContacts(page, 500);
+      all = [...all, ...res.data];
+      if (!res.has_more) break;
+      page++;
+    }
+    return all;
+  }
 
-// ─── Contacts ──────────────────────────────────────────────────────
+  async getContact(id: string): Promise<Contact> {
+    const res = await this.request<any>(`/api/v1/contacts/${id}`);
+    return ContactSchema.parse(res.data ?? res);
+  }
 
-export const contactsApi = {
-  list: () =>
-    apiFetch(ApiListResponseSchema(ContactSchema), '/contacts/').then(r => r.data),
+  async toggleFavorite(contactId: string): Promise<{ is_favorite: boolean }> {
+    return this.request(`/api/v1/contacts/${contactId}/favorite`, { method: 'PATCH' });
+  }
 
-  get: (id: string) =>
-    apiFetch(ContactSchema, `/contacts/${id}`),
+  async getContactPhotos(contactId: string): Promise<string[]> {
+    const res = await this.request<any>(`/api/v1/enrichments/${contactId}/photos`);
+    return res.photos || [];
+  }
 
-  create: (contact: Partial<Contact>) =>
-    apiFetch(ContactSchema, '/contacts/', {
+  async setContactPhoto(contactId: string, photoUrl: string): Promise<void> {
+    await this.request(`/api/v1/contacts/${contactId}/photo`, {
       method: 'POST',
-      body: JSON.stringify(contact),
-    }),
+      body: JSON.stringify({ photo_url: photoUrl }),
+    });
+  }
 
-  update: (id: string, updates: Partial<Contact>) =>
-    apiFetch(ContactSchema, `/contacts/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(updates),
-    }),
-};
 
-// ─── Calls ─────────────────────────────────────────────────────────
+  // --- CALLS ---
 
-export const callsApi = {
-  list: (limit = 50, offset = 0) =>
-    apiFetch(ApiListResponseSchema(CallRecordSchema), `/calls/?limit=${limit}&offset=${offset}`).then(r => r.data),
+  async getCalls(): Promise<CallRecord[]> {
+    const res = await this.request<any>('/api/v1/calls');
+    return ApiListResponseSchema(CallRecordSchema).parse(res).data;
+  }
 
-  create: (payload: {
-    contact_name: string;
-    phone_number: string;
-    note: string;
-    duration?: string | number;
-    external_id?: string;
-  }) =>
-    apiFetch(z.object({ status: z.string(), call_id: z.string(), brief: z.record(z.string(), z.unknown()) }), '/calls/', {
+  async ingestCall(payload: any): Promise<CallRecord> {
+    const res = await this.request<any>('/api/v1/calls', {
       method: 'POST',
       body: JSON.stringify(payload),
-    }),
-};
+    });
+    return CallRecordSchema.parse(res.data);
+  }
 
-// ─── Enrichments ───────────────────────────────────────────────────
+  // --- ENRICHMENT / NUDGES ---
 
-export const enrichmentsApi = {
-  trigger: (contactId: string) =>
-    apiFetch(z.object({ status: z.string(), message: z.string() }), '/enrichments/', {
+  async getStats(): Promise<DashboardStats> {
+    return this.request('/api/v1/data'); // Consolidated dashboard data endpoint
+  }
+
+  async getNudges(): Promise<Nudge[]> {
+    const res = await this.request<any>('/api/v1/nudges');
+    return res.data || [];
+  }
+
+  async refreshHealth(contactId?: string): Promise<{ status: string }> {
+    const endpoint = contactId
+      ? `/api/v1/contacts/${contactId}/refresh-health`
+      : '/api/v1/nudges/refresh-all';
+    return this.request(endpoint, { method: 'POST' });
+  }
+
+  async getEnrichmentJobs(contactId: string): Promise<any[]> {
+    const res = await this.request<any>(`/api/v1/enrichment/?contact_id=${contactId}`);
+    return res.data || [];
+  }
+
+  async triggerEnrichment(contact_id: string): Promise<{ status: string; job_id: string }> {
+    return this.request('/api/v1/enrichment/', {
       method: 'POST',
-      body: JSON.stringify({ contact_id: contactId }),
-    }),
+      body: JSON.stringify({ contact_id })
+    });
+  }
 
-  listForContact: (contactId: string) =>
-    apiFetch(z.object({ status: z.string(), data: z.array(EnrichmentJobSchema), count: z.number() }), `/enrichments?contact_id=${contactId}`).then(r => r.data),
+  // --- GOOGLE INTEGRATION ---
 
-  override: (entityId: string, value: string) =>
-    apiFetch(z.object({ status: z.string() }), '/enrichments/override', {
-      method: 'PATCH',
-      body: JSON.stringify({ entity_id: entityId, value }),
-    }),
-};
+  async exchangeGoogleCode(code: string, userId: string, redirectUri: string): Promise<GoogleTokenResponse> {
+    return this.request('/api/v1/auth/google/callback', {
+      method: 'POST',
+      body: JSON.stringify({ code, user_id: userId, redirect_uri: redirectUri }),
+    });
+  }
 
-// ─── Digest ────────────────────────────────────────────────────────
+  async syncGoogleContacts(userId: string, accessToken: string): Promise<{ status: string; count: number }> {
+    return this.request('/api/v1/sync/google', {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId, access_token: accessToken }),
+    });
+  }
+}
 
-export const digestApi = {
-  getWeeklyDigest: () => apiFetch(DigestResponseSchema, '/digest'),
-};
-
-// ─── Sync ──────────────────────────────────────────────────────────
-
-export const syncApi = {
-  triggerGoogle: (userId: string, accessToken: string) =>
-    apiFetch(
-      SyncResponseSchema,
-      '/sync/google',
-      {
-        method: 'POST',
-        body: JSON.stringify({ user_id: userId, access_token: accessToken }),
-      }
-    ),
-
-  getStatus: () =>
-    apiFetch(z.object({ status: z.string(), last_sync_at: z.string().nullable() }), '/sync/status'),
-};
-
-// ─── Auth ──────────────────────────────────────────────────────────
-
-export const authApi = {
-  googleCallback: (code: string, userId: string, redirectUri?: string) =>
-    apiFetch(
-      z.object({
-        status: z.string(),
-        access_token: z.string(),
-        refresh_token: z.string().optional(),
-        expires_in: z.number().optional(),
-      }),
-      '/auth/google/callback',
-      {
-        method: 'POST',
-        body: JSON.stringify({ code, user_id: userId, redirect_uri: redirectUri }),
-      }
-    ),
-};
-
-// ─── Nudges (Proactive AI) ──────────────────────────────────────────
-
-export const nudgesApi = {
-  getActive: () =>
-    apiFetch(z.object({
-      status: z.string(),
-      data: z.array(NudgeSchema),
-      count: z.number()
-    }), '/nudges'),
-    
-  refresh: (contactId: string) =>
-    apiFetch(z.object({
-      status: z.string(),
-      new_score: z.number()
-    }), `/nudges/refresh/${contactId}`, { method: 'POST' })
-};
-
-// ─── Health ────────────────────────────────────────────────────────
-
-const HealthNudgesSchema = z.object({
-  status: z.string(),
-  data: z.object({
-    nudges: z.array(z.object({
-      contact_id: z.string(),
-      contact_name: z.string(),
-      nudge_text: z.string(),
-      health_score: z.number().optional(),
-      type: z.string(),
-    })),
-    alerts: z.array(z.any()),
-  }),
-}).or(z.object({ status: z.string(), data: z.array(z.any()) }));
-
-const HealthScoreSchema = z.object({
-  status: z.string(),
-  contact_id: z.string(),
-  health_score: z.number(),
-});
-
-export const healthApi = {
-  check: () =>
-    apiFetch(z.object({ status: z.string(), version: z.string(), db_connected: z.boolean() }), '/health'),
-  getNudges: () => apiFetch(HealthNudgesSchema, '/health/nudges'),
-  getContactHealth: (id: string) => apiFetch(HealthScoreSchema, `/health/${id}`),
-  refreshAll: () => apiFetch(z.any(), '/health/refresh', { method: 'POST' }),
-};
+export const api = new ApiClient();

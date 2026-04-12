@@ -63,10 +63,10 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
     // Grouping logic for "Semantic" Search
     const results: SearchResult[] = useMemo(() => {
         const q = query.toLowerCase().trim();
-        
+
         // Always include matched actions at the top if there's a query
         const actionMatches = quickActions.filter(a => a.title.toLowerCase().includes(q) || a.subtitle?.toLowerCase().includes(q));
-        
+
         if (!q) {
             return [...viewResults, ...quickActions];
         }
@@ -106,7 +106,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
         contacts.forEach(contact => {
             const displayName = contact.name || `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || 'Unknown Contact';
             const org = (contact.organization_id || '').toLowerCase();
-            
+
             if (displayName.toLowerCase().includes(q) || org.includes(q)) {
                 matches.push({
                     id: `contact-${contact.id}`,
@@ -161,19 +161,8 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
         }
     }, [results, selectedIndex, onClose]);
 
-    // Global keyboard shortcut
-    useEffect(() => {
-        const handler = (e: KeyboardEvent) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-                e.preventDefault();
-                if (isOpen) {
-                    onClose();
-                }
-            }
-        };
-        window.addEventListener('keydown', handler);
-        return () => window.removeEventListener('keydown', handler);
-    }, [isOpen, onClose]);
+    // NOTE: Global Ctrl+K keyboard shortcut is managed by parent (Dashboard).
+    // This component only handles internal keyboard navigation (arrows, enter, esc).
 
     if (!isOpen) return null;
 

@@ -1,7 +1,6 @@
 /**
  * Zod API Schemas — AGENT-3b | REQ-025
  * Runtime type validation at all API response boundaries.
- * All API calls must parse through these schemas before use in the app.
  */
 import { z } from 'zod';
 
@@ -13,6 +12,7 @@ export const ExecutiveBriefSchema = z.object({
   sentiment: z.enum(['Positive', 'Negative', 'Neutral']).optional(),
   tags: z.array(z.string()).optional().default([]),
   actionItems: z.array(z.string()).optional().default([]),
+  action_items: z.array(z.string()).optional().default([]),
   recommended_followup_date: z.string().optional().nullable(),
   draft_followup_message: z.string().optional().nullable(),
   open_commitments: z.array(z.object({
@@ -26,8 +26,11 @@ export const ExecutiveBriefSchema = z.object({
 export const CallRecordSchema = z.object({
   id: z.string().uuid(),
   contact_name: z.string(),
+  contact_id: z.string().uuid(),
   phone_number: z.string().optional().nullable(),
   duration: z.union([z.string(), z.number()]).optional().nullable(),
+  // FIX: transcript was missing from schema — caused it to be stripped at parse boundary
+  transcript: z.string().optional().nullable(),
   executive_brief: ExecutiveBriefSchema.optional().nullable(),
   status: z.enum(['QUEUED', 'COMPLETED', 'SKIPPED_SHORT', 'ERROR']).optional(),
   sentiment: z.enum(['Positive', 'Negative', 'Neutral']).optional().nullable(),
@@ -36,22 +39,25 @@ export const CallRecordSchema = z.object({
   draft_followup_message: z.string().optional().nullable(),
   timestamp: z.string(),
   created_at: z.string().optional(),
-});
+}).passthrough(); // passthrough ensures any extra fields survive
 
 export const ContactSchema = z.object({
   id: z.string().uuid(),
   first_name: z.string().min(1),
   last_name: z.string().optional().nullable(),
   birthdate: z.string().optional().nullable(),
-  name: z.string().optional().nullable(), 
+  name: z.string().optional().nullable(),
   phone: z.string().optional().nullable(),
-  email: z.string().optional().nullable(), // Relaxed validation
-  organization_id: z.string().optional().nullable(), // UUID string or null
+  email: z.string().optional().nullable(),
+  organization: z.string().optional().nullable(),
+  organization_id: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   tags: z.array(z.string()).optional().default([]),
   health_score: z.number().min(0).max(100).optional().nullable(),
+  is_favorite: z.boolean().optional().default(false),
   last_contact_at: z.string().optional().nullable(),
-  photo_url: z.string().optional().nullable(), // Relaxed URL check
+  photo_url: z.string().optional().nullable(),
+  total_calls: z.number().optional().nullable(),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
 }).passthrough();

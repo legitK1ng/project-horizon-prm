@@ -56,7 +56,7 @@ const EnrichmentCard: React.FC<EnrichmentCardProps> = ({ contactId, className })
   const latestJobs = enrichments || [];
   
   // Helper to find specific stage results
-  const getJobByStage = (stage: number) => latestJobs.find(j => j.stage === stage);
+  const getJobByStage = (stage: number) => latestJobs.find((j: any) => j.stage === stage);
   const phoneJob = getJobByStage(2);
   const emailJob = getJobByStage(3);
   const orgJob = getJobByStage(4);
@@ -69,7 +69,7 @@ const EnrichmentCard: React.FC<EnrichmentCardProps> = ({ contactId, className })
   const phoneRes = phoneJob?.result_json as PhoneResult | undefined;
   const aiRes = aiJob?.result_json as AIResult | undefined;
 
-  const isScanning = latestJobs.some(j => j.status === 'IN_PROGRESS');
+  const isScanning = latestJobs.some((j: any) => j.status === 'IN_PROGRESS');
 
   return (
     <div className={cn("glass p-8 rounded-[2rem] border-slate-200/50 dark:border-slate-800/50 relative overflow-hidden group", className)}>

@@ -14,7 +14,7 @@ def _get_model() -> genai.GenerativeModel:
     if not api_key:
         raise EnvironmentError("GOOGLE_API_KEY environment variable not set.")
     genai.configure(api_key=api_key)
-    return genai.GenerativeModel("gemini-2.5-flash")
+    return genai.GenerativeModel("gemini-1.5-flash")
 
 
 def generate_call_brief(transcript: str, contact_name: str) -> dict:

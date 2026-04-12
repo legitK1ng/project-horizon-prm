@@ -2,7 +2,7 @@
 
 ## Horizon PRM
 
-*Relationship Intelligence Platform · Topology v1*
+*Relationship Intelligence Platform*
 
 Prepared by: Senior Product Architect & UX Strategist
 
@@ -49,8 +49,7 @@ The Dashboard is currently a view, not an intelligence surface. It should become
 The ContactDrawer + ContactDetailDrawer architecture is sound but needs enrichment surface integration.
 
   * Consolidate ContactDrawer and ContactDetailDrawer into a single, tabbed full-panel view with tabs for: Overview, Timeline, Enrichment, Notes, and Actions.
-  * The Timeline tab should render a scrollable, chronological feed of every interaction: calls, calendar events, and imported social signals — inspired by linear activity feeds in tools like Linear or Notion.
-  * The Enrichment tab should display OSINT-derived data (see Section 04) in structured cards: professional profile, social handles, org intel, and location data — with clear data-source attribution and staleness indicators.
+  * The Timeline tab should render a scrollable, chronological feed of every interaction: calls, calendar events, and imported social signals — inspired by linear activity feeds in tools like Linear or Notiong  * The Enrichment tab should display OSINT-derived data (see Section 04) in structured cards: professional profile, social handles, org intel, and location data — with clear data-source attribution and staleness indicators.
 
 ### 2.4 · Command Palette as Power Interface
 

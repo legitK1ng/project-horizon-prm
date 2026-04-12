@@ -1,124 +1,161 @@
-import React, { useEffect, useRef } from 'react';
-import * as d3 from 'd3';
+import React, { useEffect, useRef } from "react";
+import * as d3 from "d3";
+import { Contact, CallRecord } from "../../types";
+
+interface RelationshipGraphProps {
+  contacts: Contact[];
+  calls: CallRecord[];
+}
 
 interface Node extends d3.SimulationNodeDatum {
   id: string;
   name: string;
-  type: 'person' | 'organization' | 'touchpoint';
-  val: number;
+  type: "contact" | "org";
+  group: number;
 }
 
 interface Link extends d3.SimulationLinkDatum<Node> {
-  source: string;
-  target: string;
+  source: string | Node;
+  target: string | Node;
   value: number;
 }
 
-interface RelationshipGraphProps {
-  data?: {
-    nodes: Node[];
-    links: Link[];
-  };
-  width?: number;
-  height?: number;
-}
-
-const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ 
-  data = { nodes: [], links: [] }, 
-  width = 800, 
-  height = 500 
-}) => {
+const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ contacts, calls }) => {
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
-    if (!svgRef.current || data.nodes.length === 0) return;
+    if (!svgRef.current || !contacts || contacts.length === 0) return;
 
-    const svg = d3.select(svgRef.current);
-    svg.selectAll("*").remove(); // Clear previous
+    const width = 800;
+    const height = 450;
 
-    const simulation = d3.forceSimulation<Node>(data.nodes)
-      .force("link", d3.forceLink<Node, Link>(data.links).id(d => d.id).distance(100))
-      .force("charge", d3.forceManyBody().strength(-300))
-      .force("center", d3.forceCenter(width / 2, height / 2));
+    // Clean up previous SVG
+    d3.select(svgRef.current).selectAll("*").remove();
 
+    const svg = d3.select(svgRef.current)
+      .attr("viewBox", `0 0 ${width} ${height}`)
+      .attr("width", "100%")
+      .attr("height", "100%");
+
+    // REQ-028: Construct nodes from contacts and their organizations
+    const nodes: Node[] = contacts.map(c => ({
+      id: c.id,
+      name: `${c.first_name} ${c.last_name}`,
+      type: "contact",
+      group: 1
+    }));
+
+    // Add unique organizations as nodes
+    const orgs = [...new Set(contacts.map(c => c.org).filter(Boolean))];
+    orgs.forEach(org => {
+      nodes.push({
+        id: `org-${org}`,
+        name: org!,
+        type: "org",
+        group: 2
+      });
+    });
+
+    // Create links between contacts and their organizations
+    const links: Link[] = contacts
+      .filter(c => c.org)
+      .map(c => ({
+        source: c.id,
+        target: `org-${c.org}`,
+        value: 1
+      }));
+
+    // Force simulation
+    const simulation = d3.forceSimulation<Node>(nodes)
+      .force("link", d3.forceLink<Node, Link>(links).id(d => d.id).distance(80))
+      .force("charge", d3.forceManyBody().strength(-150))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collision", d3.forceCollide().radius(30)); // Prevent overlapping
+
+    // Draw links
     const link = svg.append("g")
-      .attr("stroke", "hsl(var(--surface-raised))")
-      .attr("stroke-opacity", 0.6)
       .selectAll("line")
-      .data(data.links)
-      .join("line")
+      .data(links)
+      .enter().append("line")
+      .attr("stroke", "#94a3b8")
+      .attr("stroke-opacity", 0.4)
       .attr("stroke-width", d => Math.sqrt(d.value));
 
+    // Draw nodes
     const node = svg.append("g")
       .selectAll("g")
-      .data(data.nodes)
-      .join("g")
-      .call(drag(simulation));
+      .data(nodes)
+      .enter().append("g")
+      .call(d3.drag<SVGGElement, Node>()
+        .on("start", dragstarted)
+        .on("drag", dragged)
+        .on("end", dragended));
 
-    // Glow effect for nodes
     node.append("circle")
-      .attr("r", d => d.val * 5)
-      .attr("fill", d => {
-          switch(d.type) {
-              case 'person': return 'hsl(var(--horizon-primary))';
-              case 'organization': return '#10b981';
-              case 'touchpoint': return '#f59e0b';
-              default: return '#94a3b8';
-          }
-      })
-      .attr("filter", "drop-shadow(0 0 8px rgba(0, 87, 255, 0.3))");
+      .attr("r", d => d.type === "org" ? 12 : 8)
+      .attr("fill", d => d.type === "org" ? "#3b82f6" : "#10b981")
+      .attr("stroke", "#fff")
+      .attr("stroke-width", 2)
+      .attr("class", "shadow-sm transform group-hover:scale-110 transition-transform");
 
     node.append("text")
       .text(d => d.name)
       .attr("x", 12)
       .attr("y", 4)
-      .style("font-size", "10px")
-      .style("font-weight", "bold")
-      .style("fill", "currentColor")
-      .style("opacity", 0.7);
+      .attr("font-size", d => d.type === "org" ? "10px" : "8px")
+      .attr("class", "fill-slate-500 dark:fill-slate-400 font-bold uppercase tracking-tighter pointer-events-none select-none shadow-sm");
 
     simulation.on("tick", () => {
+      // REQ-028: Clamp nodes within bounds
       link
-        .attr("x1", (d: any) => d.source.x)
-        .attr("y1", (d: any) => d.source.y)
-        .attr("x2", (d: any) => d.target.x)
-        .attr("y2", (d: any) => d.target.y);
+        .attr("x1", (d: any) => Math.max(20, Math.min(width - 20, d.source.x)))
+        .attr("y1", (d: any) => Math.max(20, Math.min(height - 20, d.source.y)))
+        .attr("x2", (d: any) => Math.max(20, Math.min(width - 20, d.target.x)))
+        .attr("y2", (d: any) => Math.max(20, Math.min(height - 20, d.target.y)));
 
-      node.attr("transform", (d: any) => `translate(${d.x}, ${d.y})`);
+      node
+        .attr("transform", (d: any) => {
+            const x = Math.max(20, Math.min(width - 20, d.x));
+            const y = Math.max(20, Math.min(height - 20, d.y));
+            return `translate(${x},${y})`;
+        });
     });
 
-    function drag(sim: d3.Simulation<Node, undefined>) {
-      function dragstarted(event: any) {
-        if (!event.active) sim.alphaTarget(0.3).restart();
-        event.subject.fx = event.subject.x;
-        event.subject.fy = event.subject.y;
-      }
-      function dragged(event: any) {
-        event.subject.fx = event.x;
-        event.subject.fy = event.y;
-      }
-      function dragended(event: any) {
-        if (!event.active) sim.alphaTarget(0);
-        event.subject.fx = null;
-        event.subject.fy = null;
-      }
-      return d3.drag<any, Node>()
-        .on("start", dragstarted)
-        .on("drag", dragged)
-        .on("end", dragended);
+    function dragstarted(event: any) {
+      if (!event.active) simulation.alphaTarget(0.3).restart();
+      event.subject.fx = event.subject.x;
+      event.subject.fy = event.subject.y;
     }
 
-    return () => {
-      simulation.stop();
-    };
-  }, [data, width, height]);
+    function dragged(event: any) {
+      event.subject.fx = event.x;
+      event.subject.fy = event.y;
+    }
+
+    function dragended(event: any) {
+      if (!event.active) simulation.alphaTarget(0);
+      event.subject.fx = null;
+      event.subject.fy = null;
+    }
+  }, [contacts, calls]);
+
+  if (!contacts || contacts.length === 0) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center text-center p-8">
+        <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center mb-4 border border-slate-100 dark:border-slate-800 animate-pulse">
+           <div className="w-8 h-8 bg-slate-200 dark:bg-slate-700 rounded-full" />
+        </div>
+        <h4 className="font-semibold text-slate-700 dark:text-slate-300">Quiet Network</h4>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-[200px]">
+          Sync your contacts to see your relational surface mapped in 3D.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="relative w-full h-full min-h-[400px] border border-slate-100 dark:border-slate-800 rounded-3xl bg-slate-50/50 dark:bg-slate-950/20 overflow-hidden backdrop-blur-sm">
-       <div className="absolute top-6 left-6 z-10">
-          <h4 className="text-sm font-black uppercase tracking-widest text-slate-400">Relationship Topology</h4>
-       </div>
-       <svg ref={svgRef} className="w-full h-full" viewBox={`0 0 ${width} ${height}`} />
+    <div className="w-full h-full cursor-grab active:cursor-grabbing">
+      <svg ref={svgRef}></svg>
     </div>
   );
 };

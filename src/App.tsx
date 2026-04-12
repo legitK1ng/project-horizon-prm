@@ -1,216 +1,81 @@
-import React, { useState, useEffect, useCallback, Suspense, memo } from 'react';
-import { AppView, ConnectionStatus } from '@/types';
-import { APP_VIEW } from '@/constants';
-import { HistoryProvider } from '@/contexts/HistoryContext';
-import { useQuery } from '@tanstack/react-query';
-import { useContacts, useCalls } from '@/hooks/useHorizonData';
-import { healthApi } from '@/services/apiClient';
-import { useTheme } from '@/hooks/useTheme';
+import React, { useEffect, useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "react-hot-toast";
 
-// Core Components
-import Navigation from '@/components/Navigation';
-import LoadingScreen from '@/components/LoadingScreen';
-import CommandPalette from '@/components/CommandPalette';
-import UnifiedContactDrawer from '@/components/common/UnifiedContactDrawer';
-import AssistantChat from '@/components/AssistantChat';
-import { ToastProvider } from '@/components/common/Toast';
-import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import Navigation from "./components/Navigation";
+import Dashboard from "./components/Dashboard";
+import ContactList from "./components/ContactList";
+import Lab from "./components/Lab";
+import Console from "./components/Console";
+import LoadingScreen from "./components/LoadingScreen";
+import FloatingChat from "./components/common/FloatingChat";
+import { useCheckHealth } from "./hooks/useHorizonData";
 
-// Lazy Loaded Views (Code Splitting)
-const Dashboard = React.lazy(() => import('@/components/Dashboard'));
-const CallLog = React.lazy(() => import('@/components/CallLog'));
-const ContactList = React.lazy(() => import('@/components/ContactList'));
-const ActionsLog = React.lazy(() => import('@/components/ActionsLog'));
-const Lab = React.lazy(() => import('@/components/Lab'));
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      retry: 1,
+    },
+  },
+});
 
-const MobileHeader = memo(({ isMobileMenuOpen, setIsMobileMenuOpen }: { isMobileMenuOpen: boolean, setIsMobileMenuOpen: (o: boolean) => void }) => (
-  <header className="md:hidden flex items-center justify-between px-6 py-4 glass border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50">
-    <div className="flex items-center space-x-2">
-      <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
-        <span className="font-bold text-lg">H</span>
-      </div>
-      <span className="font-bold text-slate-800 dark:text-white">Horizon PRM</span>
-    </div>
-    <button
-      onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-      className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-      aria-label="Toggle menu"
-    >
-      {isMobileMenuOpen ? (
-        <div className="text-2xl">×</div>
-      ) : (
-        <div className="text-2xl">☰</div>
-      )}
-    </button>
-  </header>
-));
-
-const FallbackLoader = () => (
-  <div className="flex flex-col items-center justify-center h-full min-h-[400px]">
-    <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-    <p className="mt-4 text-slate-500 font-medium">Loading module...</p>
-  </div>
-);
-
-const MainLayout: React.FC = () => {
-  const [currentView, setCurrentView] = useState<AppView>(APP_VIEW.DASHBOARD);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeTag, setActiveTag] = useState<string | null>(null);
-  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-  const [drawerContact, setDrawerContact] = useState<string | null>(null);
-
-  const { isDarkMode, toggleTheme } = useTheme();
-  
-  // Real Production Data Hooks
-  const { data: contactsData, isLoading: isContactsLoading } = useContacts();
-  const { data: callsData, isLoading: isCallsLoading } = useCalls();
-  const { data: healthData } = useQuery({ queryKey: ['health'], queryFn: () => healthApi.check() });
-
-  const contacts = Array.isArray(contactsData) ? contactsData : (contactsData as any)?.data || [];
-  const calls = Array.isArray(callsData) ? callsData : (callsData as any)?.data || [];
-  
-  // REQ-024: Improved loading logic — only block if we have 0 data and are currently fetching
-  const isLoading = (isContactsLoading && contacts.length === 0) || (isCallsLoading && calls.length === 0);
-  
-  const connectionStatus: ConnectionStatus = healthData?.status === 'online' ? 'connected' : 'offline';
-  
-  // Dummy tags for now, will be replaced with real tags from backend if needed
-  const tags: string[] = []; 
-  
-  const refreshData = () => {
-    // TanStack Query handles background refresh automatically, 
-    // but we can trigger a manual refetch if the user hits the button.
-    window.location.reload(); 
-  };
-
-  const addCall = () => {
-    console.warn('Direct addCall from App.tsx is deprecated. Use Lab or ACR sync.');
-  };
-
-  // ⌘K / Ctrl+K shortcut
-  const handleGlobalKeyDown = useCallback((e: KeyboardEvent) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-      e.preventDefault();
-      setIsCommandPaletteOpen(prev => !prev);
-    }
-  }, []);
+const AppContent: React.FC = () => {
+  const { data: health, isLoading } = useCheckHealth();
+  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [handleGlobalKeyDown]);
-
-  const handleMobileNav = useCallback((view: AppView) => {
-    setCurrentView(view);
-    setIsMobileMenuOpen(false);
+    const timer = setTimeout(() => setIsInitializing(false), 800);
+    return () => clearTimeout(timer);
   }, []);
 
-  const handleTagSelect = useCallback((tag: string | null) => {
-    setActiveTag(tag);
-    setIsMobileMenuOpen(false);
-  }, []);
-
-  // Show loading screen on initial load only if we have NO data yet
-  if (isLoading) {
-    return <LoadingScreen />;
+  if (isInitializing || isLoading) {
+    return <LoadingScreen message="Initializing Horizon Intelligence..." />;
   }
 
+  // REQ-014: Accept 'ok' or 'healthy' from FastAPI health check
+  const isOnline = health?.status === "online" || health?.status === "ok" || health?.status === "healthy";
+
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
-      {/* Desktop Sidebar */}
-      <Navigation
-        currentView={currentView}
-        onNavigate={setCurrentView}
-        isDarkMode={isDarkMode}
-        toggleTheme={toggleTheme}
-        onRefresh={refreshData}
-        isRefreshing={isLoading}
-        connectionStatus={connectionStatus}
-        tags={tags}
-        activeTag={activeTag}
-        onTagSelect={setActiveTag}
-      />
+    <Router>
+      <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
+        <Navigation isOnline={isOnline} />
 
-      {/* Mobile Header */}
-      <MobileHeader isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} />
+        <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/contacts" element={<ContactList />} />
+            <Route path="/lab" element={<Lab />} />
+            <Route path="/console" element={<Console />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
 
-      {/* Mobile Menu Drawer */}
-      {isMobileMenuOpen && (
-        <>
-          <div
-            className="md:hidden fixed inset-0 bg-black/30 backdrop-blur-sm z-40 animate-in fade-in duration-200"
-            onClick={() => setIsMobileMenuOpen(false)}
-          />
-          <div className="md:hidden fixed inset-y-0 left-0 w-72 bg-white dark:bg-slate-900 z-50 shadow-xl pt-4 flex flex-col slide-in-from-right-4">
-            <Navigation
-              currentView={currentView}
-              onNavigate={handleMobileNav}
-              isDarkMode={isDarkMode}
-              toggleTheme={toggleTheme}
-              isMobile={true}
-              closeMobileMenu={() => setIsMobileMenuOpen(false)}
-              onRefresh={refreshData}
-              isRefreshing={isLoading}
-              connectionStatus={connectionStatus}
-              tags={tags}
-              activeTag={activeTag}
-              onTagSelect={handleTagSelect}
-            />
-          </div>
-        </>
-      )}
+        <footer className="py-6 border-t border-slate-200 dark:border-slate-800 text-center text-slate-500 text-sm">
+          <p>© {new Date().getFullYear()} Project Horizon — Relationship Intelligence Platform</p>
+        </footer>
 
-      {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12">
-        <div className="max-w-6xl mx-auto" key={currentView}>
-          <ErrorBoundary>
-            <Suspense fallback={<FallbackLoader />}>
-              {currentView === APP_VIEW.DASHBOARD && (
-                <Dashboard
-                  onNavigate={setCurrentView}
-                  connectionStatus={connectionStatus}
-                />
-              )}
-              {currentView === APP_VIEW.LOGS && (
-                <CallLog activeTag={activeTag} onContactClick={setDrawerContact} />
-              )}
-              {currentView === APP_VIEW.CONTACTS && <ContactList />}
-              {currentView === APP_VIEW.ACTIONS && <ActionsLog />}
-              {currentView === APP_VIEW.LAB && <Lab onSaveLog={addCall} />}
-            </Suspense>
-          </ErrorBoundary>
-        </div>
-      </main>
+        <Toaster
+          position="bottom-left"
+          toastOptions={{
+            className: "dark:bg-slate-800 dark:text-slate-100",
+            duration: 4000,
+          }}
+        />
 
-      <CommandPalette
-        isOpen={isCommandPaletteOpen}
-        onClose={() => setIsCommandPaletteOpen(false)}
-        onNavigate={setCurrentView}
-        calls={calls}
-        contacts={contacts}
-      />
-
-      <UnifiedContactDrawer
-        contactName={drawerContact}
-        onClose={() => setDrawerContact(null)}
-        calls={calls}
-        contacts={contacts}
-      />
-
-      <AssistantChat />
-    </div>
+        {/* Floating AI Chat — persists across all routes */}
+        <FloatingChat />
+      </div>
+    </Router>
   );
 };
 
 const App: React.FC = () => {
   return (
-    <ErrorBoundary>
-      <HistoryProvider>
-        <ToastProvider>
-          <MainLayout />
-        </ToastProvider>
-      </HistoryProvider>
-    </ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <AppContent />
+    </QueryClientProvider>
   );
 };
 
