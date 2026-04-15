@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PersonData } from '@/types';
-import { updatePerson } from '@/services/apiService';
+import { api } from '@/services/apiClient';
 
 interface EditContactModalProps {
     isOpen: boolean;
@@ -34,7 +34,7 @@ const EditContactModal: React.FC<EditContactModalProps> = ({ isOpen, onClose, pe
         setError(null);
 
         try {
-            const result = await updatePerson(formData);
+            const result: any = await api.updateContact(formData.id, formData);
             if (result.status === 'success') {
                 onSave(formData);
                 onClose();

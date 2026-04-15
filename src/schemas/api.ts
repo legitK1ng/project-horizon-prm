@@ -11,7 +11,7 @@ export const ExecutiveBriefSchema = z.object({
   summary: z.string().optional(),
   sentiment: z.enum(['Positive', 'Negative', 'Neutral']).optional(),
   tags: z.array(z.string()).optional().default([]),
-  actionItems: z.array(z.string()).optional().default([]),
+  // Backend always sends snake_case; transform camelCase aliases on ingest for legacy compat
   action_items: z.array(z.string()).optional().default([]),
   recommended_followup_date: z.string().optional().nullable(),
   draft_followup_message: z.string().optional().nullable(),
@@ -21,7 +21,14 @@ export const ExecutiveBriefSchema = z.object({
     owner: z.enum(['user', 'contact']).optional()
   })).optional().default([]),
   commitment_deadline_alerts: z.array(z.string()).optional().default([]),
-}).passthrough();
+}).passthrough()
+  .transform((val) => ({
+    ...val,
+    // Normalize: if only camelCase exists (old records), back-fill snake_case
+    action_items: val.action_items?.length
+      ? val.action_items
+      : (val as any).actionItems ?? [],
+  }));
 
 export const CallRecordSchema = z.object({
   id: z.string().uuid(),

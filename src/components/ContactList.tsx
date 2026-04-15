@@ -2,9 +2,8 @@
 import React, { useState, useMemo } from 'react';
 import { Contact } from '@/types';
 import { Search, Phone, Mail, Clock, ArrowUpDown, Users, Star, ImagePlus } from 'lucide-react';
-import ContactDetailDrawer from '@/components/common/ContactDetailDrawer';
-
-import { useContacts, useToggleFavorite } from '@/hooks/useHorizonData';
+import UnifiedContactDrawer from '@/components/common/UnifiedContactDrawer';
+import { useContacts, useToggleFavorite, useCalls } from '@/hooks/useHorizonData';
 import { api } from '@/services/apiClient';
 
 interface ContactListProps {
@@ -15,6 +14,7 @@ type SortOption = 'alpha' | 'recent' | 'stats';
 
 const ContactList: React.FC<ContactListProps> = () => {
     const { data: contacts = [] } = useContacts();
+    const { data: calls = [] } = useCalls();
     const { mutate: toggleFavorite } = useToggleFavorite();
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState<SortOption>('alpha');
@@ -36,7 +36,9 @@ const ContactList: React.FC<ContactListProps> = () => {
             if (photos && photos.length > 0) {
                 // Just cycle to the first new photo that isn't the current one (if available)
                 const nextPhoto = photos.find(p => p !== contact.photo_url) || photos[0];
-                await api.setContactPhoto(contact.id, nextPhoto);
+                if (nextPhoto) {
+                    await api.setContactPhoto(contact.id, nextPhoto);
+                }
             }
         } finally {
             setEnrichingId(null);
@@ -237,11 +239,14 @@ const ContactList: React.FC<ContactListProps> = () => {
                 )}
             </div>
 
-            {/* Contact Detail Drawer */}
+            {/* Unified Contact Drawer */}
             {
                 selectedContact && (
-                    <ContactDetailDrawer
-                        contact={selectedContact}
+                    <UnifiedContactDrawer
+                        contactId={selectedContact.id}
+                        contactName={`${selectedContact.first_name} ${selectedContact.last_name || ''}`.trim()}
+                        contacts={contacts}
+                        calls={calls}
                         onClose={() => setSelectedContact(null)}
                     />
                 )

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { MessageCircle, X, Send, Minimize2, Bot, Sparkles, Trash2, RefreshCw } from 'lucide-react';
+import { MessageCircle, X, Send, Minimize2, Bot, Sparkles, Trash2 } from 'lucide-react';
 import { cn } from '@/utils/ui';
+import { api } from '@/services/apiClient';
 
 interface Message {
     id: string;
@@ -90,35 +91,19 @@ const FloatingChat: React.FC = () => {
         setIsThinking(true);
 
         try {
-            // Optimistic UI: Add a temporary ID for the AI response if we were streaming, 
-            // but here we just wait for the full response.
-
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
-
-            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/v1/ai/chat`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text, history: messages.slice(-6) }),
-            });
-
-            let reply = "I'm having trouble connecting to the AI. Try again in a moment.";
-            if (res.ok) {
-                const data = await res.json();
-                reply = data.reply || data.message || reply;
-            }
+            const data = await api.aiChat(text);
 
             setMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
                 role: 'ai',
-                text: reply,
+                text: data.message,
                 timestamp: new Date(),
             }]);
-        } catch {
+        } catch (error: any) {
             setMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
                 role: 'ai',
-                text: "Couldn't reach the intelligence engine. Check that your backend is running.",
+                text: `Error: ${error.message || "Couldn't reach the intelligence engine."}`,
                 timestamp: new Date(),
             }]);
         } finally {

@@ -208,19 +208,63 @@ async def _persist_to_db(
 ) -> None:
     """Background task: store the call record in Supabase."""
     try:
+        # 1. Lookup contact if possible to link via UUID
+        contact_id = None
+        if phone_number or contact_name:
+            try:
+                # Try phone first (normalized)
+                if phone_number:
+                    clean_phone = "".join(filter(str.isdigit, phone_number))
+                    if len(clean_phone) >= 10:
+                        res = db.table("contacts").select("id").ilike("phone", f"%{clean_phone[-10:]}%").limit(1).execute()
+                        if res.data:
+                            contact_id = res.data[0]["id"]
+                
+                # Try name if phone failed
+                if not contact_id and contact_name and contact_name != "Unknown":
+                    res = db.table("contacts").select("id").ilike("full_name", f"%{contact_name}%").limit(1).execute()
+                    if res.data:
+                        contact_id = res.data[0]["id"]
+            except Exception as e:
+                logger.warning(f"[DB] Contact lookup failed (non-critical): {e}")
+
+        # 2. Generate AI Brief (REQ-035)
+        # Only if there's enough transcript to analyze
+        executive_brief = None
+        sentiment = "Neutral"
+        tags = []
+        if len(transcript_text) > 50:
+            try:
+                from services.ai_briefing_service import generate_call_brief
+                brief = generate_call_brief(transcript_text, contact_name)
+                executive_brief = brief
+                sentiment = brief.get("sentiment", "Neutral")
+                tags = brief.get("tags", [])
+                logger.info(f"[AI] Successfully generated brief for {contact_name!r}")
+            except Exception as ai_err:
+                logger.warning(f"[AI] Brief generation failed: {ai_err}")
+
+        # 3. Build record
         record = {
             "contact_name": contact_name,
             "phone_number": phone_number,
             "duration": duration,
-            "raw_transcript": transcript_text,  # Fixed: Use v1 schema column
-            "status": "pending",               # Use 'pending' to match DB constraints
+            "raw_transcript": transcript_text,
+            "executive_brief": executive_brief,
+            "sentiment": sentiment,
+            "tags": tags,
+            "status": "completed",
             "timestamp": call_timestamp or datetime.now(timezone.utc).isoformat(),
+            "contact_id": contact_id,  # Linked UUID if found
         }
-        # Explicitly use the .from_() syntax and catch specific database errors
+        
+        # 4. Insert
         db.table("call_records").insert(record).execute()
-        logger.info(f"[DB] Successfully persisted call record for {contact_name!r}")
+        logger.info(
+            f"[DB] Successfully persisted call record for {contact_name!r}. "
+            f"Linked to contact: {bool(contact_id)}"
+        )
     except Exception as e:
-        # Log the full error but don't let it crash the server
         error_msg = str(e)
         if "PGRST204" in error_msg or "not found" in error_msg.lower():
             logger.error(

@@ -125,15 +125,72 @@ class ApiClient {
   }
 
   async getEnrichmentJobs(contactId: string): Promise<any[]> {
-    const res = await this.request<any>(`/api/v1/enrichment/?contact_id=${contactId}`);
+    const res = await this.request<any>(`/api/v1/enrichments/?contact_id=${contactId}`);
     return res.data || [];
   }
 
   async triggerEnrichment(contact_id: string): Promise<{ status: string; job_id: string }> {
-    return this.request('/api/v1/enrichment/', {
+    return this.request('/api/v1/enrichments/', {
       method: 'POST',
       body: JSON.stringify({ contact_id })
     });
+  }
+
+  // --- AI / INTELLIGENCE ---
+
+  async aiChat(message: string, contextId?: string): Promise<{ message: string; context_used: boolean }> {
+    const res = await this.request<any>('/api/v1/ai/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message, context_id: contextId })
+    });
+    return {
+      message: res.message || '',
+      context_used: !!res.context_used
+    };
+  }
+
+  async updateContact(id: string, contactData: any) {
+    return this.request(`/api/v1/contacts/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(contactData),
+    });
+  }
+
+  /** Search contacts by name/phone/email — routes to the real contacts list endpoint */
+  async searchPerson(query: string) {
+    const res = await this.request<any>(`/api/v1/contacts?search=${encodeURIComponent(query)}&limit=20`);
+    return res.data || [];
+  }
+
+  async getModels() {
+    return this.request('/api/v1/system/models');
+  }
+
+  async analyzeText(transcript: string): Promise<any> {
+    const res = await this.request<any>('/api/v1/ai/analyze', {
+      method: 'POST',
+      body: JSON.stringify({ transcript })
+    });
+    return res.data;
+  }
+
+  // --- SYSTEM / DIAGNOSTICS ---
+
+  async fetchModels(): Promise<{ name: string; displayName: string }[]> {
+    const res = await this.request<any>('/api/v1/system/models');
+    return res.models || [];
+  }
+
+  async runDiagnostics(): Promise<{ status: string; results: any[] }> {
+    return this.request('/api/v1/system/diagnostics');
+  }
+
+  async testGeminiConnection(): Promise<any> {
+    return this.request('/api/v1/system/test-gemini');
+  }
+
+  async triggerProcessing(): Promise<any> {
+    return this.request('/api/v1/system/trigger-processing');
   }
 
   // --- GOOGLE INTEGRATION ---

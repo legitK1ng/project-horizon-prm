@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Mail, Phone, User, Edit2 } from 'lucide-react';
-import { searchPerson } from '@/services/apiService';
 import { PersonData } from '@/types';
+import { api } from '@/services/apiClient';
 import EditContactModal from './EditContactModal';
 
 interface ContactHoverCardProps {
@@ -48,7 +48,7 @@ const ContactHoverCard: React.FC<ContactHoverCardProps> = ({ contactName, phoneN
 
         setLoading(true);
         try {
-            const result = await searchPerson(query);
+            const result: any = await api.searchPerson(query);
             contactCache[query] = result;
             setData(result);
         } catch (err) {

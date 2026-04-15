@@ -3,7 +3,7 @@ import { CallRecord, Persona } from '@/types';
 import { BRAIN_PERSONAS, ICONS } from '@/constants';
 import { Brain, Play, RefreshCw, Save, Activity, Server, CheckCircle, AlertTriangle, Upload } from 'lucide-react';
 import { generateId } from '@/utils/helpers';
-import { fetchModels, runBackendDiagnostics, testGeminiConnection, triggerProcessing, analyzeText } from '@/services/apiService';
+import { api } from '@/services/apiClient';
 import { connectionLogger, LogEntry as ServiceLogEntry } from '@/utils/connectionLogger';
 import Console, { LogEntry } from './Console';
 
@@ -115,7 +115,7 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
         setResult(null);
 
         try {
-            const analysis = await analyzeText(transcript);
+            const analysis = await api.analyzeText(transcript);
             setResult(analysis);
         } catch (error) {
             console.error(error);
@@ -130,6 +130,7 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
         if (result && onSaveLog) {
             const newCall: CallRecord = {
                 id: generateId('call'),
+                contact_id: 'manual', // Static ID for manual diagnostics
                 timestamp: new Date().toISOString(),
                 contact_name: 'Manual Entry', // Backend will resolve this if phone matches
                 phone_number: phoneNumber,
@@ -155,16 +156,16 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
 
         try {
             addLog('INFO', 'Fetching Gemini Models...');
-            const modelData = await fetchModels();
-            if (modelData && modelData.models) {
-                setModels(modelData.models);
-                addLog('SUCCESS', `Fetched ${modelData.models.length} models`, modelData.models.map((m: any) => m.name));
+            const models = await api.fetchModels();
+            if (models && models.length > 0) {
+                setModels(models);
+                addLog('SUCCESS', `Fetched ${models.length} models`, models.map((m: any) => m.name));
             } else {
                 addLog('WARNING', 'No models returned from backend');
             }
 
             addLog('INFO', 'Running Backend Integrity Tests...');
-            const diagData = await runBackendDiagnostics();
+            const diagData = await api.runDiagnostics();
             if (diagData) {
                 setDiagResults(diagData);
                 if (diagData.status === 'healthy') {
@@ -417,7 +418,7 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
                                 <button
                                     onClick={async () => {
                                         addLog('INFO', 'Testing Gemini Connection...');
-                                        const res = await testGeminiConnection();
+                                        const res = await api.testGeminiConnection();
                                         if (res?.status === 'success' || res?.candidates) {
                                             addLog('SUCCESS', 'Gemini Connection Verified', res);
                                         } else {
@@ -431,7 +432,7 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
                                 <button
                                     onClick={async () => {
                                         addLog('INFO', 'Triggering Background Processing...');
-                                        const res = await triggerProcessing();
+                                        const res = await api.triggerProcessing();
                                         addLog('INFO', 'Trigger Result', res);
                                     }}
                                     className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors"

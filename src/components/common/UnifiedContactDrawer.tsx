@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Mail, Phone, Building, User, Clock, FileText, ChevronRight, Shield, Activity, Globe, Linkedin, Twitter, ExternalLink } from 'lucide-react';
-import { searchPerson } from '@/services/apiService';
 import { CallRecord, Contact } from '@/types';
+import { api } from '@/services/apiClient';
 import { formatDuration, getInitials } from '@/utils/helpers';
 import { cn } from '@/utils/ui';
 import EnrichmentCard from './EnrichmentCard';
@@ -16,7 +16,7 @@ interface UnifiedContactDrawerProps {
 
 type Tab = 'overview' | 'notes' | 'actions' | 'osint' | 'timeline';
 
-const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({ contactName, onClose, calls, contacts }) => {
+const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({ contactId, contactName, onClose, calls, contacts }) => {
     const [data, setData] = useState<any | null>(null);
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<Tab>('overview');
@@ -30,13 +30,17 @@ const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({ contactName
         }) || null;
     }, [contactName, contacts]);
 
-    // Filter calls for this contact
+    // Filter calls for this contact (Precision: ID-first, fallback to Name)
     const contactCalls = useMemo(() => {
-        if (!contactName) return [];
+        if (!contactName && !contactId) return [];
         return calls
-            .filter(c => c.contact_name?.toLowerCase() === contactName.toLowerCase())
+            .filter(c => {
+                if (contactId && c.contact_id === contactId) return true;
+                if (contactName && c.contact_name?.toLowerCase() === contactName.toLowerCase()) return true;
+                return false;
+            })
             .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    }, [contactName, calls]);
+    }, [contactName, contactId, calls]);
 
     // Extract action items from contact's calls
     const actionItems = useMemo(() => {
@@ -53,7 +57,7 @@ const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({ contactName
     useEffect(() => {
         if (!contactName) return;
         setLoading(true);
-        searchPerson(contactName).then(result => {
+        api.searchPerson(contactName).then(result => {
             setData(result);
         }).catch(err => {
             console.error('Contact fetch error:', err);
@@ -74,7 +78,7 @@ const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({ contactName
     if (!contactName) return null;
 
     const initials = getInitials(contactName);
-    
+
     // Calculate relationship health (mock logic)
     const healthScore = Math.min(100, (contactCalls.length * 10) + (localContact?.total_calls || 0));
     const healthColor = healthScore > 70 ? 'text-emerald-500' : healthScore > 40 ? 'text-amber-500' : 'text-rose-500';
@@ -101,13 +105,13 @@ const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({ contactName
                 <div className="p-8 border-b border-slate-100 dark:border-slate-900 bg-slate-50/50 dark:bg-slate-900/50 relative overflow-hidden">
                     {/* Background decoration */}
                     <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full -mr-32 -mt-32 blur-3xl opacity-50" />
-                    
+
                     <div className="flex items-start justify-between relative z-10">
                         <div className="flex items-center gap-6">
                             <div className="relative">
-                                {data?.photoUrl ? (
+                                {(data?.photoUrl || localContact?.photo_url) ? (
                                     <img
-                                        src={data.photoUrl}
+                                        src={data?.photoUrl || localContact?.photo_url || ''}
                                         alt={contactName}
                                         className="w-20 h-20 rounded-2xl object-cover border-4 border-white dark:border-slate-800 shadow-xl"
                                     />
@@ -232,7 +236,49 @@ const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({ contactName
                                             </div>
                                         </div>
                                     </section>
-                                    
+
+                                    <section>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Recent Calls</h4>
+                                            {contactCalls.length > 0 && (
+                                                <button
+                                                    onClick={() => setActiveTab('timeline')}
+                                                    className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase hover:underline"
+                                                >
+                                                    View All
+                                                </button>
+                                            )}
+                                        </div>
+                                        {contactCalls.length === 0 ? (
+                                            <div className="p-6 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-center">
+                                                <p className="text-xs text-slate-400 italic">No recent calls recorded</p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {contactCalls.slice(0, 3).map((call) => (
+                                                    <div key={call.id} className="p-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl flex items-center justify-between group hover:border-blue-500/30 transition-all">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
+                                                                <Clock size={14} />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                                                                    {new Date(call.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                                                </p>
+                                                                <p className="text-[10px] text-slate-400 truncate max-w-[150px]">
+                                                                    {call.executive_brief?.summary || "Call detected"}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <span className="text-[10px] font-mono text-slate-400">
+                                                            {formatDuration(call.duration ?? undefined)}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </section>
+
                                     <section>
                                         <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Key Metrics</h4>
                                         <div className="grid grid-cols-3 gap-3">
@@ -248,7 +294,7 @@ const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({ contactName
                                             </div>
                                             <div className="text-center">
                                                 <p className="text-xl font-bold text-slate-900 dark:text-white">
-                                                    {contactCalls[0] ? new Date(contactCalls[0].timestamp).toLocaleDateString(undefined, {month:'short', day:'numeric'}) : 'N/A'}
+                                                    {contactCalls[0] ? new Date(contactCalls[0].timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'N/A'}
                                                 </p>
                                                 <p className="text-[10px] text-slate-500 uppercase">Last Contact</p>
                                             </div>
@@ -266,7 +312,7 @@ const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({ contactName
                                             {localContact?.notes || "No persistent notes for this contact. Notes generated from briefs will appear in the History tab."}
                                         </p>
                                     </div>
-                                    
+
                                     {localContact?.tags && localContact.tags.length > 0 && (
                                         <div>
                                             <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Relationship Tags</h4>
@@ -313,11 +359,11 @@ const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({ contactName
                             )}                             {/* OSINT TAB */}
                             {activeTab === 'osint' && (
                                 <div className="space-y-6">
-                                    <EnrichmentCard 
-                                        contactId={localContact?.id || ''} 
+                                    <EnrichmentCard
+                                        contactId={localContact?.id || ''}
                                         contactName={contactName}
                                     />
-                                    
+
                                     <div className="p-4 bg-blue-600 rounded-2xl text-white shadow-lg shadow-blue-500/20">
                                         <div className="flex items-center gap-3 mb-3">
                                             <Shield size={20} />
@@ -330,15 +376,15 @@ const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({ contactName
 
                                     <div className="space-y-4">
                                         <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
-                                             <div className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm">
+                                            <div className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm">
                                                 <Building size={16} className="text-slate-400" />
-                                             </div>
-                                             <div className="flex-1 min-w-0">
-                                                 <p className="text-[10px] text-slate-400 font-bold uppercase">Affiliation</p>
-                                                 <p className="text-sm font-bold text-slate-800 dark:text-white truncate">
-                                                     {data?.organization || "Independent / Unverified"}
-                                                 </p>
-                                             </div>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase">Affiliation</p>
+                                                <p className="text-sm font-bold text-slate-800 dark:text-white truncate">
+                                                    {data?.organization || "Independent / Unverified"}
+                                                </p>
+                                            </div>
                                         </div>
 
                                         {data?.resourceName && (
@@ -371,10 +417,10 @@ const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({ contactName
                                             <div key={call.id} className="relative">
                                                 {/* Dot on line */}
                                                 <div className="absolute -left-[21px] top-1.5 w-4 h-4 rounded-full bg-white dark:bg-slate-950 border-2 border-blue-600 z-10" />
-                                                
+
                                                 <div className="animate-in fade-in slide-in-from-right-4 duration-300" style={{ animationDelay: `${i * 100}ms` }}>
                                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">
-                                                        {new Date(call.timestamp).toLocaleString(undefined, {month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'})}
+                                                        {new Date(call.timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                     </span>
                                                     <div className="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl hover:border-slate-200 dark:hover:border-slate-700 transition-all">
                                                         <div className="flex items-center justify-between mb-2">
@@ -390,11 +436,16 @@ const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({ contactName
                                                         <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-3 leading-relaxed">
                                                             {call.executive_brief?.summary || call.transcript || "Call detected with no transcript content."}
                                                         </p>
-                                                        {call.tags && call.tags.length > 0 && (
+                                                        {(call.tags || call.executive_brief?.tags || (call.keywords && call.keywords.length > 0)) && (
                                                             <div className="flex flex-wrap gap-1.5 mt-3">
-                                                                {call.tags.slice(0, 3).map(tag => (
+                                                                {(call.tags || call.executive_brief?.tags || []).slice(0, 3).map(tag => (
                                                                     <span key={tag} className="text-[9px] font-bold text-blue-600/70 dark:text-blue-400/70 uppercase">
                                                                         #{tag}
+                                                                    </span>
+                                                                ))}
+                                                                {(call.keywords || call.executive_brief?.keywords || []).slice(0, 2).map(kw => (
+                                                                    <span key={kw} className="text-[9px] font-bold text-slate-400 uppercase italic">
+                                                                        {kw}
                                                                     </span>
                                                                 ))}
                                                             </div>

@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from routers import calls, health, auth, system, contacts, sync, data, nudges, enrichments
+from routers import calls, health, auth, system, contacts, sync, data, nudges, enrichments, ai, transcriptions
 
 from db.supabase_client import init_supabase
 
@@ -48,9 +48,19 @@ app = FastAPI(
     redirect_slashes=False
 )
 
+CORS_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:8000",
+    "http://localhost",
+    "capacitor://localhost",      # Capacitor mobile wrapper
+    "https://localhost",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
+    allow_origin_regex=r"https?://localhost(:\d+)?",  # catch any localhost port in dev
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -65,7 +75,11 @@ app.include_router(contacts.router, prefix="/api/v1/contacts", tags=["contacts"]
 app.include_router(sync.router, prefix="/api/v1/sync", tags=["sync"])
 app.include_router(data.router, prefix="/api/v1/data", tags=["data"])
 app.include_router(nudges.router, prefix="/api/v1/nudges", tags=["nudges"])
-app.include_router(enrichments.router, prefix="/api/v1/enrichment", tags=["enrichment"])
+app.include_router(enrichments.router, prefix="/api/v1/enrichments", tags=["enrichment"])
+app.include_router(ai.router, prefix="/api/v1/ai", tags=["ai"])
+
+# ACR Phone / Whisper-compatible transcription webhook (OpenAI API surface)
+app.include_router(transcriptions.router, prefix="/v1/audio", tags=["transcription"])
 
 if __name__ == "__main__":
     import uvicorn

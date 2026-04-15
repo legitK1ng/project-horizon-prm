@@ -10,6 +10,7 @@ import Lab from "./components/Lab";
 import Console from "./components/Console";
 import LoadingScreen from "./components/LoadingScreen";
 import FloatingChat from "./components/common/FloatingChat";
+import CallLog from "./components/CallLog";
 import { useCheckHealth } from "./hooks/useHorizonData";
 
 const queryClient = new QueryClient({
@@ -45,6 +46,7 @@ const AppContent: React.FC = () => {
         <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/calls" element={<CallLog />} />
             <Route path="/contacts" element={<ContactList />} />
             <Route path="/lab" element={<Lab />} />
             <Route path="/console" element={<Console />} />

@@ -87,51 +87,49 @@ class GooglePeopleService:
             creds = Credentials(token=access_token)
             service = build('people', 'v1', credentials=creds)
 
-            # REQ-031: Fetch comprehensive data for OSINT/Enrichment
-            results = service.people().connections().list(
-                resourceName='people/me',
+            # REQ-031: Fetch comprehensive data for OSINT/Enrichment with full pagination
+            connections = []
+            page_token = None
+            stats = {"created": 0, "updated": 0, "errors": 0}
+
+            while True:
+                results = service.people().connections().list(
+                    resourceName='people/me',
                     pageSize=1000,
                     personFields='names,emailAddresses,phoneNumbers,organizations,photos,birthdays,biographies,urls,addresses,userDefined,locales',
                     pageToken=page_token
-            ).execute()
+                ).execute()
 
-            connections = results.get('connections', [])
-            stats = {"created": 0, "updated": 0, "errors": 0}
+                batch = results.get('connections', [])
+                connections.extend(batch)
+                
+                logger.info(f"[SYNC] Fetched batch of {len(batch)} connections. Total so far: {len(connections)}")
 
-            logger.info(f"[SYNC] Found {len(connections)} connections for user {user_id}")
-
-            for person in connections:
-                try:
-                    # Map Google Person to Horizon Contact
-                    contact_data = self._map_person_to_contact(person, stable_user_id)
-                    if not contact_data['name']:
-                        logger.warning(f"[SYNC] Skipping contact with no name: {person.get('resourceName')}")
-                        continue
-
-                    # Upsert into Supabase based on google_resource_name (REPO-001)
-                    # Note: 'on_conflict' requires a unique constraint on the column
-                    logger.info(f"[SYNC] Upserting contact: {contact_data['name']} ({contact_data['google_resource_name']})")
-                    
+                # Process batch immediately to avoid memory bloat
+                for person in batch:
                     try:
-                        res = self.supabase.table('contacts').upsert(
-                            contact_data,
-                            on_conflict='google_resource_name'
-                        ).execute()
-                        
-                        if res.data:
+                        contact_data = self._map_person_to_contact(person, stable_user_id)
+                        if not contact_data['full_name'] or contact_data['full_name'] == "Unknown":
+                            continue
+
+                        # Upsert into Supabase
+                        try:
+                            self.supabase.table('contacts').upsert(
+                                contact_data,
+                                on_conflict='google_resource_name'
+                            ).execute()
                             stats["updated"] += 1
-                        else:
-                            logger.warning(f"[SYNC] Upsert successful but no data returned for {contact_data['name']}")
+                        except Exception as db_err:
+                            logger.error(f"[SYNC] DB error for {contact_data['full_name']}: {db_err}")
                             stats["errors"] += 1
-                    except Exception as db_err:
-                        logger.error(f"[SYNC] Database error for contact {contact_data['name']}: {str(db_err)}")
+                    except Exception as e:
                         stats["errors"] += 1
+                
+                page_token = results.get('nextPageToken')
+                if not page_token:
+                    break
 
-                except Exception as inner_e:
-                    logger.error(f"[SYNC] Failed to sync contact {person.get('resourceName')}: {str(inner_e)}")
-                    stats["errors"] += 1
-
-            logger.info(f"[SYNC] Finished. Results: {stats}")
+            logger.info(f"[SYNC] Finished. Total contacts processed: {len(connections)}, Stats: {stats}")
             return {
                 "status": "success",
                 "stats": stats,

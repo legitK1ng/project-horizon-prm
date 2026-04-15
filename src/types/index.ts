@@ -6,6 +6,7 @@ export interface DashboardStats {
     totalContacts: number;
     callsThisWeek: number;
     avgHealth: number;
+    needsAttention: number;
 }
 
 export interface GoogleTokenResponse {
@@ -21,6 +22,7 @@ export interface ExecutiveBrief {
     key_points?: string[];
     tags?: string[];
     sentiment?: 'Positive' | 'Neutral' | 'Negative';
+    keywords?: string[];
 }
 
 export interface CallRecord {
@@ -37,6 +39,7 @@ export interface CallRecord {
     recommended_followup_date?: string | null;
     draft_followup_message?: string | null;
     timestamp: string;
+    keywords?: string[];
     created_at?: string;
 }
 

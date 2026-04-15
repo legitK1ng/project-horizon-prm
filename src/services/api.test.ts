@@ -2,34 +2,26 @@
 /// <reference types="vitest/globals" />
 
 import { describe, it, expect, vi } from 'vitest';
-import { fetchModels, runBackendDiagnostics, fetchProjectHorizonData } from './apiService';
+import { api } from './apiClient';
 import { mockFetch } from '../utils/testUtils';
 
 // Mock global fetch
 globalThis.fetch = vi.fn(mockFetch) as any;
 
-describe('API Service', () => {
-    it('fetches logs and transforms them correctly', async () => {
-        // Mock the return of fetchProjectHorizonData or the underlying fetch
-        // Since we mocked global.fetch, fetchProjectHorizonData should work.
-        const data = await fetchProjectHorizonData();
-        if (!data) throw new Error('Data is null');
-
-        if (!data || !data.calls) throw new Error('Data or calls is null');
-
-        expect(data.calls).toHaveLength(1);
-        expect(data.calls![0]!.contact_name).toBe('Test User');
-        expect(data.calls![0]!.tags).toContain('#test');
-        expect(data.calls![0]!.status).toBe('COMPLETED');
+describe('API Client', () => {
+    it('fetches health stats correctly', async () => {
+        const data = await api.getStats();
+        expect(data).toBeDefined();
+        expect(data.totalContacts).toBeGreaterThan(0);
     });
 
     it('fetches models', async () => {
-        const models = await fetchModels();
+        const models: any = await api.getModels();
         expect(models?.models).toHaveLength(1);
     });
 
     it('runs diagnostics', async () => {
-        const results = await runBackendDiagnostics();
+        const results = await api.checkHealth();
         expect(results?.status).toBe('healthy');
     });
 });

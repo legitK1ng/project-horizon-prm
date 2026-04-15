@@ -1,14 +1,15 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Users, 
-  FlaskConical, 
-  Terminal, 
+import {
+  LayoutDashboard,
+  Users,
+  FlaskConical,
+  Terminal,
   Menu,
   X,
   Zap,
-  ZapOff
+  ZapOff,
+  PhoneCall
 } from 'lucide-react';
 import { cn } from '@/utils/ui';
 
@@ -21,6 +22,7 @@ const Navigation: React.FC<NavigationProps> = ({ isOnline }) => {
 
   const navItems = [
     { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/calls', label: 'Call Logs', icon: PhoneCall },
     { to: '/contacts', label: 'Contacts', icon: Users },
     { to: '/lab', label: 'Processing Lab', icon: FlaskConical },
     { to: '/console', label: 'System Console', icon: Terminal },
@@ -61,8 +63,8 @@ const Navigation: React.FC<NavigationProps> = ({ isOnline }) => {
                 to={item.to}
                 className={({ isActive }) => cn(
                   "flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300",
-                  isActive 
-                    ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm" 
+                  isActive
+                    ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm"
                     : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
                 )}
               >
@@ -73,7 +75,7 @@ const Navigation: React.FC<NavigationProps> = ({ isOnline }) => {
           </div>
 
           {/* Mobile Toggle */}
-          <button 
+          <button
             onClick={() => setIsOpen(!isOpen)}
             className="md:hidden p-2.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all"
           >
@@ -95,8 +97,8 @@ const Navigation: React.FC<NavigationProps> = ({ isOnline }) => {
               onClick={() => setIsOpen(false)}
               className={({ isActive }) => cn(
                 "flex items-center gap-4 px-6 py-4 rounded-2xl text-base font-bold transition-all",
-                isActive 
-                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" 
+                isActive
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
                   : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
               )}
             >

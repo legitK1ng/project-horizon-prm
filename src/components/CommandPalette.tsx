@@ -84,9 +84,19 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
         calls.forEach(call => {
             const contactName = (call.contact_name || '').toLowerCase();
             const briefTitle = (call.executive_brief?.title || '').toLowerCase();
+            const briefSummary = (call.executive_brief?.summary || '').toLowerCase();
             const tags = (call.tags || []).join(' ').toLowerCase();
+            const keywords = (call.keywords || []).join(' ').toLowerCase();
+            const briefKeywords = (call.executive_brief?.keywords || []).join(' ').toLowerCase();
 
-            if (contactName.includes(q) || briefTitle.includes(q) || tags.includes(q)) {
+            if (
+                contactName.includes(q) ||
+                briefTitle.includes(q) ||
+                briefSummary.includes(q) ||
+                tags.includes(q) ||
+                keywords.includes(q) ||
+                briefKeywords.includes(q)
+            ) {
                 matches.push({
                     id: `call-${call.id}`,
                     type: 'call',
@@ -106,14 +116,27 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
         contacts.forEach(contact => {
             const displayName = contact.name || `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || 'Unknown Contact';
             const org = (contact.organization_id || '').toLowerCase();
+            const notes = (contact.notes || '').toLowerCase();
 
-            if (displayName.toLowerCase().includes(q) || org.includes(q)) {
+            if (displayName.toLowerCase().includes(q) || org.includes(q) || notes.includes(q)) {
                 matches.push({
                     id: `contact-${contact.id}`,
                     type: 'contact',
-                    icon: <Users size={16} />,
+                    icon: contact.photo_url ? (
+                        <img
+                            src={contact.photo_url}
+                            alt=""
+                            className="w-4 h-4 rounded-full object-cover"
+                            onError={(e) => {
+                                // Fallback if image fails
+                                (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                        />
+                    ) : (
+                        <Users size={16} />
+                    ),
                     title: displayName,
-                    subtitle: contact.organization_id || 'Professional Connection',
+                    subtitle: contact.organization_id || contact.organization || 'Professional Connection',
                     onSelect: () => {
                         onNavigate(APP_VIEW.CONTACTS);
                         onClose();
@@ -233,7 +256,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
                                                 : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
                                                 }`}
                                         >
-                                            <div className={`flex-shrink-0 ${selectedIndex === currentIndex
+                                            <div className={`flex-shrink-0 w-4 flex justify-center ${selectedIndex === currentIndex
                                                 ? 'text-blue-600 dark:text-blue-400'
                                                 : 'text-slate-400'
                                                 }`}>

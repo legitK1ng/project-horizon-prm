@@ -96,6 +96,26 @@ async def ingest_call(
     except Exception as e:
         logger.error(f"[SECURITY] Encryption failed: {e}")
 
+    # 4. Lookup contact if possible to link via UUID
+    contact_id = None
+    if phone_number or contact_name:
+        try:
+            # Try phone first (normalized)
+            if phone_number:
+                clean_phone = "".join(filter(str.isdigit, phone_number))
+                if len(clean_phone) >= 10:
+                    res = db.table("contacts").select("id").ilike("phone", f"%{clean_phone[-10:]}%").limit(1).execute()
+                    if res.data:
+                        contact_id = res.data[0]["id"]
+            
+            # Try name if phone failed
+            if not contact_id and contact_name and contact_name != "Unknown":
+                res = db.table("contacts").select("id").ilike("full_name", f"%{contact_name}%").limit(1).execute()
+                if res.data:
+                    contact_id = res.data[0]["id"]
+        except Exception as e:
+            logger.warning(f"[DB] Contact lookup failed (non-critical): {e}")
+
     record = {
         "contact_name": contact_name,
         "phone_number": phone_number,
@@ -110,6 +130,7 @@ async def ingest_call(
         "draft_followup_message": brief.get("draft_followup_message"),
         "open_commitments": brief.get("open_commitments", []),
         "timestamp": timestamp or datetime.now(timezone.utc).isoformat(),
+        "contact_id": contact_id,  # Linked UUID if found
     }
 
     try:
