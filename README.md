@@ -53,11 +53,12 @@ The system centers on three core entities linked by stable UUIDs:
 ## 📦 SETUP & INSTALLATION GUIDE
 
 Ensure you have the following installed before proceeding:
-- **Node.js**: v18+ (LTS recommended)
-- **Python**: v3.11+
-- **Git**: Latest version
-- **Database**: A **Supabase** project (PostgreSQL)
-- **Google Cloud Account**: For Google People API, Cloud Run, and Google OAuth.
+
+* **Node.js**: v18+ (LTS recommended)
+* **Python**: v3.11+
+* **Git**: Latest version
+* **Database**: A **Supabase** project (PostgreSQL)
+* **Google Cloud Account**: For Google People API, Cloud Run, and Google OAuth.
 
 ### 1. Repository Setup
 
@@ -71,18 +72,23 @@ cd project-horizon-prm
 The backend manages the AI intelligence (speaker diarization, Gemini prompting) and our secure Supabase bridge.
 
 1. **Create Virtual Environment**:
+
    ```bash
    cd mcp-backend
    python -m venv venv
    .\venv\Scripts\activate   # (Windows)
    source venv/bin/activate  # (Mac/Linux)
    ```
+
 2. **Install Dependencies**:
+
    ```bash
    pip install -r requirements.txt
    ```
+
 3. **Environment Variables**:
    Create a `.env` in `mcp-backend/`. Needed variables:
+
    ```env
    # Supabase
    SUPABASE_URL=...
@@ -93,7 +99,9 @@ The backend manages the AI intelligence (speaker diarization, Gemini prompting) 
    # Encryption
    FIELD_ENCRYPTION_MASTER_KEY=...
    ```
+
 4. **Run the Backend**:
+
    ```bash
    uvicorn main:app --reload --port 8000
    # Optionally run the background ingestion daemon:
@@ -103,17 +111,22 @@ The backend manages the AI intelligence (speaker diarization, Gemini prompting) 
 ### 3. Frontend Config (Vite React)
 
 1. **Install Node Modules**:
+
    ```bash
    # from project root
    npm install
    ```
+
 2. **Environment Variables**:
    Create a `.env` at the root level:
+
    ```env
    VITE_GOOGLE_CLIENT_ID=...
    # Note: Local dev proxies /api to localhost:8000 automatically via vite.config.ts
    ```
+
 3. **Launch the Dashboard**:
+
    ```bash
    npm run dev
    ```
@@ -140,4 +153,4 @@ The backend manages the AI intelligence (speaker diarization, Gemini prompting) 
 
 ## 📜 LICENSE
 
-*Confidential — Private Property of Project Horizon Team*
+###### Confidential — Private Property of Project Horizon Team
