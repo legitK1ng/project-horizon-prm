@@ -1,156 +1,194 @@
-# 🪐 Project Horizon: Enterprise-Grade Relationship Intelligence (PRM)
+# Horizon PRM
 
-## *The Future of Proactive Relationship Management*
-
-[![Horizon Tech](https://img.shields.io/badge/Architecture-Topology%20v1.0-blueviolet?style=for-the-badge)](https://github.com/legitK1ng/project-horizon-prm)
-[![Stack](https://img.shields.io/badge/Stack-FastAPI%20%7C%20React%20%7C%20Supabase-blue?style=for-the-badge)](https://github.com/legitK1ng/project-horizon-prm)
-[![AI](https://img.shields.io/badge/AI-Gemini%20%7C%20MCP-orange?style=for-the-badge)](https://github.com/legitK1ng/project-horizon-prm)
+A self-hosted **Relationship Intelligence Platform** built to automatically capture, transcribe, and analyze phone calls — then surface proactive reminders, summaries, and health scores for every relationship that matters.
 
 ---
 
-## 🏛️ VISION & IDENTITY
+## What it does
 
-Project Horizon is not a "Contact List"—it's a **Relationship Intelligence Platform (PRM)** designed to transition from reactive workflows to **Proactive AI-Driven Nudging**. We provide an "Enterprise-Grade" architecture (Topology v1) that centralizes entities, relationships, and touchpoints into a unified intelligence surface.
+Horizon turns every phone call into structured relationship intelligence. It accepts call recordings from the [ACR Phone](https://nllabsapps.com/) Android app via a local Whisper-compatible endpoint, transcribes them on-device, and stores a rich record in Supabase — complete with an AI-generated executive brief, sentiment, action items, recommended follow-up date, and open commitments. The React dashboard (also deployable as a native Android/iOS app) surfaces all of this alongside a relationship health score that decays automatically over time.
 
----
+**Core features:**
 
-## 🚀 THE 5 CRITICAL PIVOTS (The Strategic Law)
-
-Every feature and line of code in Horizon is measured against these five pillars:
-
-1. **Decoupling**: Complete independence from legacy/GAS scripts.
-2. **Relational Intelligence**: Moving from "Flat Lists" to a 3-tier model (Entities → Relationships → Touchpoints).
-3. **Proactive AI**: Transitioning from "Summarization" to "Proactive Nudging" (Relationship Health Scores).
-4. **OSINT Pipeline**: Asynchronous enrichment for phone, email, social, and organization signals.
-5. **Security**: Field-level AES encryption for transcripts and sensitive relationship notes.
-
----
-
-## 🛠️ THE TOPOLOGY V1 TECH STACK
-
-Built for scale, security, and intelligence:
-
-* **Frontend**: React (Vite) + TypeScript + Tailwind CSS (Glassmode UI) + Unified `apiClient` architecture.
-* **Mobile Engine**: Capacitor (Cross-platform support).
-* **Backend**: Python (FastAPI) structured as a **Model Context Protocol (MCP)** Server—giving AI agentic control over your data.
-* **Database**: Supabase (PostgreSQL) — Relational Data with RLS (Row Level Security).
-* **Intelligence**: Google Gemini (Flash 1.5/Pro) integrated via a global background floating chat interface + Custom OSINT enrichment and diarization.
-* **Infrastructure**: GCP Cloud Run (Serverless).
+- **Local call transcription** — ACR Phone POSTs recordings to `POST /v1/audio/transcriptions`, a local endpoint that mirrors the OpenAI Whisper API. Transcription runs entirely on-device via faster-whisper (no cloud transcription service required).
+- **AI call briefs** — Each transcript is analyzed by Gemini 2.0 Flash to produce a structured brief: summary, sentiment, action items, follow-up date, draft follow-up message, and commitment tracking.
+- **Relationship Health Score** — A per-contact score (0–100) computed from recency (40%), call frequency (30%), and sentiment (30%), with automatic decay for inactive relationships.
+- **Proactive nudges** — Contacts with health scores below 40 or no contact in 21+ days are surfaced automatically on the dashboard.
+- **Contact enrichment** — A 6-stage OSINT pipeline (phone lookup, email enrichment, org data, social discovery, AI synthesis) runs asynchronously per contact using Hunter.io, Numverify, and Clearbit.
+- **Google Contacts sync** — Bidirectional sync with Google People API via OAuth 2.0.
+- **Batch archive ingestion** — `POST /api/v1/batch-ingest` walks an ACR backup directory, parses filenames, deduplicates by MD5, and queues recordings.
+- **AI chat assistant** — Contextual chat backed by Kimi K2 (via Ollama cloud proxy) with semantic search over call transcript embeddings.
+- **Task & project tracking** — Actions extracted from call briefs are stored as first-class tasks, manageable through the Actions view.
+- **Real-time updates** — Server-Sent Events push transcript completions, enrichment progress, and task changes to all connected clients instantly.
+- **Mobile app** — The React frontend is wrapped in Capacitor for native Android and iOS deployment.
 
 ---
 
-## 📂 CORE SYSTEM ARCHITECTURE
+## Architecture
 
-The system centers on three core entities linked by stable UUIDs:
-
-* `profiles`: User auth and subscription management.
-* `contacts`: The "Master Truth" for people and entities.
-* `call_records`: Encrypted transcripts, interaction logging, and `executive_brief` objects.
-* `enriched_entities`: JSONB storage for the OSINT enrichment pipeline.
-
----
-
-## 📦 SETUP & INSTALLATION GUIDE
-
-Ensure you have the following installed before proceeding:
-
-* **Node.js**: v18+ (LTS recommended)
-* **Python**: v3.11+
-* **Git**: Latest version
-* **Database**: A **Supabase** project (PostgreSQL)
-* **Google Cloud Account**: For Google People API, Cloud Run, and Google OAuth.
-
-### 1. Repository Setup
-
-```bash
-git clone https://github.com/legitK1ng/project-horizon-prm
-cd project-horizon-prm
+```
+Zone 1 — Supabase (PostgreSQL + pgvector)
+    ↕  Supabase SDK
+Zone 2 — FastAPI backend  (localhost:8000)
+    ↕  HTTP REST / JSON  ← governed by docs/API_CONTRACT.md
+Zone 3 — React frontend   (localhost:3000)
+    ↕  Capacitor bridge
+Zone 4 — Mobile device (Android / iOS)
 ```
 
-### 2. Backend Config (FastAPI MCP)
-
-The backend manages the AI intelligence (speaker diarization, Gemini prompting) and our secure Supabase bridge.
-
-1. **Create Virtual Environment**:
-
-   ```bash
-   cd mcp-backend
-   python -m venv venv
-   .\venv\Scripts\activate   # (Windows)
-   source venv/bin/activate  # (Mac/Linux)
-   ```
-
-2. **Install Dependencies**:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Environment Variables**:
-   Create a `.env` in `mcp-backend/`. Needed variables:
-
-   ```env
-   # Supabase
-   SUPABASE_URL=...
-   SUPABASE_SERVICE_ROLE_KEY=...
-   # AI / Integrations
-   HUGGINGFACE_TOKEN=...
-   GOOGLE_API_KEY=...
-   # Encryption
-   FIELD_ENCRYPTION_MASTER_KEY=...
-   ```
-
-4. **Run the Backend**:
-
-   ```bash
-   uvicorn main:app --reload --port 8000
-   # Optionally run the background ingestion daemon:
-   uvicorn ingestion_server:app --host 0.0.0.0 --port 9000
-   ```
-
-### 3. Frontend Config (Vite React)
-
-1. **Install Node Modules**:
-
-   ```bash
-   # from project root
-   npm install
-   ```
-
-2. **Environment Variables**:
-   Create a `.env` at the root level:
-
-   ```env
-   VITE_GOOGLE_CLIENT_ID=...
-   # Note: Local dev proxies /api to localhost:8000 automatically via vite.config.ts
-   ```
-
-3. **Launch the Dashboard**:
-
-   ```bash
-   npm run dev
-   ```
-
-### 4. Database Setup
-
-1. Run the migrations in `mcp-backend/run_migrations.py`.
-2. Verify the existence of `profiles`, `contacts`, and `call_records` tables via the Supabase Dashboard.
-
-> **Warning:** Do not change your `FIELD_ENCRYPTION_MASTER_KEY` once data is encrypted in Supabase. Lost keys will result in permanent transcript data loss.
+The frontend never talks to Supabase or any AI API directly. All data flows through the FastAPI backend, keeping credentials server-side and giving the web app and mobile app identical code paths.
 
 ---
 
-## 🔮 ROADMAP & ADVANCEMENT
+## Tech stack
 
-> **Project Horizon is evolving rapidly.** We are currently in "Topology Phase 1".
-
-* **Invisible OSINT (v1.1)**: Automatic person enrichment using Hunter, NumVerify, and Gemini background processing.
-* **Proactive Health Scores (v1.2)**: "Needs Attention" algorithms that track relationship decay.
-* **The Timeline Feed**: Linear/Notion style chronological feed for every contact interaction.
-* **Field-Level Encryption (v2)**: Fully non-deterministic salts for ultra-secure "Vault" transcripts.
+| Layer | Technology |
+|---|---|
+| Frontend | React 18, TypeScript, Vite, Tailwind CSS |
+| State & data fetching | Zustand, TanStack React Query v5 |
+| API validation | Zod |
+| Mobile wrapper | Capacitor 8 (Android + iOS) |
+| Backend | FastAPI, Uvicorn, Python 3.11+ |
+| Database | Supabase (PostgreSQL + pgvector extension) |
+| Transcription | faster-whisper (`tiny` model, CPU by default) |
+| Audio normalization | FFmpeg (16 kHz mono WAV) |
+| Speaker diarization | pyannote.audio |
+| AI — call briefs | Google Gemini 2.0 Flash |
+| AI — chat | Kimi K2 via Ollama cloud proxy |
+| Embeddings | Google Gemini Embedding 001 (switchable to Voyage AI) |
+| Enrichment | Hunter.io, Numverify, Clearbit |
+| Contacts sync | Google People API |
+| Charts | Recharts, D3 |
+| Testing | Vitest (unit), Playwright (e2e) |
 
 ---
 
-## 📜 LICENSE
+## Project layout
 
-###### Confidential — Private Property of Project Horizon Team
+```
+horizon/
+├── src/                          # React frontend (TypeScript)
+│   ├── App.tsx                   # Router, query client, lazy-loaded routes
+│   ├── components/               # UI: Dashboard, ContactList, CallLog, Actions, Console
+│   ├── hooks/useHorizonData.ts   # All TanStack Query hooks
+│   ├── services/apiClient.ts     # Single HTTP client class
+│   ├── schemas/api.ts            # Zod schemas for all API responses
+│   ├── store/                    # Zustand stores
+│   └── types/index.ts            # Shared TypeScript interfaces
+├── mcp-backend/                  # FastAPI backend (Python)
+│   ├── main.py                   # App factory, CORS, rate limiting, router registration
+│   ├── routers/                  # One file per domain (calls, contacts, ai, transcriptions, …)
+│   ├── services/                 # Business logic: transcription, enrichment, AI briefing, …
+│   ├── core/                     # Auth, Whisper engine, diarization engine
+│   ├── db/supabase_client.py     # Supabase singleton
+│   ├── migrations/               # SQL migrations (apply via Supabase Dashboard)
+│   └── requirements.txt          # Python dependencies
+├── docs/
+│   └── API_CONTRACT.md           # Authoritative backend↔frontend endpoint contract
+├── capacitor.config.ts           # Mobile app config (app ID, allowed hosts)
+├── vite.config.ts                # Dev server (port 3000, /api proxy to :8000) + build
+└── package.json
+```
+
+---
+
+## Quick start
+
+### Prerequisites
+
+- Node.js ≥ 18, npm ≥ 9
+- Python ≥ 3.11
+- FFmpeg on your PATH (`ffmpeg -version` should work)
+- A Supabase project (free tier is fine)
+- Google Cloud project with Gemini API enabled
+
+### 1. Frontend
+
+```bash
+npm install
+```
+
+### 2. Backend
+
+```bash
+cd mcp-backend
+python -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 3. Environment variables
+
+Create `mcp-backend/.env` with at minimum:
+
+```env
+SUPABASE_URL=https://<your-project>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<service-role-jwt>
+GOOGLE_API_KEY=<gemini-api-key>
+HORIZON_API_KEY=hzn_<any-strong-random-string>
+```
+
+See `setup.md` for the full variable reference.
+
+### 4. Database migrations
+
+Run both files in order via the Supabase Dashboard → SQL Editor:
+
+```
+mcp-backend/migrations/001_actions_and_entities.sql
+mcp-backend/migrations/002_call_recordings.sql
+```
+
+### 5. Run
+
+```bash
+# Terminal 1 — backend
+cd mcp-backend && uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+# Terminal 2 — frontend
+npm run dev
+```
+
+The dashboard opens at `http://localhost:3000`. API docs are at `http://localhost:8000/docs`.
+
+---
+
+## ACR Phone setup
+
+To stream live call recordings from your Android phone:
+
+1. Install [ACR Phone by NLL Labs](https://nllabsapps.com/) on Android.
+2. In ACR Phone → Settings → Cloud Backup → Custom Server:
+   - **URL:** `http://<your-machine-ip>:8000/v1/audio/transcriptions`
+     (use a Tailscale Funnel URL for remote access)
+   - **API key:** the value of `HORIZON_API_KEY` from your `.env`
+   - **Model:** `whisper-1`
+3. Make a test call. The transcript and brief will appear in the dashboard within ~60 seconds depending on call length.
+
+---
+
+## Mobile build
+
+```bash
+npm run build
+npx cap sync android
+npx cap open android       # opens Android Studio
+```
+
+For live reload during development, uncomment and update the `server.url` line in `capacitor.config.ts`.
+
+---
+
+## Notes
+
+- The Whisper model is loaded into memory on the first transcription and stays resident. On CPU, a 5-minute call transcribes in roughly 30–90 seconds depending on hardware. Override the model size with `WHISPER_MODEL_SIZE` (`tiny` → `base` → `small` → `medium` → `large`).
+- Gemini (briefs, embeddings) and Kimi K2 (chat) require internet access. The transcription pipeline itself is fully offline.
+- Rate limiting defaults to 120 requests/minute per IP. Adjust with `RATE_LIMIT_RPM`.
+- The in-memory SSE event bus and rate limiter are single-worker only. For multi-worker production deployments, replace both with Redis-backed implementations (noted in the source).
+- Do not change `FIELD_ENCRYPTION_MASTER_KEY` once data is encrypted in Supabase — there is no recovery path for data encrypted under a lost key.
+
+---
+
+## License
+
+Private — Project Horizon. Not licensed for redistribution.

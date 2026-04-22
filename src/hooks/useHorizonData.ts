@@ -122,6 +122,22 @@ export const useTriggerEnrichment = () => {
   });
 };
 
+export const useTasks = () => {
+  return useQuery({
+    queryKey: ['tasks'],
+    queryFn: () => api.getTasks().catch(() => []),
+    staleTime: 1000 * 60 * 2,
+  });
+};
+
+export const useProjects = () => {
+  return useQuery({
+    queryKey: ['projects'],
+    queryFn: () => api.getProjects().catch(() => []),
+    staleTime: 1000 * 60 * 2,
+  });
+};
+
 export const useGoogleAuth = () => {
   return useMutation({
     mutationFn: (data: { code: string; userId: string; redirectUri: string }) =>

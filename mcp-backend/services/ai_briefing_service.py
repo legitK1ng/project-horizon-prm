@@ -14,7 +14,7 @@ def _get_model() -> genai.GenerativeModel:
     if not api_key:
         raise EnvironmentError("GOOGLE_API_KEY environment variable not set.")
     genai.configure(api_key=api_key)
-    return genai.GenerativeModel("gemini-1.5-flash")
+    return genai.GenerativeModel("gemini-2.0-flash")
 
 
 def generate_call_brief(transcript: str, contact_name: str) -> dict:
@@ -180,16 +180,77 @@ def compute_relationship_strength_score(
     REQ-036: Compute Relationship Strength Score (0-100).
     Composite of: recency, frequency, sentiment trend, response latency.
     """
-    # Recency: max 30 pts — decays over 60 days
-    recency = max(0, 30 - (days_since_last_contact / 2))
-
-    # Frequency: max 30 pts — 10 calls/month = full score
+    recency   = max(0, 30 - (days_since_last_contact / 2))
     frequency = min(30, calls_last_30_days * 3)
-
-    # Sentiment: max 25 pts — avg_sentiment_score is 0.0 (negative) to 1.0 (positive)
     sentiment = avg_sentiment_score * 25
-
-    # Response latency: max 15 pts — < 1 hour response = full score; > 72 hours = 0
-    latency = max(0, 15 - (avg_response_latency_hours / 5))
-
+    latency   = max(0, 15 - (avg_response_latency_hours / 5))
     return round(min(100, recency + frequency + sentiment + latency), 2)
+
+
+# ── Transcript Pipeline (Item 5 / 15) — Gemini ───────────────────────────────
+
+def process_transcript_gemini(transcript: str, contact_name: str = "Unknown") -> dict:
+    """
+    Item 5: Full transcript pipeline via Gemini 1.5 Flash (cloud).
+    Stages: speaker structuring → summary → action items → entity extraction.
+    Returns a dict matching the executive_brief schema.
+    """
+    model = _get_model()
+    today = datetime.now(timezone.utc).date().isoformat()
+
+    prompt = f"""Analyse this call transcript and return ONLY valid JSON with this structure:
+{{
+  "title": "Short descriptive title",
+  "summary": "2-3 sentence executive summary",
+  "sentiment": "Positive | Neutral | Negative",
+  "action_items": ["Action 1", "Action 2"],
+  "key_points": ["Key point 1", "Key point 2"],
+  "speakers": ["Speaker A", "Speaker B"],
+  "entities": [
+    {{"name": "Acme Corp", "type": "organization"}},
+    {{"name": "John Smith", "type": "person"}}
+  ],
+  "keywords": ["keyword1", "keyword2"],
+  "recommended_followup_date": "YYYY-MM-DD",
+  "draft_followup_message": "Personalized follow-up under 100 words",
+  "open_commitments": [
+    {{"commitment": "Send proposal", "deadline": "YYYY-MM-DD or null", "owner": "user | contact"}}
+  ]
+}}
+
+Contact: {contact_name}
+Today: {today}
+
+TRANSCRIPT:
+{transcript}
+
+Return ONLY the JSON object."""
+
+    response = model.generate_content(prompt)
+    text = response.text.strip()
+    for fence in ("```json", "```"):
+        if text.startswith(fence):
+            text = text[len(fence):]
+    if text.endswith("```"):
+        text = text[:-3]
+
+    return json.loads(text.strip())
+
+
+# ── Embeddings (Item 14) — Google text-embedding-004 ─────────────────────────
+
+def generate_embedding(text: str) -> list[float]:
+    """
+    Item 14: Generate a 768-dim embedding via Google text-embedding-004.
+    Used for semantic search over contacts, transcripts, tasks, projects.
+    """
+    api_key = os.environ.get("GOOGLE_API_KEY", "")
+    if not api_key:
+        raise EnvironmentError("GOOGLE_API_KEY not set.")
+    genai.configure(api_key=api_key)
+    result = genai.embed_content(
+        model="models/text-embedding-004",
+        content=text,
+        task_type="retrieval_document",
+    )
+    return result["embedding"]

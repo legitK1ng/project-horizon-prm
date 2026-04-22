@@ -33,13 +33,12 @@ export const ExecutiveBriefSchema = z.object({
 export const CallRecordSchema = z.object({
   id: z.string().uuid(),
   contact_name: z.string(),
-  contact_id: z.string().uuid(),
+  contact_id: z.string().uuid().optional().nullable(),
   phone_number: z.string().optional().nullable(),
   duration: z.union([z.string(), z.number()]).optional().nullable(),
-  // FIX: transcript was missing from schema — caused it to be stripped at parse boundary
   transcript: z.string().optional().nullable(),
   executive_brief: ExecutiveBriefSchema.optional().nullable(),
-  status: z.enum(['QUEUED', 'COMPLETED', 'SKIPPED_SHORT', 'ERROR']).optional(),
+  status: z.string().optional().nullable(),
   sentiment: z.enum(['Positive', 'Negative', 'Neutral']).optional().nullable(),
   tags: z.array(z.string()).optional().default([]),
   recommended_followup_date: z.string().optional().nullable(),

@@ -95,7 +95,7 @@ class ApiClient {
 
   async getCalls(): Promise<CallRecord[]> {
     const res = await this.request<any>('/api/v1/calls');
-    return ApiListResponseSchema(CallRecordSchema).parse(res).data;
+    return ApiListResponseSchema(CallRecordSchema).parse(res).data as CallRecord[];
   }
 
   async ingestCall(payload: any): Promise<CallRecord> {
@@ -103,7 +103,7 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(payload),
     });
-    return CallRecordSchema.parse(res.data);
+    return CallRecordSchema.parse(res.data) as CallRecord;
   }
 
   // --- ENRICHMENT / NUDGES ---
@@ -191,6 +191,107 @@ class ApiClient {
 
   async triggerProcessing(): Promise<any> {
     return this.request('/api/v1/system/trigger-processing');
+  }
+
+  // --- TASKS (Item 11) ---
+
+  async getTasks(): Promise<any[]> {
+    const res = await this.request<any>('/api/v1/actions/tasks');
+    return res.data || [];
+  }
+
+  async createTask(task: any): Promise<any> {
+    const res = await this.request<any>('/api/v1/actions/tasks', {
+      method: 'POST',
+      body: JSON.stringify(task),
+    });
+    return res.data ?? res;
+  }
+
+  async updateTask(id: string, patch: any): Promise<any> {
+    const res = await this.request<any>(`/api/v1/actions/tasks/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    });
+    return res.data ?? res;
+  }
+
+  async deleteTask(id: string): Promise<void> {
+    await this.request(`/api/v1/actions/tasks/${id}`, { method: 'DELETE' });
+  }
+
+  // --- PROJECTS (Item 11) ---
+
+  async getProjects(): Promise<any[]> {
+    const res = await this.request<any>('/api/v1/actions/projects');
+    return res.data || [];
+  }
+
+  async createProject(project: any): Promise<any> {
+    const res = await this.request<any>('/api/v1/actions/projects', {
+      method: 'POST',
+      body: JSON.stringify(project),
+    });
+    return res.data ?? res;
+  }
+
+  async updateProject(id: string, patch: any): Promise<any> {
+    const res = await this.request<any>(`/api/v1/actions/projects/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    });
+    return res.data ?? res;
+  }
+
+  async deleteProject(id: string): Promise<void> {
+    await this.request(`/api/v1/actions/projects/${id}`, { method: 'DELETE' });
+  }
+
+  // --- OLLAMA / kimi-k2:1t-cloud (Item 5) ---
+  // Cloud-hosted via Ollama daemon — no local VRAM needed.
+
+  async ollamaGenerate(prompt: string, model = 'minimax-m2.7:cloud'): Promise<{ response: string }> {
+    return this.request('/api/v1/ollama/generate', {
+      method: 'POST',
+      body: JSON.stringify({ prompt, model }),
+    });
+  }
+
+  async ollamaModels(): Promise<{ models: string[]; default_model: string }> {
+    return this.request('/api/v1/ollama/models');
+  }
+
+  async ollamaHealth(): Promise<{ status: string; version?: string; model?: string }> {
+    return this.request('/api/v1/ollama/health');
+  }
+
+  async processTranscript(transcript: string, contactName = 'Unknown'): Promise<any> {
+    // Routes to kimi-k2:1t-cloud via Ollama daemon
+    const res = await this.request<any>('/api/v1/ollama/process-transcript', {
+      method: 'POST',
+      body: JSON.stringify({ transcript, contact_name: contactName }),
+    });
+    return res.data ?? res;
+  }
+
+  // Embeddings use Google text-embedding-004 (cloud, no VRAM)
+  async embedText(text: string): Promise<{ embedding: number[]; dims: number; model: string }> {
+    return this.request('/api/v1/ai/embed', {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    });
+  }
+
+  // --- SSE REAL-TIME (Item 18) ---
+
+  subscribeToEvents(onEvent: (event: any) => void): () => void {
+    const BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+    const source = new EventSource(`${BASE}/api/v1/events/stream`);
+    source.onmessage = (e) => {
+      try { onEvent(JSON.parse(e.data)); } catch { /* non-JSON heartbeat */ }
+    };
+    source.onerror = () => source.close();
+    return () => source.close();
   }
 
   // --- GOOGLE INTEGRATION ---

@@ -1,23 +1,28 @@
 import os
 from fastapi import Header, HTTPException, status
 
-def verify_acr_secret(x_acr_secret: str = Header(None)):
+def verify_acr_secret(
+    x_horizon_key: str = Header(None),
+    x_acr_secret:  str = Header(None),
+):
     """
     REQ-018: Secret Handshake validation.
-    Checks the incoming X-ACR-Secret header against the environmental secret.
+    Accepts x-horizon-key (primary) or legacy x-acr-secret header.
     """
-    expected_secret = os.environ.get("ACR_WEBHOOK_SECRET")
-    
-    if not expected_secret:
-        # In development, we might not have it, but for production it's mandatory.
-        # We'll allow it only if explicitly disabled in dev (not recommended).
-        print("[AUTH] WARNING: ACR_WEBHOOK_SECRET not set in environment.")
+    horizon_key = os.environ.get("HORIZON_API_KEY")
+    legacy_key  = os.environ.get("ACR_WEBHOOK_SECRET")
+
+    provided = x_horizon_key or x_acr_secret
+
+    if not horizon_key and not legacy_key:
+        print("[AUTH] WARNING: No API key set in environment — allowing request.")
         return True
 
-    if x_acr_secret != expected_secret:
+    valid_keys = set(filter(None, [horizon_key, legacy_key]))
+    if provided not in valid_keys:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or missing ACR Webhook Secret",
+            detail="Invalid or missing API key (use x-horizon-key header)",
             headers={"WWW-Authenticate": "Header"},
         )
     return True

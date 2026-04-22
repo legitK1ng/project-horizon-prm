@@ -3,12 +3,15 @@ import sys
 import json
 import logging
 from datetime import datetime, timezone
+from pathlib import Path
 from fastapi import APIRouter, Request, HTTPException, Depends, UploadFile, File, Form, BackgroundTasks
 from pydantic import BaseModel
 
 from services.ai_briefing_service import generate_call_brief
 from services.audio_processing_service import process_audio_ingest, cleanup_processed_audio
 from services.transcription_service import transcribe_audio
+from services.acr_parser_reference import parse_acr_filename, build_canonical, norm_phone
+from services.embedding_service import embed_text
 from core.security.crypto import encrypt_data
 from core.auth import verify_acr_secret
 
@@ -116,6 +119,32 @@ async def ingest_call(
         except Exception as e:
             logger.warning(f"[DB] Contact lookup failed (non-critical): {e}")
 
+    # Parse ACR filename metadata when a file was uploaded
+    parsed_meta: dict = {}
+    if file and file.filename:
+        try:
+            stem = Path(file.filename).stem
+            ext  = Path(file.filename).suffix
+            parsed_meta = parse_acr_filename(stem, ext)
+            # Prefer sidecar/form phone over parsed phone if already set
+            if not phone_number and parsed_meta.get("phone"):
+                phone_number = parsed_meta["phone"]
+            if not contact_name or contact_name == "Unknown":
+                if parsed_meta.get("contact"):
+                    contact_name = parsed_meta["contact"]
+            logger.info(f"[INGEST] ACR parse: pattern={parsed_meta.get('pattern')} canonical={build_canonical(parsed_meta, ext)}")
+        except Exception as e:
+            logger.warning(f"[INGEST] ACR filename parse failed (non-critical): {e}")
+
+    # Embed the summary + transcript for semantic search (RAG)
+    embed_text_input = " ".join(filter(None, [
+        brief.get("summary", ""),
+        brief.get("title", ""),
+        " ".join(brief.get("tags", [])),
+        (transcript or "")[:2000],
+    ]))
+    embedding = embed_text(embed_text_input) if embed_text_input.strip() else None
+
     record = {
         "contact_name": contact_name,
         "phone_number": phone_number,
@@ -123,14 +152,20 @@ async def ingest_call(
         "transcript_encrypted": transcript_encrypted,
         "transcript_iv": transcript_iv,
         "executive_brief": brief,
-        "status": "COMPLETED",
+        "status": "completed",
         "sentiment": brief.get("sentiment", "Neutral"),
         "tags": brief.get("tags", []),
         "recommended_followup_date": brief.get("recommended_followup_date"),
         "draft_followup_message": brief.get("draft_followup_message"),
         "open_commitments": brief.get("open_commitments", []),
         "timestamp": timestamp or datetime.now(timezone.utc).isoformat(),
-        "contact_id": contact_id,  # Linked UUID if found
+        "contact_id": contact_id,
+        "embedding": embedding,
+        # ACR-parsed enrichment fields (populated when filename is parseable)
+        "acr_pattern":    parsed_meta.get("pattern", ""),
+        "acr_channel":    parsed_meta.get("channel", ""),
+        "acr_direction":  parsed_meta.get("direction", ""),
+        "acr_phone_e164": norm_phone(phone_number) if phone_number else "",
     }
 
     try:

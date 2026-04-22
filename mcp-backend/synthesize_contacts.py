@@ -124,9 +124,12 @@ async def run_synthesis():
             
             match = google_phone_map.get(norm, {})
             tagged_name = tagged_map.get(norm)
-            
-            full_name = match.get("full_name") or tagged_name or f"Contact {raw_phone}"
-            
+
+            full_name = match.get("full_name") or tagged_name
+            if not full_name:
+                # Skip unknown phone numbers — do not create placeholder "Contact +phone" entries
+                continue
+
             unique_phones[norm] = {
                 "user_id": USER_ID,
                 "phone": raw_phone,

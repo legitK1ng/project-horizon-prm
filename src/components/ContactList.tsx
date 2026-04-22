@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Contact } from '@/types';
 import { Search, Phone, Mail, Clock, ArrowUpDown, Users, Star, ImagePlus } from 'lucide-react';
 import UnifiedContactDrawer from '@/components/common/UnifiedContactDrawer';
+import { GoogleSyncButton } from '@/components/common/GoogleSyncButton';
 import { useContacts, useToggleFavorite, useCalls } from '@/hooks/useHorizonData';
 import { api } from '@/services/apiClient';
 
@@ -82,6 +83,7 @@ const ContactList: React.FC<ContactListProps> = () => {
                     <p className="text-slate-500 dark:text-slate-400">Synced from Google Contacts.</p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <GoogleSyncButton userId="8f9bd918-48a2-7da2-2e4d-1de095ad5631" />
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                         <input

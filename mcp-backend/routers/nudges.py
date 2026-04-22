@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, HTTPException
 from typing import List, Dict, Any
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from services.health_service import update_contact_health, calculate_health_score
 
 router = APIRouter()
@@ -17,9 +17,11 @@ async def get_active_nudges(req: Request):
         raise HTTPException(status_code=503, detail="Database not available")
 
     try:
+        # Compute cutoff in Python — PostgREST or_() requires literal values, not SQL expressions
+        stale_cutoff = (datetime.now(timezone.utc) - timedelta(days=21)).isoformat()
         response = db.table("contacts") \
             .select("id, first_name, last_name, health_score, last_contact_at, email, phone") \
-            .or_("health_score.lt.40, last_contact_at.lt.now()-interval '21 days'") \
+            .or_(f"health_score.lt.40,last_contact_at.lt.{stale_cutoff}") \
             .order("health_score", desc=False) \
             .limit(10) \
             .execute()

@@ -6,6 +6,7 @@ import { generateId } from '@/utils/helpers';
 import { api } from '@/services/apiClient';
 import { connectionLogger, LogEntry as ServiceLogEntry } from '@/utils/connectionLogger';
 import Console, { LogEntry } from './Console';
+import { WebNative, NativeContext } from '@/services/WebNative';
 
 interface LabProps {
     onSaveLog?: (call: CallRecord) => void;
@@ -23,6 +24,7 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
     // Diagnostics State
     const [models, setModels] = useState<any[]>([]);
     const [diagResults, setDiagResults] = useState<any>(null);
+    const [nativeContext, setNativeContext] = useState<NativeContext | null>(null);
     const [isLoadingDiag, setIsLoadingDiag] = useState(false);
 
     // Console State
@@ -155,6 +157,11 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
         setDiagResults(null);
 
         try {
+            addLog('NATIVE', 'Fetching Native Device Context...');
+            const context = await WebNative.getNativeContext();
+            setNativeContext(context);
+            addLog('NATIVE', `Fetched Native Context (${context.deviceInfo.platform})`, context);
+
             addLog('INFO', 'Fetching Gemini Models...');
             const models = await api.fetchModels();
             if (models && models.length > 0) {
@@ -408,6 +415,42 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
                                 )}
                             </div>
                         </div>
+
+                        {/* WebNative Context Section */}
+                        {nativeContext && (
+                            <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-2xl border border-slate-200/50 dark:border-slate-800/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] mt-6 animate-in slide-in-from-bottom-4 duration-500">
+                                <h4 className="font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
+                                    <Activity size={18} className="text-blue-500" /> WebNative Extension Details
+                                </h4>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                    <div className="p-4 bg-white/60 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                                        <p className="text-xs text-slate-500 mb-1">Platform</p>
+                                        <p className="font-medium text-slate-800 dark:text-slate-200 capitalize">{nativeContext.deviceInfo.platform}</p>
+                                    </div>
+                                    <div className="p-4 bg-white/60 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                                        <p className="text-xs text-slate-500 mb-1">Model</p>
+                                        <p className="font-medium text-slate-800 dark:text-slate-200">{nativeContext.deviceInfo.model}</p>
+                                    </div>
+                                    <div className="p-4 bg-white/60 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                                        <p className="text-xs text-slate-500 mb-1">Battery Optimization</p>
+                                        <p className="font-medium text-slate-800 dark:text-slate-200">{nativeContext.isBatteryOptimized ? 'Optimized' : 'Unrestricted'}</p>
+                                    </div>
+                                    <div className="col-span-2 md:col-span-3 p-4 bg-white/60 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                                        <p className="text-xs text-slate-500 mb-2">Permissions</p>
+                                        <div className="flex gap-4">
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-2 h-2 rounded-full ${nativeContext.permissions.contacts === 'granted' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                                                <span className="text-sm text-slate-700 dark:text-slate-300">Contacts</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-2 h-2 rounded-full ${nativeContext.permissions.calls === 'granted' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                                                <span className="text-sm text-slate-700 dark:text-slate-300">Call Logs</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Gemini Integration Section */}
                         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm mt-6">

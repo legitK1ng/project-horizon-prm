@@ -449,7 +449,12 @@
     "prompt-engineering-patterns": {
       "source": "wshobson/agents",
       "sourceType": "github",
-      "computedHash": "b3928f5cd846977a15c15dfd04dd9180ca05639063fe92e8f4dd8afb61173d4a"
+      "computedHash": "da802e85b6c7e53d343ec19fb331afb5b00afd3fb9b1964e39f75c753b239a4f"
+    },
+    "protect-mcp-setup": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "ce93ead215c250e975e57f45dc462ae9bed2fc94771b96f8336e513ca4e70028"
     },
     "protocol-reverse-engineering": {
       "source": "wshobson/agents",
@@ -600,6 +605,11 @@
       "source": "wshobson/agents",
       "sourceType": "github",
       "computedHash": "4f0e5b15d400b8165a4adef71b190e6af8e9d9e246d485d1d5b55ead65a6d2a4"
+    },
+    "signed-audit-trails-recipe": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "ded72e7b11ff40f2c404fbb108c5127fe858b19666d6b9ea8384e08ec81921a8"
     },
     "similarity-search-patterns": {
       "source": "wshobson/agents",

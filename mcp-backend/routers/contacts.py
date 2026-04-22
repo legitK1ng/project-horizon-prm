@@ -63,13 +63,14 @@ async def list_contacts(
         if favorites_only:
             query = query.eq("is_favorite", True)
         if search:
-            # Case-insensitive search across name fields
+            # Strip PostgREST filter metacharacters (comma = clause separator, parens = grouping)
+            safe = search.replace(",", " ").replace("(", "").replace(")", "").strip()
             query = query.or_(
-                f"first_name.ilike.%{search}%,"
-                f"last_name.ilike.%{search}%,"
-                f"organization.ilike.%{search}%,"
-                f"phone.ilike.%{search}%,"
-                f"email.ilike.%{search}%"
+                f"first_name.ilike.%{safe}%,"
+                f"last_name.ilike.%{safe}%,"
+                f"organization.ilike.%{safe}%,"
+                f"phone.ilike.%{safe}%,"
+                f"email.ilike.%{safe}%"
             )
 
         start = page * limit
@@ -106,7 +107,10 @@ async def get_contact(req: Request, contact_id: str):
 
         return contact
     except Exception as e:
-        raise HTTPException(status_code=404, detail="Contact not found")
+        err = str(e)
+        if "PGRST116" in err or "JSON object requested, multiple (or no) rows returned" in err:
+            raise HTTPException(status_code=404, detail="Contact not found")
+        raise HTTPException(status_code=500, detail=err)
 
 
 @router.post("/{contact_id}/refresh-health")
@@ -171,7 +175,17 @@ async def create_contact(req: Request, body: ContactCreate):
         raise HTTPException(status_code=503, detail="Database not available")
 
     record = body.dict()
-    record["user_id"] = "default"
+
+    # Resolve real user_id from profiles (single-user system — one profile row)
+    try:
+        profile = db.table("profiles").select("id").limit(1).execute()
+        if not profile.data:
+            raise HTTPException(status_code=500, detail="No user profile found; cannot create contact")
+        record["user_id"] = profile.data[0]["id"]
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Profile lookup failed: {str(e)}")
 
     try:
         response = db.table("contacts").insert(record).execute()

@@ -27,13 +27,13 @@ export interface ExecutiveBrief {
 
 export interface CallRecord {
     id: string;
-    contact_id: string;
+    contact_id?: string | null;
     contact_name: string;
     phone_number?: string | null;
     duration?: string | number | null;
     transcript?: string | null;
     executive_brief?: ExecutiveBrief | null;
-    status?: 'QUEUED' | 'COMPLETED' | 'SKIPPED_SHORT' | 'ERROR';
+    status?: 'QUEUED' | 'COMPLETED' | 'SKIPPED_SHORT' | 'ERROR' | null;
     sentiment?: 'Positive' | 'Neutral' | 'Negative' | null;
     tags?: string[];
     recommended_followup_date?: string | null;
@@ -62,7 +62,9 @@ export interface Contact {
     last_contact_at?: string | null;
     photo_url?: string | null;
     total_calls?: number | null;
-    raw_data?: any;
+    raw_data?: any;           // Full Google People API Person object
+    google_resource_name?: string | null;
+    last_synced?: string | null;
     created_at?: string;
     updated_at?: string;
     org?: string | null;
@@ -152,4 +154,117 @@ export interface ApiResponse {
     logs?: RawLog[];
     contacts?: RawContact[];
     data?: any;
+}
+
+// ── Actions / Tasks / Projects ──────────────────────────────────────────────
+
+export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
+export type TaskSource = 'user' | 'ai_generated' | 'ai_approved';
+export type ProjectStatus = 'active' | 'on_hold' | 'completed' | 'archived';
+
+export interface Task {
+    id: string;
+    title: string;
+    description?: string | null;
+    status: TaskStatus;
+    source: TaskSource;
+    priority: 'low' | 'medium' | 'high' | 'urgent';
+    due_date?: string | null;
+    project_id?: string | null;
+    contact_id?: string | null;
+    contact_name?: string | null;
+    tags?: string[];
+    ai_confidence?: number | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ProjectSection {
+    title: string;
+    content: string;
+}
+
+export interface Project {
+    id: string;
+    title: string;
+    description?: string | null;
+    status: ProjectStatus;
+    tasks?: Task[];
+    notes?: string | null;
+    people?: Array<{ contact_id: string; name: string; role?: string }>;
+    attachments?: Attachment[];
+    tags?: string[];
+    start_date?: string | null;
+    end_date?: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface Attachment {
+    id: string;
+    entity_id: string;
+    entity_type: 'task' | 'project' | 'contact' | 'call';
+    file_name: string;
+    file_path: string;
+    file_type: string;
+    file_size?: number | null;
+    uploaded_at: string;
+    url?: string | null;
+}
+
+// ── Entity Resolution / Normalization (Item 13) ────────────────────────────
+
+export type EntityType = 'contact' | 'task' | 'project' | 'location' | 'organization';
+export type RelationshipType = 'assigned_to' | 'related_to' | 'located_at' | 'belongs_to' | 'references';
+
+export interface Entity {
+    id: string;
+    type: EntityType;
+    name: string;
+    normalized_name: string;
+    aliases: string[];
+    metadata: Record<string, any>;
+    relationship_ids: string[];
+    created_at: string;
+    updated_at: string;
+}
+
+export interface EntityRelationship {
+    id: string;
+    from_entity_id: string;
+    to_entity_id: string;
+    type: RelationshipType;
+    weight?: number;
+    metadata?: Record<string, any>;
+    created_at: string;
+}
+
+// ── Canvas Graph (Item 12) ──────────────────────────────────────────────────
+
+export interface CanvasNode {
+    id: string;
+    label: string;
+    type: 'project' | 'task' | 'person' | 'location' | 'attachment' | 'note';
+    data?: Record<string, any>;
+}
+
+export interface CanvasEdge {
+    from: string;
+    to: string;
+    label?: string;
+}
+
+export interface CanvasGraph {
+    nodes: CanvasNode[];
+    edges: CanvasEdge[];
+}
+
+// ── Observability (Item 21) ─────────────────────────────────────────────────
+
+export interface StructuredLog {
+    level: 'info' | 'warn' | 'error' | 'debug';
+    message: string;
+    timestamp: string;
+    source?: string;
+    data?: Record<string, any>;
 }

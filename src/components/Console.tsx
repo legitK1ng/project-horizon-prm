@@ -3,7 +3,7 @@ import { Terminal, Activity, CheckCircle2, AlertCircle, Info } from 'lucide-reac
 
 export interface LogEntry {
     timestamp: string;
-    type: 'INFO' | 'ERROR' | 'SUCCESS' | 'WARNING';
+    type: 'INFO' | 'ERROR' | 'SUCCESS' | 'WARNING' | 'NATIVE';
     message: string;
     details?: any;
 }
@@ -27,6 +27,7 @@ const Console: React.FC<ConsoleProps> = ({ logs = [], onClear = () => {}, isRunn
             case 'ERROR': return <AlertCircle size={14} className="text-red-400" />;
             case 'SUCCESS': return <CheckCircle2 size={14} className="text-green-400" />;
             case 'WARNING': return <AlertCircle size={14} className="text-yellow-400" />;
+            case 'NATIVE': return <Activity size={14} className="text-purple-400" />;
             default: return <Info size={14} className="text-blue-400" />;
         }
     };
@@ -36,6 +37,7 @@ const Console: React.FC<ConsoleProps> = ({ logs = [], onClear = () => {}, isRunn
             case 'ERROR': return 'text-red-300 bg-red-900/10 border-red-900/20';
             case 'SUCCESS': return 'text-green-300 bg-green-900/10 border-green-900/20';
             case 'WARNING': return 'text-yellow-300 bg-yellow-900/10 border-yellow-900/20';
+            case 'NATIVE': return 'text-purple-300 bg-purple-900/10 border-purple-900/20';
             default: return 'text-slate-300 border-slate-700/50';
         }
     };

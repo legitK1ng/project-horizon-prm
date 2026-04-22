@@ -3,6 +3,7 @@ uvicorn
 supabase
 mcp
 pydantic-settings
+httpx
 # Security & Cryptography
 cryptography
 python-dotenv
@@ -14,3 +15,11 @@ google-generativeai
 torch
 faster-whisper
 pyannote.audio
+
+# Item 5: Generation via Ollama (gudzenkoi/kimi-k2:1t-cloud, remote host, no local VRAM)
+#          Embeddings via google-generativeai text-embedding-004 (already listed above)
+# Item 23: Rate limiting helper (optional Redis-backed alternative to built-in)
+# slowapi  # Uncomment and `pip install slowapi redis` for multi-worker rate limiting
+
+# Optional: Voyage AI embeddings (voyage-3-large, 1024-dim) — set VOYAGE_API_KEY to activate
+# voyageai

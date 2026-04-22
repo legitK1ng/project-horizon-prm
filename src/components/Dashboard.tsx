@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { motion } from "framer-motion";
 import {
   Users,
   PhoneCall,
@@ -10,6 +11,15 @@ import {
   Sparkles,
   Cloud
 } from "lucide-react";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from "recharts";
 
 import RelationshipGraph from "./common/RelationshipGraph";
 import NudgeShelf from "./common/NudgeShelf";
@@ -79,8 +89,30 @@ const Dashboard: React.FC = () => {
     console.log('Navigate to', view);
   };
 
+  // Item 7: Build call-frequency sparkline data — last 14 days
+  const callFrequencyData = useMemo(() => {
+    const days: { date: string; calls: number }[] = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const dayStr = d.toISOString().slice(0, 10);
+      const count = (calls || []).filter((c) => {
+        const ts = (c.timestamp || c.created_at || '').slice(0, 10);
+        return ts === dayStr;
+      }).length;
+      days.push({ date: label, calls: count });
+    }
+    return days;
+  }, [calls]);
+
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <motion.div 
+      initial={{ opacity: 0 }} 
+      animate={{ opacity: 1 }} 
+      transition={{ duration: 0.5 }}
+      className="space-y-6"
+    >
       {/* 🟢 TOP BAR — STATS & ACTIONS */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -132,10 +164,15 @@ const Dashboard: React.FC = () => {
           { icon: AlertCircle, label: "Needs Review", val: stats?.needsAttention || 0, color: "amber", path: "/contacts?filter=attention" },
           { icon: TrendingUp, label: "Avg. Health", val: `${stats?.avgHealth || 0}%`, color: "purple", path: "/contacts?sort=health" }
         ].map((kpi, i) => (
-          <button
+          <motion.button
             key={i}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: i * 0.1 }}
+            whileHover={{ y: -4, scale: 1.02, transition: { duration: 0.2 } }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => navigate(kpi.path)}
-            className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-500/50 transition-all group text-left w-full"
+            className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-500/50 transition-colors group text-left w-full"
           >
             <div className="flex justify-between items-start">
               <div className={`p-2 rounded-xl bg-${kpi.color}-50 dark:bg-${kpi.color}-950 text-${kpi.color}-600 dark:text-${kpi.color}-400`}>
@@ -146,7 +183,7 @@ const Dashboard: React.FC = () => {
               <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{kpi.label}</p>
               <h3 className="text-2xl font-bold mt-0.5">{kpi.val}</h3>
             </div>
-          </button>
+          </motion.button>
         ))}
       </div>
 
@@ -210,6 +247,65 @@ const Dashboard: React.FC = () => {
                   </button>
                 ))}
             </div>
+          </div>
+
+          {/* Item 7: Call Frequency Sparkline */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-sm border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <PhoneCall className="text-emerald-500" size={20} />
+                  Call Frequency
+                </h3>
+                <p className="text-slate-500 text-xs mt-0.5">Calls logged over the last 14 days</p>
+              </div>
+              <span className="text-2xl font-black text-emerald-500">
+                {callFrequencyData.reduce((s, d) => s + d.calls, 0)}
+              </span>
+            </div>
+            <ResponsiveContainer width="100%" height={160}>
+              <AreaChart data={callFrequencyData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="callGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor="#10b981" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 10, fill: '#94a3b8' }}
+                  tickLine={false}
+                  axisLine={false}
+                  interval={3}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fontSize: 10, fill: '#94a3b8' }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'rgba(15,23,42,0.9)',
+                    border: 'none',
+                    borderRadius: '12px',
+                    color: '#f8fafc',
+                    fontSize: '12px',
+                  }}
+                  cursor={{ stroke: '#10b981', strokeWidth: 1, strokeDasharray: '4 4' }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="calls"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  fill="url(#callGrad)"
+                  dot={false}
+                  activeDot={{ r: 5, fill: '#10b981', stroke: '#fff', strokeWidth: 2 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
 
           {/* Recent Call Records */}
@@ -315,7 +411,7 @@ const Dashboard: React.FC = () => {
           }}
         />
       )}
-    </div>
+    </motion.div>
   );
 };
 

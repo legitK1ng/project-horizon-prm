@@ -105,25 +105,30 @@ class GooglePeopleService:
                 
                 logger.info(f"[SYNC] Fetched batch of {len(batch)} connections. Total so far: {len(connections)}")
 
-                # Process batch immediately to avoid memory bloat
+                # Map this page to contact rows, skipping unnamed entries
+                page_contacts = []
                 for person in batch:
                     try:
                         contact_data = self._map_person_to_contact(person, stable_user_id)
                         if not contact_data['full_name'] or contact_data['full_name'] == "Unknown":
                             continue
-
-                        # Upsert into Supabase
-                        try:
-                            self.supabase.table('contacts').upsert(
-                                contact_data,
-                                on_conflict='google_resource_name'
-                            ).execute()
-                            stats["updated"] += 1
-                        except Exception as db_err:
-                            logger.error(f"[SYNC] DB error for {contact_data['full_name']}: {db_err}")
-                            stats["errors"] += 1
-                    except Exception as e:
+                        page_contacts.append(contact_data)
+                    except Exception:
                         stats["errors"] += 1
+
+                # Batch upsert the whole page in chunks of 100 (one round-trip per chunk)
+                CHUNK = 100
+                for i in range(0, len(page_contacts), CHUNK):
+                    chunk = page_contacts[i:i + CHUNK]
+                    try:
+                        self.supabase.table('contacts').upsert(
+                            chunk,
+                            on_conflict='google_resource_name'
+                        ).execute()
+                        stats["updated"] += len(chunk)
+                    except Exception as db_err:
+                        logger.error(f"[SYNC] DB error upserting chunk of {len(chunk)}: {db_err}")
+                        stats["errors"] += len(chunk)
                 
                 page_token = results.get('nextPageToken')
                 if not page_token:
