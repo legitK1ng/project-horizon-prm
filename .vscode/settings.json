@@ -1,5 +1,5 @@
 {
-    "java.configuration.updateBuildConfiguration": "interactive",
+    "java.configuration.updateBuildConfiguration": "automatic",
     "git.ignoreLimitWarning": true,
     "avdmanager.sdkManager": "c:\\android\\SDK\\cmdline-tools\\latest\\bin\\sdkmanager.bat",
     "avdmanager.executable": "c:\\android\\SDK\\cmdline-tools\\latest\\bin\\avdmanager.bat"
