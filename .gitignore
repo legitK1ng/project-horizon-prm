@@ -105,4 +105,5 @@ Thumbs.db
 test_audio.wav
 test_connect.js
 mcp-backend/test_agent5.py
-mcp-backend/test_connections.py
+# ── Agent Data ────────────────────────────
+.claude/
