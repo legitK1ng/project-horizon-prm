@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { AppView, CallRecord, Contact } from '@/types';
 import { APP_VIEW } from '@/constants';
 import { Search, ArrowRight, Phone, Users, FileText, LayoutDashboard, FlaskConical, History, Command } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface CommandPaletteProps {
     isOpen: boolean;
@@ -211,8 +213,17 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-150" />
 
             {/* Palette */}
-            <div
-                className="relative w-full max-w-lg mx-4 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden zoom-in-95"
+            <motion.div
+                className={cn(
+                  "relative w-full max-w-lg mx-4 overflow-hidden",
+                  "glass card backdrop-blur-xl",
+                  "bg-white/90 dark:bg-slate-900/90",
+                  "border border-slate-200/50 dark:border-slate-700/50",
+                  "rounded-2xl shadow-2xl"
+                )}
+                initial={{ opacity: 0, scale: 0.95, y: -20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ type: 'spring', stiffness: 120, damping: 14 }}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Search Input */}
@@ -305,7 +316,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
                         <span>K to open</span>
                     </div>
                 </div>
-            </div>
+            </motion.div>
         </div>
     );
 };

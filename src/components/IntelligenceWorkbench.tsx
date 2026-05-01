@@ -1,9 +1,11 @@
-import { 
-  Sparkles, 
-  Send, 
+import {
+  Sparkles,
+  Send,
   FileJson
 } from "lucide-react";
 import { useState } from "react";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 import { useIngestCall } from "../hooks/useHorizonData";
 import toast from "react-hot-toast";
 
@@ -39,7 +41,19 @@ const IntelligenceWorkbench: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm space-y-4">
+      <motion.div
+        className={cn(
+          "p-6 space-y-4",
+          "glass card backdrop-blur-xl",
+          "bg-white/70 dark:bg-slate-900/70",
+          "border border-slate-200/50 dark:border-slate-700/50",
+          "rounded-3xl"
+        )}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+        whileHover={{ y: -2 }}
+      >
         <div className="flex justify-between items-center">
           <h3 className="font-semibold flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-blue-500" />
@@ -102,7 +116,7 @@ const IntelligenceWorkbench: React.FC = () => {
             </p>
           </div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 };

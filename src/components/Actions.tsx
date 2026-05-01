@@ -3,6 +3,7 @@
  * Items 11 (Tasks/Projects toggle), 12 (Canvas visualization)
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import {
   ListTodo,
   FolderKanban,
@@ -74,12 +75,17 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onStatusChange, onDelete }) =
   const StatusIcon = cfg.icon;
 
   return (
-    <div
+    <motion.div
       className={cn(
-        'bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800',
-        'border-l-4 shadow-sm hover:shadow-md transition-all group',
+        'glass card backdrop-blur-xl p-4 border-l-4 group',
+        'bg-white/70 dark:bg-slate-900/70',
+        'border border-slate-200/50 dark:border-slate-700/50',
         PRIORITY_COLOR[task.priority] || 'border-l-slate-300'
       )}
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+      whileHover={{ y: -2, scale: 1.02 }}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
@@ -136,7 +142,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onStatusChange, onDelete }) =
           </button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
@@ -170,7 +176,12 @@ const NewTaskForm: React.FC<NewTaskFormProps> = ({ onAdd, onCancel }) => {
   };
 
   return (
-    <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-2xl p-4 space-y-3">
+    <motion.div
+      className="glass card backdrop-blur-xl p-4 space-y-3 bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-800/50"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+    >
       <input
         autoFocus
         value={title}
@@ -216,7 +227,7 @@ const NewTaskForm: React.FC<NewTaskFormProps> = ({ onAdd, onCancel }) => {
           </button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
@@ -330,7 +341,17 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onUpdate, onDelete }
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+    <motion.div
+      className={cn(
+        'glass card backdrop-blur-xl overflow-hidden',
+        'bg-white/70 dark:bg-slate-900/70',
+        'border border-slate-200/50 dark:border-slate-700/50'
+      )}
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+      whileHover={{ y: -2, scale: 1.02 }}
+    >
       {/* Header */}
       <div
         className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
@@ -459,7 +480,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onUpdate, onDelete }
           )}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };
 
@@ -640,7 +661,17 @@ const CanvasPanel: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 min-h-[500px]">
+      <motion.div
+        className={cn(
+          'glass card backdrop-blur-xl p-6 min-h-[500px]',
+          'bg-white/70 dark:bg-slate-900/70',
+          'border border-slate-200/50 dark:border-slate-700/50'
+        )}
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+        whileHover={{ y: -2, scale: 1.02 }}
+      >
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <Network size={18} className="text-blue-500" />
@@ -667,7 +698,7 @@ const CanvasPanel: React.FC = () => {
             )}
           </div>
         )}
-      </div>
+      </motion.div>
 
       {/* Raw definition preview */}
       <details className="bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { useCalls } from '@/hooks/useHorizonData';
 import { ICONS } from '@/constants';
 import { Calendar, CheckSquare, Copy, ChevronDown, ChevronUp, ClipboardList } from 'lucide-react';
 import { useToast } from '@/components/common/Toast';
+import { cn } from '@/lib/utils';
 
 const ActionsLog: React.FC = () => {
     const { data: calls = [], isLoading } = useCalls();
@@ -63,7 +65,18 @@ const ActionsLog: React.FC = () => {
                         <div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
                     </div>
                 ) : actionableCalls.length === 0 ? (
-                    <div className="card p-16 text-center">
+                    <motion.div
+                      className={cn(
+                        "p-16 text-center",
+                        "glass card backdrop-blur-xl",
+                        "bg-white/70 dark:bg-slate-900/70",
+                        "border border-slate-200/50 dark:border-slate-700/50",
+                        "rounded-3xl"
+                      )}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+                    >
                         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-purple-50 dark:bg-purple-900/20 text-purple-500 dark:text-purple-400 mb-4">
                             <ClipboardList size={28} />
                         </div>
@@ -71,10 +84,23 @@ const ActionsLog: React.FC = () => {
                         <p className="text-slate-400 text-sm max-w-sm mx-auto">
                             Process calls in the Processing Lab to extract actionable items automatically.
                         </p>
-                    </div>
+                    </motion.div>
                 ) : (
                     actionableCalls.map((call) => (
-                        <div key={call.id} className="card overflow-hidden">
+                        <motion.div
+                          key={call.id}
+                          className={cn(
+                            "overflow-hidden",
+                            "glass card backdrop-blur-xl",
+                            "bg-white/70 dark:bg-slate-900/70",
+                            "border border-slate-200/50 dark:border-slate-700/50",
+                            "rounded-2xl"
+                          )}
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+                          whileHover={{ scale: 1.02 }}
+                        >
                             <div
                                 onClick={() => toggleExpand(call.id)}
                                 className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
@@ -102,9 +128,21 @@ const ActionsLog: React.FC = () => {
                             </div>
 
                             {expandedCallId === call.id && (
-                                <div className="border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-4 space-y-3 animate-in slide-in-from-top-2 duration-200">
+                                <div className="border-t border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30 p-4 space-y-3 animate-in slide-in-from-top-2 duration-200">
                                     {(call.executive_brief?.action_items as string[]).map((item: string, idx: number) => (
-                                        <div key={idx} className="flex items-start gap-3 p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-800 group hover:shadow-sm transition-shadow">
+                                        <motion.div
+                                          key={idx}
+                                          className={cn(
+                                            "flex items-start gap-3 p-3",
+                                            "glass card backdrop-blur-md",
+                                            "bg-white/60 dark:bg-slate-800/60",
+                                            "border border-slate-100/50 dark:border-slate-700/50",
+                                            "rounded-lg group hover:scale-[1.01] transition-all"
+                                          )}
+                                          initial={{ opacity: 0, x: -10 }}
+                                          animate={{ opacity: 1, x: 0 }}
+                                          transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+                                        >
                                             <CheckSquare className="mt-0.5 text-slate-400" size={18} />
                                             <div className="flex-1">
                                                 <p className="text-slate-800 dark:text-slate-200">{item}</p>
@@ -125,11 +163,11 @@ const ActionsLog: React.FC = () => {
                                                     <Copy size={16} />
                                                 </button>
                                             </div>
-                                        </div>
+                                        </motion.div>
                                     ))}
                                 </div>
                             )}
-                        </div>
+                        </motion.div>
                     ))
                 )}
             </div>

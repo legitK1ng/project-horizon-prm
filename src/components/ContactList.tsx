@@ -1,11 +1,13 @@
 
 import React, { useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { Contact } from '@/types';
 import { Search, Phone, Mail, Clock, ArrowUpDown, Users, Star, ImagePlus } from 'lucide-react';
 import UnifiedContactDrawer from '@/components/common/UnifiedContactDrawer';
 import { GoogleSyncButton } from '@/components/common/GoogleSyncButton';
 import { useContacts, useToggleFavorite, useCalls } from '@/hooks/useHorizonData';
 import { api } from '@/services/apiClient';
+import { cn } from '@/lib/utils';
 
 interface ContactListProps {
     // No props needed as we use the hook directly
@@ -128,7 +130,18 @@ const ContactList: React.FC<ContactListProps> = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <motion.div
+              className={cn(
+                "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4",
+                "card glass rounded-2xl overflow-hidden",
+                "bg-white/70 dark:bg-slate-900/70",
+                "border border-slate-200/50 dark:border-slate-700/50",
+                "backdrop-blur-xl p-6"
+              )}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
                 {filteredAndSortedContacts.length === 0 ? (
                     <div className="col-span-full card p-16 text-center">
                         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 dark:text-emerald-400 mb-4">
@@ -161,7 +174,20 @@ const ContactList: React.FC<ContactListProps> = () => {
                         const displayLetter = isEmail(contact.first_name) ? '✉' : contact.first_name?.charAt(0) || '?';
 
                         return (
-                            <div key={contact.id} onClick={() => setSelectedContact(contact)} className="card card-interactive p-6 cursor-pointer group relative overflow-hidden">
+                            <motion.div
+                              key={contact.id}
+                              onClick={() => setSelectedContact(contact)}
+                              className={cn(
+                                "card card-interactive p-6 cursor-pointer group relative overflow-hidden",
+                                "glass backdrop-blur-xl",
+                                "bg-white/70 dark:bg-slate-900/70",
+                                "border border-slate-200/50 dark:border-slate-700/50"
+                              )}
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+                              whileHover={{ scale: 1.02 }}
+                            >
                                 {isStale && (
                                     <div className="absolute top-0 right-0 w-20 h-20 -mr-10 -mt-10 bg-rose-500/10 rotate-45 pointer-events-none" title="Relationship needs attention" />
                                 )}
@@ -235,11 +261,11 @@ const ContactList: React.FC<ContactListProps> = () => {
                                         </span>
                                     </div>
                                 </div>
-                            </div>
+                            </motion.div>
                         );
                     })
                 )}
-            </div>
+            </motion.div>
 
             {/* Unified Contact Drawer */}
             {

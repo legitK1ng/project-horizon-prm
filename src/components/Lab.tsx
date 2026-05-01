@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { CallRecord, Persona } from '@/types';
 import { BRAIN_PERSONAS, ICONS } from '@/constants';
-import { Brain, Play, RefreshCw, Save, Activity, Server, CheckCircle, AlertTriangle, Upload } from 'lucide-react';
+import { Brain, Play, RefreshCw, Save, Activity, Server, CheckCircle, AlertTriangle, Upload, Sparkles } from 'lucide-react';
 import { generateId } from '@/utils/helpers';
 import { api } from '@/services/apiClient';
 import { connectionLogger, LogEntry as ServiceLogEntry } from '@/utils/connectionLogger';
@@ -197,7 +198,7 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
                     <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Processing Lab</h2>
                     <p className="text-slate-500 dark:text-slate-400">Test AI analysis and System Health.</p>
                 </div>
-                <div className="flex gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+                <div className="flex gap-2 bg-white/50 dark:bg-slate-800/60 backdrop-blur-lg p-1 rounded-xl border border-slate-200/40 dark:border-slate-700/40">
                     <button
                         onClick={() => setActiveTab('analysis')}
                         className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'analysis' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700'}`}
@@ -217,7 +218,12 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Input Column */}
                     <div className="space-y-4">
-                        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                        <motion.div
+                            className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-6 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)]"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+                        >
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                                     Phone Number (Optional)
@@ -287,13 +293,18 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
                                     </>
                                 )}
                             </button>
-                        </div>
+                        </motion.div>
                     </div>
 
                     {/* Output Column */}
                     <div className="space-y-4">
                         {result ? (
-                            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm animate-in slide-in-from-right-4 duration-500">
+                            <motion.div
+                                className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-6 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)]"
+                                initial={{ opacity: 0, x: 20, scale: 0.97 }}
+                                animate={{ opacity: 1, x: 0, scale: 1 }}
+                                transition={{ type: 'spring', stiffness: 120, damping: 14, delay: 0.1 }}
+                            >
                                 <div className="flex items-center justify-between mb-4">
                                     <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
                                         {ICONS.Dashboard} Analysis Results
@@ -325,21 +336,31 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
                                         </ul>
                                     </div>
                                 </div>
-                            </div>
+                            </motion.div>
                         ) : (
-                            <div className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 h-full flex flex-col items-center justify-center text-slate-400">
+                            <motion.div
+                                className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-2xl border border-dashed border-slate-300/50 dark:border-slate-700/50 h-full flex flex-col items-center justify-center text-slate-400 shadow-[0_8px_30px_rgb(0,0,0,0.02)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.06)]"
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ type: 'spring', stiffness: 100, damping: 16 }}
+                            >
                                 <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
                                     <Play size={24} className="ml-1 opacity-50" />
                                 </div>
                                 <p>Ready to analyze.</p>
                                 <p className="text-xs mt-1">Select a persona and click Analyze.</p>
-                            </div>
+                            </motion.div>
                         )}
                     </div>
                 </div>
             ) : (
                 <div className="space-y-6">
-                    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <motion.div
+                        className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-6 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)]"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+                    >
                         <div className="flex justify-between items-center mb-6">
                             <div>
                                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">System Diagnostics</h3>
@@ -362,7 +383,7 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
                                     <Brain size={16} /> Available Models
                                 </h4>
                                 {models.length > 0 ? (
-                                    <div className="bg-slate-50 dark:bg-slate-950 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800">
+                                    <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-lg rounded-xl overflow-hidden border border-slate-200/50 dark:border-slate-700/50">
                                         {models.map((m, i) => (
                                             <div key={i} className="p-3 border-b border-slate-200 dark:border-slate-800 last:border-0 flex justify-between items-center">
                                                 <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{m.displayName}</span>
@@ -371,7 +392,7 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="p-8 text-center bg-slate-50 dark:bg-slate-950 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-slate-400 text-sm">
+                                    <div className="p-8 text-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-lg rounded-xl border border-dashed border-slate-300/50 dark:border-slate-700/50 text-slate-400 text-sm">
                                         No models loaded. Run diagnostics to fetch.
                                     </div>
                                 )}
@@ -392,7 +413,7 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
                                             <span className="font-bold uppercase text-sm">{diagResults.status}</span>
                                         </div>
 
-                                        <div className="bg-slate-50 dark:bg-slate-950 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800">
+                                        <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-lg rounded-xl overflow-hidden border border-slate-200/50 dark:border-slate-700/50">
                                             {diagResults.results?.map((r: any, i: number) => (
                                                 <div key={i} className="p-3 border-b border-slate-200 dark:border-slate-800 last:border-0 flex justify-between items-center text-sm">
                                                     <span className="text-slate-700 dark:text-slate-300">{r.test}</span>
@@ -409,7 +430,7 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="p-8 text-center bg-slate-50 dark:bg-slate-950 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-slate-400 text-sm">
+                                    <div className="p-8 text-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-lg rounded-xl border border-dashed border-slate-300/50 dark:border-slate-700/50 text-slate-400 text-sm">
                                         No diagnostic results. Run diagnostics to test.
                                     </div>
                                 )}
@@ -453,9 +474,14 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
                         )}
 
                         {/* Gemini Integration Section */}
-                        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm mt-6">
+                        <motion.div
+                            className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-2xl border border-purple-200/40 dark:border-purple-800/30 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] mt-6"
+                            initial={{ opacity: 0, y: 16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ type: 'spring', stiffness: 120, damping: 14, delay: 0.15 }}
+                        >
                             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                                <Brain size={20} className="text-purple-500" /> Gemini Integration
+                                <Sparkles size={20} className="text-purple-500" /> Gemini Integration
                             </h3>
                             <div className="flex gap-4">
                                 <button
@@ -483,7 +509,7 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
                                     Force Process Queue
                                 </button>
                             </div>
-                        </div>
+                        </motion.div>
 
                         {/* NEW CONSOLE SECTION */}
                         <div className="mt-8">
@@ -496,7 +522,7 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
                                 isRunning={isLoadingDiag}
                             />
                         </div>
-                    </div>
+                    </motion.div>
                 </div>
             )}
         </div>

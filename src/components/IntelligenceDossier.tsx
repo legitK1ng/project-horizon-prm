@@ -10,6 +10,7 @@
 
 
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { useSupabaseCalls, useGoogleContactMatch, useSupabaseEnrichments } from '../hooks/useSupabaseData';
 import { useContacts } from '../hooks/useHorizonData'; // keeps using cached FastAPI contacts until migrated
 import type { CallRecord, EnrichmentJob } from '../types';
@@ -38,7 +39,13 @@ function TranscriptCard({ call }: { call: CallRecord }) {
   const brief = call.executive_brief;
 
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3 hover:border-violet-500/30 transition-colors">
+    <motion.div
+      className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-lg p-4 space-y-3 hover:border-violet-500/30 transition-colors shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.08)]"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+      whileHover={{ y: -1, scale: 1.005 }}
+    >
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div>
@@ -84,13 +91,13 @@ function TranscriptCard({ call }: { call: CallRecord }) {
             {expanded ? 'Hide' : 'Show'} transcript
           </button>
           {expanded && (
-            <pre className="text-xs text-slate-300 whitespace-pre-wrap font-mono bg-black/30 rounded p-3 max-h-64 overflow-y-auto">
+            <pre className="text-xs text-slate-300 whitespace-pre-wrap font-mono bg-black/30 backdrop-blur-sm rounded p-3 max-h-64 overflow-y-auto">
               {call.transcript}
             </pre>
           )}
         </>
       )}
-    </div>
+    </motion.div>
   );
 }
 
@@ -104,7 +111,7 @@ function OsintPanel({ contactId }: { contactId: string }) {
   return (
     <div className="space-y-2">
       {enrichments.map((job: EnrichmentJob) => (
-        <div key={job.id} className="rounded-lg border border-white/10 bg-black/20 p-3">
+        <div key={job.id} className="rounded-lg border border-white/10 bg-black/20 backdrop-blur-sm p-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-300">{job.source_name ?? `Stage ${job.stage}`}</span>
             <span className={`text-xs px-1.5 py-0.5 rounded ${
@@ -133,7 +140,7 @@ function GoogleMatchPanel({ contactId }: { contactId: string }) {
   if (!data?.google_resource_name) return <p className="text-xs text-slate-500">Not synced with Google Contacts.</p>;
 
   return (
-    <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 space-y-1">
+    <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 backdrop-blur-lg p-3 space-y-1">
       <p className="text-xs text-blue-300">✓ Linked to Google Contacts</p>
       {data.photo_url && (
         <img src={data.photo_url} alt="Google Contact" className="w-10 h-10 rounded-full border border-blue-500/30" />
@@ -195,7 +202,12 @@ export function IntelligenceDossier({ contactId }: IntelligenceDossierProps) {
     <div className="space-y-6">
       {/* Contact Intelligence Header */}
       {selectedContact && (
-        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+        <motion.div
+          className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.06)]"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+        >
           <div className="flex items-start justify-between">
             <div>
               <h2 className="text-lg font-semibold text-white">
@@ -212,7 +224,7 @@ export function IntelligenceDossier({ contactId }: IntelligenceDossierProps) {
               {enrichMutation.isPending ? 'Enriching…' : 'Run OSINT'}
             </button>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Three-column intelligence layout */}

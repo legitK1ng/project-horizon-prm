@@ -6,7 +6,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ message = "Connecting to 
   return (
     <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950 transition-colors">
       {/* Simulated Sidebar */}
-      <div className="hidden md:flex flex-col w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 p-4">
+      <div className="hidden md:flex flex-col w-64 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-r border-slate-200/50 dark:border-slate-700/50 p-4">
         {/* Logo */}
         <div className="flex items-center gap-3 mb-8">
           <div className="w-8 h-8 rounded-lg skeleton" />
@@ -71,7 +71,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ message = "Connecting to 
         </div>
 
         {/* Centered loading indicator */}
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 glass rounded-full px-6 py-3 flex items-center gap-3 z-50 shadow-lg">
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 glass backdrop-blur-xl bg-white/70 dark:bg-slate-900/70 border border-slate-200/50 dark:border-slate-700/50 rounded-full px-6 py-3 flex items-center gap-3 z-50 shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
           <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
           <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
             {message}

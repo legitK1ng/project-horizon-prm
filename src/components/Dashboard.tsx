@@ -26,6 +26,7 @@ import NudgeShelf from "./common/NudgeShelf";
 import CommandPalette from "./CommandPalette";
 import CallLog from "./CallLog";
 import LoadingScreen from "./LoadingScreen";
+import { cn } from "../lib/utils";
 import {
   useContacts,
   useCalls,
@@ -70,7 +71,7 @@ const Dashboard: React.FC = () => {
   const handleSync = async () => {
     const toastId = toast.loading("Syncing with Google Contacts...");
     try {
-      // PROD: We need a valid token here. 
+      // PROD: We need a valid token here.
       // For now, we take from local storage or prompt user.
       const token = localStorage.getItem('google_access_token') || '';
       const result: any = await syncContacts.mutateAsync({ userId: 'default', accessToken: token });
@@ -79,14 +80,6 @@ const Dashboard: React.FC = () => {
       const detail = error?.response?.data?.detail || error.message || 'Unknown error';
       toast.error(`Sync failed: ${detail}`, { id: toastId });
     }
-  };
-
-  if (contactsLoading || callsLoading || nudgesLoading || statsLoading) {
-    return <LoadingScreen />;
-  }
-
-  const onNavigate = (view: any) => {
-    console.log('Navigate to', view);
   };
 
   // Item 7: Build call-frequency sparkline data — last 14 days
@@ -105,6 +98,14 @@ const Dashboard: React.FC = () => {
     }
     return days;
   }, [calls]);
+
+  if (contactsLoading || callsLoading || nudgesLoading || statsLoading) {
+    return <LoadingScreen />;
+  }
+
+  const onNavigate = (view: any) => {
+    console.log('Navigate to', view);
+  };
 
   return (
     <motion.div 
@@ -125,34 +126,40 @@ const Dashboard: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
+          <motion.button
             onClick={() => setIsCommandPaletteOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:border-blue-500 transition-all shadow-sm text-sm font-medium"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="glass flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
           >
-            <Search className="w-4 h-4 text-slate-400" />
-            <span className="text-slate-400">Search or command...</span>
-            <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 ml-2 text-[10px] bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-slate-500 uppercase font-bold tracking-wider">
+            <Search className="w-4 h-4" />
+            <span className="hidden sm:inline">Search or command...</span>
+            <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 ml-2 text-[10px] bg-slate-200 dark:bg-slate-700 rounded text-slate-600 dark:text-slate-400 uppercase font-bold tracking-wider">
               {navigator.platform.includes("Mac") ? "⌘" : "Ctrl"} K
             </span>
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
             onClick={handleSync}
             disabled={syncContacts.isPending}
-            className="p-2 text-slate-500 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors border border-transparent hover:border-emerald-200 dark:hover:border-emerald-800 disabled:opacity-50"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            className="glass p-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-emerald-500 transition-colors disabled:opacity-50"
             title="Sync with Google Contacts"
           >
             <Cloud className={`w-5 h-5 ${syncContacts.isPending ? 'animate-bounce' : ''}`} />
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
             onClick={() => refreshHealth.mutate(undefined)}
             disabled={refreshHealth.isPending}
-            className="p-2 text-slate-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors border border-transparent hover:border-blue-200 dark:hover:border-blue-800 disabled:opacity-50"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            className="glass p-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-blue-500 transition-colors disabled:opacity-50"
             title="Refresh Health Scores"
           >
             <RefreshCw className={`w-5 h-5 ${refreshHealth.isPending ? 'animate-spin' : ''}`} />
-          </button>
+          </motion.button>
         </div>
       </div>
 
@@ -172,16 +179,21 @@ const Dashboard: React.FC = () => {
             whileHover={{ y: -4, scale: 1.02, transition: { duration: 0.2 } }}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(kpi.path)}
-            className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-500/50 transition-colors group text-left w-full"
+            className={cn(
+              "card card-interactive p-6 group text-left w-full",
+              "bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl",
+              "border border-slate-200/50 dark:border-slate-700/50",
+              "shadow-md hover:shadow-lg hover:border-blue-500/30"
+            )}
           >
             <div className="flex justify-between items-start">
-              <div className={`p-2 rounded-xl bg-${kpi.color}-50 dark:bg-${kpi.color}-950 text-${kpi.color}-600 dark:text-${kpi.color}-400`}>
+              <div className={`p-2 rounded-lg bg-${kpi.color}-50/50 dark:bg-${kpi.color}-950/30 text-${kpi.color}-600 dark:text-${kpi.color}-400`}>
                 <kpi.icon className="w-5 h-5" />
               </div>
             </div>
-            <div className="mt-3">
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{kpi.label}</p>
-              <h3 className="text-2xl font-bold mt-0.5">{kpi.val}</h3>
+            <div className="mt-4">
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{kpi.label}</p>
+              <h3 className="text-3xl font-bold mt-1 text-slate-900 dark:text-white">{kpi.val}</h3>
             </div>
           </motion.button>
         ))}
@@ -192,7 +204,16 @@ const Dashboard: React.FC = () => {
         {/* LEFT COLUMN: Insights & Relationships */}
         <div className="lg:col-span-2 space-y-8">
           {/* Relationship Map */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-sm border border-slate-200 dark:border-slate-800">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className={cn(
+              "card rounded-3xl p-8 backdrop-blur-xl",
+              "bg-white/70 dark:bg-slate-900/70",
+              "border border-slate-200/50 dark:border-slate-700/50"
+            )}
+          >
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -203,10 +224,19 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
             <RelationshipGraph contacts={contacts ?? []} calls={calls ?? []} />
-          </div>
+          </motion.div>
 
           {/* MOST CONTACTED */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-sm">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.25 }}
+            className={cn(
+              "card rounded-3xl p-8 backdrop-blur-xl",
+              "bg-white/70 dark:bg-slate-900/70",
+              "border border-slate-200/50 dark:border-slate-700/50"
+            )}
+          >
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold flex items-center gap-2">
                 <TrendingUp className="w-6 h-6 text-emerald-500" />
@@ -247,10 +277,19 @@ const Dashboard: React.FC = () => {
                   </button>
                 ))}
             </div>
-          </div>
+          </motion.div>
 
           {/* Item 7: Call Frequency Sparkline */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-sm border border-slate-200 dark:border-slate-800">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className={cn(
+              "card rounded-3xl p-8 backdrop-blur-xl",
+              "bg-white/70 dark:bg-slate-900/70",
+              "border border-slate-200/50 dark:border-slate-700/50"
+            )}
+          >
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -306,7 +345,7 @@ const Dashboard: React.FC = () => {
                 />
               </AreaChart>
             </ResponsiveContainer>
-          </div>
+          </motion.div>
 
           {/* Recent Call Records */}
           <CallLog />
@@ -315,7 +354,16 @@ const Dashboard: React.FC = () => {
         {/* RIGHT COLUMN: AI Tasks & Proactive Nudges */}
         <div className="space-y-8">
           {/* Proactive AI Shelf */}
-          <div className="bg-slate-900 dark:bg-black rounded-3xl p-8 shadow-xl border border-slate-800 relative overflow-hidden group">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.35 }}
+            className={cn(
+              "rounded-3xl p-8 backdrop-blur-xl",
+              "bg-slate-900/80 dark:bg-black/80",
+              "border border-slate-700/50 shadow-xl",
+              "relative overflow-hidden group"
+            )}>
             <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-40 transition-opacity">
               <BrainCircuit size={80} className="text-blue-500" />
             </div>
@@ -326,10 +374,19 @@ const Dashboard: React.FC = () => {
               </h3>
               <NudgeShelf nudges={nudges ?? []} />
             </div>
-          </div>
+          </motion.div>
 
           {/* INNER CIRCLE (FAVORITES) */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-sm">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className={cn(
+              "card rounded-3xl p-8 backdrop-blur-xl",
+              "bg-white/70 dark:bg-slate-900/70",
+              "border border-slate-200/50 dark:border-slate-700/50",
+              "shadow-sm"
+            )}>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-amber-500" />
@@ -369,10 +426,19 @@ const Dashboard: React.FC = () => {
                 <p className="text-sm text-slate-400 text-center py-4 italic">No favorites yet.</p>
               )}
             </div>
-          </div>
+          </motion.div>
 
           {/* Health Score Summary */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-sm border border-slate-200 dark:border-slate-800">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.45 }}
+            className={cn(
+              "card rounded-3xl p-8 backdrop-blur-xl",
+              "bg-white/70 dark:bg-slate-900/70",
+              "border border-slate-200/50 dark:border-slate-700/50",
+              "shadow-sm"
+            )}>
             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Network Health</h3>
             <div className="space-y-6">
               <div className="flex items-center justify-between">
@@ -386,7 +452,7 @@ const Dashboard: React.FC = () => {
                 "Your average network health is {stats?.avgHealth || 0}%. Proactive engagement recommended for low-scoring entities."
               </p>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
 

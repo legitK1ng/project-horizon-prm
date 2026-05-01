@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { Terminal, Activity, CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export interface LogEntry {
     timestamp: string;
@@ -43,7 +45,18 @@ const Console: React.FC<ConsoleProps> = ({ logs = [], onClear = () => {}, isRunn
     };
 
     return (
-        <div className="w-full h-96 bg-slate-900 rounded-lg border border-slate-700 flex flex-col font-mono text-sm shadow-xl overflow-hidden">
+        <motion.div
+          className={cn(
+            'w-full h-96 flex flex-col font-mono text-sm overflow-hidden',
+            'glass card backdrop-blur-xl',
+            'bg-slate-900/70 dark:bg-slate-950/70',
+            'border border-slate-700/50 dark:border-slate-700/50'
+          )}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+          whileHover={{ y: -2, scale: 1.02 }}
+        >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-2 bg-slate-800 border-b border-slate-700 sticky top-0 z-10">
                 <div className="flex items-center gap-2 text-slate-300">
@@ -97,7 +110,7 @@ const Console: React.FC<ConsoleProps> = ({ logs = [], onClear = () => {}, isRunn
                 )}
                 <div ref={endRef} />
             </div>
-        </div>
+        </motion.div>
     );
 };
 

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { CallRecord } from '@/types';
 import { ICONS } from '@/constants';
 import { formatDuration } from '@/utils/helpers';
 import { ChevronDown, ChevronUp, Search, Plus, Calendar, Users, Phone } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useCalls } from '@/hooks/useHorizonData';
 import TagPicker from '@/components/common/TagPicker';
 import DateRangePicker from '@/components/common/DateRangePicker';
@@ -176,7 +178,17 @@ const CallLog: React.FC<CallLogProps> = ({ activeTag, onContactClick }) => {
 
             <div className="flex gap-6 relative">
                 {/* Main List */}
-                <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+                <motion.div
+                  className={cn(
+                    "flex-1 rounded-2xl overflow-hidden",
+                    "card glass backdrop-blur-xl",
+                    "bg-white/70 dark:bg-slate-900/70",
+                    "border border-slate-200/50 dark:border-slate-700/50"
+                  )}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                >
                     {filteredCalls.length === 0 ? (
                         <div className="p-12 text-center text-slate-500 dark:text-slate-400">
                             {ICONS.Logs}
@@ -275,7 +287,20 @@ const CallLog: React.FC<CallLogProps> = ({ activeTag, onContactClick }) => {
                                     const firstChar = contactName.charAt(0).toUpperCase();
 
                                     return (
-                                        <div key={contactName} id={`group-${firstChar}`} className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-all duration-200 hover:shadow-md">
+                                        <motion.div
+                                          key={contactName}
+                                          id={`group-${firstChar}`}
+                                          className={cn(
+                                            "card glass rounded-2xl overflow-hidden",
+                                            "bg-white/70 dark:bg-slate-900/70",
+                                            "border border-slate-200/50 dark:border-slate-700/50",
+                                            "backdrop-blur-xl"
+                                          )}
+                                          initial={{ opacity: 0, y: 10 }}
+                                          animate={{ opacity: 1, y: 0 }}
+                                          transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+                                          whileHover={{ scale: 1.01 }}
+                                        >
                                             {/* Group Header */}
                                             <div
                                                 className="p-4 flex items-center justify-between cursor-pointer bg-slate-50/50 dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
@@ -424,17 +449,27 @@ const CallLog: React.FC<CallLogProps> = ({ activeTag, onContactClick }) => {
                                                     })()}
                                                 </div>
                                             )}
-                                        </div>
+                                        </motion.div>
                                     )
                                 })
                             )}
                         </div>
                     )}
-                </div>
+                </motion.div>
 
                 {/* ALPHABET SCROLLER */}
                 {groupBy === 'contact' && (
-                    <div className="w-6 hidden md:flex flex-col items-center justify-center gap-1 fixed right-4 top-1/2 -translate-y-1/2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm p-1 rounded-full border border-slate-200 dark:border-slate-800 shadow-sm z-10 max-h-[80vh] overflow-y-auto">
+                    <motion.div
+                      className={cn(
+                        "w-6 hidden md:flex flex-col items-center justify-center gap-1 fixed right-4 top-1/2 -translate-y-1/2 p-1 rounded-full z-10 max-h-[80vh] overflow-y-auto",
+                        "glass backdrop-blur-xl",
+                        "bg-white/70 dark:bg-slate-900/70",
+                        "border border-slate-200/50 dark:border-slate-700/50"
+                      )}
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
                         {alphabet.map(letter => (
                             <button
                                 key={letter}
@@ -444,7 +479,7 @@ const CallLog: React.FC<CallLogProps> = ({ activeTag, onContactClick }) => {
                                 {letter}
                             </button>
                         ))}
-                    </div>
+                    </motion.div>
                 )}
             </div>
         </div>

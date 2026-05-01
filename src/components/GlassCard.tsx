@@ -13,9 +13,9 @@ export interface GlassCardProps extends HTMLMotionProps<"div"> {
  * Uses established CSS variables for a premium, monochromatic, high-fidelity look.
  * Supports interactive hover effects and glassmorphism via Framer Motion.
  */
-export const GlassCard = React.forwardRef<HTMLDivElement, GlassCardProps>(({ 
-  children, 
-  className, 
+export const GlassCard = React.forwardRef<HTMLDivElement, GlassCardProps>(({
+  children,
+  className,
   interactive = false,
   ...props
 }, ref) => {
@@ -27,11 +27,16 @@ export const GlassCard = React.forwardRef<HTMLDivElement, GlassCardProps>(({
         interactive && "card-interactive cursor-pointer",
         className
       )}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-      whileHover={interactive ? { y: -2, scale: 1.01 } : undefined}
-      whileTap={interactive ? { y: 0, scale: 0.99 } : undefined}
+      initial={{ opacity: 0, y: 8, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{
+        duration: 0.3,
+        type: 'spring',
+        stiffness: 120,
+        damping: 14,
+      }}
+      whileHover={interactive ? { y: -2, scale: 1.02 } : undefined}
+      whileTap={interactive ? { y: 0, scale: 0.98 } : undefined}
       {...props}
     >
       {children}

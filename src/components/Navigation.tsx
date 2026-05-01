@@ -45,8 +45,8 @@ const Navigation: React.FC<NavigationProps> = ({ isOnline }) => {
   ];
 
   return (
-    <nav 
-      className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50"
+    <nav
+      className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-700/50 shadow-sm hover:shadow-md transition-shadow"
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
       <div className="container mx-auto px-4 max-w-7xl">
