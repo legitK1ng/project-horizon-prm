@@ -6,7 +6,7 @@ A self-hosted **Relationship Intelligence Platform** built to automatically capt
 
 ## What it does
 
-Horizon turns every phone call into structured relationship intelligence. It accepts call recordings from the [ACR Phone](https://nllabsapps.com/) Android app via a local Whisper-compatible endpoint, transcribes them on-device, and stores a rich record in Supabase — complete with an AI-generated executive brief, sentiment, action items, recommended follow-up date, and open commitments. The React dashboard (also deployable as a native Android/iOS app) surfaces all of this alongside a relationship health score that decays automatically over time.
+Horizon turns every phone call into structured relationship intelligence. It accepts call recordings from the [ACR Phone](https://nllapps.com/apps/cb/) Android app via a local Whisper-compatible endpoint, transcribes them on-device, and stores a rich record in Supabase — complete with an AI-generated executive brief, sentiment, action items, recommended follow-up date, and open commitments. The React dashboard (also deployable as a native Android/iOS app) surfaces all of this alongside a relationship health score that decays automatically over time.
 
 **Core features:**
 
