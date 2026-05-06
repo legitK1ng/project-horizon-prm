@@ -98,10 +98,43 @@ class ApiClient {
     return ApiListResponseSchema(CallRecordSchema).parse(res).data as CallRecord[];
   }
 
-  async ingestCall(payload: any): Promise<CallRecord> {
-    const res = await this.request<any>('/api/v1/calls', {
+  async ingestCall(payload: {
+    contact_name?: string;
+    phone_number?: string;
+    duration?: string | number;
+    transcript?: string;
+    timestamp?: string;
+    file?: File;
+  }): Promise<CallRecord> {
+    // Backend expects multipart/form-data with Form() fields, not JSON.
+    // Field mapping: frontend "transcript" → backend "note"
+    const formData = new FormData();
+    formData.append('contact_name', payload.contact_name || 'Unknown');
+    formData.append('phone_number', payload.phone_number || '');
+    formData.append('duration', String(payload.duration || ''));
+    formData.append('note', payload.transcript || '');
+    if (payload.timestamp) formData.append('timestamp', payload.timestamp);
+    if (payload.file) formData.append('file', payload.file);
+
+    const res = await fetch(`${API_BASE}/api/v1/calls`, {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: formData,
+      headers: {
+        'X-ACR-Secret': 'horizon-secret-handshake',
+      },
+    });
+    if (!res.ok) {
+      const err = await res.text().catch(() => res.statusText);
+      throw new Error(`Ingest failed (${res.status}): ${err}`);
+    }
+    const json = await res.json();
+    return CallRecordSchema.parse(json.data) as CallRecord;
+  }
+
+  async updateCall(id: string, updateData: { tags?: string[]; sentiment?: string; contact_id?: string; transcript?: string }): Promise<CallRecord> {
+    const res = await this.request<any>(`/api/v1/calls/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updateData),
     });
     return CallRecordSchema.parse(res.data) as CallRecord;
   }
@@ -179,6 +212,11 @@ class ApiClient {
   async fetchModels(): Promise<{ name: string; displayName: string }[]> {
     const res = await this.request<any>('/api/v1/system/models');
     return res.models || [];
+  }
+
+  async getTags(): Promise<string[]> {
+    const res = await this.request<any>('/api/v1/system/tags');
+    return res.tags || [];
   }
 
   async runDiagnostics(): Promise<{ status: string; results: any[] }> {

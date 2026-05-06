@@ -14,10 +14,12 @@ from services.acr_parser_reference import parse_acr_filename, build_canonical, n
 from services.embedding_service import embed_text
 from core.security.crypto import encrypt_data
 from core.auth import verify_acr_secret
+from core.schemas.acr import ACRWebhookPayload, CallRecordCreate
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+# Legacy model (kept for compatibility)
 class CallIngestRequest(BaseModel):
     contact_name: str = "Unknown"
     phone_number: str = ""
@@ -149,8 +151,8 @@ async def ingest_call(
         "contact_name": contact_name,
         "phone_number": phone_number,
         "duration": str(duration),
-        "transcript_encrypted": transcript_encrypted,
-        "transcript_iv": transcript_iv,
+        "raw_transcript": transcript,
+        "transcript": transcript,
         "executive_brief": brief,
         "status": "completed",
         "sentiment": brief.get("sentiment", "Neutral"),
@@ -169,6 +171,9 @@ async def ingest_call(
     }
 
     try:
+        # Validate record against schema before insert
+        validated_record = CallRecordCreate(**record)
+        
         response = db.table("call_records").insert(record).execute()
         return {
             "status": "success",
@@ -195,13 +200,8 @@ async def list_calls(req: Request, limit: int = 100, offset: int = 0):
 
         records = []
         for record in response.data:
-            # Decrypt transcript at read time
-            enc = record.get("transcript_encrypted") or ""
-            iv = record.get("transcript_iv") or ""
-            if enc and iv:
-                record["transcript"] = decrypt_data(enc, iv)
-            else:
-                record["transcript"] = record.get("transcript") or record.get("note") or ""
+            # Read transcript from the unified column (raw_transcript or transcript)
+            record["transcript"] = record.get("transcript") or record.get("raw_transcript") or ""
             records.append(record)
 
         return {
@@ -210,5 +210,42 @@ async def list_calls(req: Request, limit: int = 100, offset: int = 0):
             "count": len(records)
         }
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class CallUpdate(BaseModel):
+    transcript: str | None = None
+    tags: list[str] | None = None
+    sentiment: str | None = None
+    contact_id: str | None = None
+
+@router.patch("/{call_id}")
+async def update_call(call_id: str, req: Request, update: CallUpdate):
+    """PATCH /api/v1/calls/{id} — Update a call record (tags, transcript, etc.)"""
+    db = getattr(req.app.state, "supabase", None)
+    if not db:
+        raise HTTPException(status_code=503, detail="Database not available")
+    
+    patch = {}
+    if update.tags is not None:
+        patch["tags"] = update.tags
+    if update.sentiment is not None:
+        patch["sentiment"] = update.sentiment
+    if update.contact_id is not None:
+        patch["contact_id"] = update.contact_id
+        
+    if update.transcript is not None:
+        patch["transcript"] = update.transcript
+        patch["raw_transcript"] = update.transcript
+
+    if not patch:
+        return {"status": "success", "message": "No changes provided"}
+
+    try:
+        response = db.table("call_records").update(patch).eq("id", call_id).execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Call record not found")
+        return {"status": "success", "data": response.data[0]}
+    except Exception as e:
+        logger.error(f"[DB] Update failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 

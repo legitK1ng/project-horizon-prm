@@ -250,6 +250,7 @@ async def _persist_to_db(
             "phone_number": phone_number,
             "duration": duration,
             "raw_transcript": transcript_text,
+            "transcript": transcript_text,
             "executive_brief": executive_brief,
             "sentiment": sentiment,
             "tags": tags,

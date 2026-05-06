@@ -106,6 +106,7 @@ export function useSupabaseCalls() {
           phone_number,
           duration,
           transcript,
+          raw_transcript,
           executive_brief,
           status,
           sentiment,
@@ -119,7 +120,12 @@ export function useSupabaseCalls() {
         .limit(500);
 
       if (error) throw new Error(`[Supabase] call_records: ${error.message}`);
-      return (data ?? []) as CallRecord[];
+      // Normalize: use transcript, fall back to raw_transcript
+      const normalized = (data ?? []).map((row: any) => ({
+        ...row,
+        transcript: row.transcript || row.raw_transcript || '',
+      }));
+      return normalized as CallRecord[];
     },
   });
 }
