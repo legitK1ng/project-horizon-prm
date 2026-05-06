@@ -157,7 +157,7 @@ The dashboard opens at `http://localhost:3000`. API docs are at `http://localhos
 
 To stream live call recordings from your Android phone:
 
-1. Install [ACR Phone by NLL Labs](https://nllabsapps.com/) on Android.
+1. Install [ACR Phone by NLL Labs](https://nllapps.com/apps/cb/) on Android.
 2. In ACR Phone → Settings → Cloud Backup → Custom Server:
    - **URL:** `http://<your-machine-ip>:8000/v1/audio/transcriptions`
      (use a Tailscale Funnel URL for remote access)
