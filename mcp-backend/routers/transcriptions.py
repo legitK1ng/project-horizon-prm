@@ -120,6 +120,39 @@ async def create_transcription(
         f"model={model} lang={language} fmt={response_format}"
     )
 
+    # ── Parse ACR filename for contact metadata ──────────────────
+    # ACR apps encode contact + phone + direction in the filename:
+    #   "Hailey With Newport Academy (+17142747952) [2026-05-05 16-45-18] [Incoming].m4a"
+    try:
+        from pathlib import Path
+        from services.acr_parser_reference import parse_acr_filename, norm_phone
+        fname = file.filename or "audio.m4a"
+        stem = Path(fname).stem
+        ext = Path(fname).suffix
+        parsed_meta = parse_acr_filename(stem, ext)
+        logger.info(
+            f"[ACR-PARSE] pattern={parsed_meta['pattern']} "
+            f"contact={parsed_meta['contact']!r} phone={parsed_meta['phone']!r} "
+            f"direction={parsed_meta['direction']}"
+        )
+        # Enrich from filename if form fields were empty/default
+        if (not contact_name or contact_name == "Unknown") and parsed_meta.get("contact"):
+            contact_name = parsed_meta["contact"]
+        if not phone_number and parsed_meta.get("phone"):
+            phone_number = parsed_meta["phone"]
+        if not duration and parsed_meta.get("dt"):
+            # Use parsed timestamp as call_timestamp if not provided
+            if not call_timestamp:
+                dt_str = parsed_meta["dt"]  # Format: YYYY-MM-DD_HHMMSS
+                try:
+                    call_timestamp = datetime.strptime(dt_str, "%Y-%m-%d_%H%M%S").replace(
+                        tzinfo=timezone.utc
+                    ).isoformat()
+                except ValueError:
+                    pass
+    except Exception as e:
+        logger.warning(f"[ACR-PARSE] Filename parse failed (non-critical): {e}")
+
     # ── Audio → WAV ───────────────────────────────────────────────
     wav_path: Optional[str] = None
     try:
