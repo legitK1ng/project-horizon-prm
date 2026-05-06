@@ -12,6 +12,7 @@ Network:        Expose via `tailscale funnel 9000`
 """
 import os
 import sys
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -48,16 +49,29 @@ from routers import transcriptions
 from db.supabase_client import init_supabase
 
 
+try:
+    from core.sentinel import HorizonSentinel
+    sentinel = HorizonSentinel(interval_seconds=300)
+except Exception as _sentinel_err:
+    logger.error(f"[STARTUP] Sentinel import failed: {_sentinel_err}. Running without self-healing.")
+    sentinel = None
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("[HORIZON-INGEST] Starting ingestion server on port 9000...")
     
-    # Non-blocking DB init: If Supabase is down/hanging, don't freeze the server
+    # Non-blocking DB init
     try:
         app.state.supabase = init_supabase()
     except Exception as e:
         logger.error(f"[DB] Supabase init failed/timed out: {e}. Running in LOCAL-ONLY mode.")
         app.state.supabase = None
+
+    # Start the Sentinel Bot (if it loaded successfully)
+    if sentinel:
+        asyncio.create_task(sentinel.run())
+    else:
+        logger.warning("[STARTUP] Sentinel is disabled — no self-healing active.")
 
     api_key = os.environ.get("HORIZON_API_KEY", "")
     if api_key:
@@ -68,6 +82,8 @@ async def lifespan(app: FastAPI):
     logger.info("[HORIZON-INGEST] Ready. Whisper v1 endpoint active.")
     yield
     logger.info("[HORIZON-INGEST] Shutting down.")
+    if sentinel:
+        sentinel.stop()
 
 
 # ── App ────────────────────────────────────────────────────────────────────────
@@ -98,6 +114,14 @@ app.add_middleware(
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
 app.include_router(transcriptions.router, prefix="/v1/audio")
+
+
+@app.get("/v1/sentinel/status", tags=["meta"])
+async def sentinel_status():
+    """Sentinel health metrics — used by the process supervisor."""
+    if sentinel:
+        return {"status": "active", "metrics": sentinel.metrics.to_dict()}
+    return {"status": "disabled", "reason": "Sentinel failed to load"}
 
 
 @app.get("/v1/health", tags=["meta"])
