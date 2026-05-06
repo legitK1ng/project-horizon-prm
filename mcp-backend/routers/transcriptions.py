@@ -156,8 +156,22 @@ async def create_transcription(
         if wav_path:
             background_tasks.add_task(cleanup_processed_audio, wav_path)
 
+    # ── Generate AI Executive Brief (synchronous — so we can return it) ──
+    executive_brief = None
+    if len(transcript_text) > 50:
+        try:
+            from services.ai_briefing_service import generate_call_brief
+            logger.info(f"[AI] Generating executive brief for {contact_name!r}...")
+            executive_brief = generate_call_brief(transcript_text, contact_name)
+            logger.info(f"[AI] Brief generated. Sentiment: {executive_brief.get('sentiment', '?')}")
+        except Exception as ai_err:
+            logger.warning(f"[AI] Brief generation failed (non-blocking): {ai_err}")
+
     elapsed = time.perf_counter() - ingest_start
     logger.info(f"[TRANSCRIBE] Total pipeline time: {elapsed:.2f}s")
+
+    # ── Build enriched response text: brief + transcript ─────────
+    enriched_text = _format_enriched_response(transcript_text, executive_brief)
 
     # ── Persist to DB (non-blocking background task) ──────────────
     db = getattr(request.app.state, "supabase", None)
@@ -170,21 +184,22 @@ async def create_transcription(
             duration=duration,
             call_timestamp=call_timestamp,
             transcript_text=transcript_text,
+            executive_brief=executive_brief,
         )
 
     # ── Build response to match Whisper v1 format ─────────────────
     if response_format == "text":
-        return PlainTextResponse(content=transcript_text)
+        return PlainTextResponse(content=enriched_text)
 
     if response_format == "json":
-        return {"text": transcript_text}
+        return {"text": enriched_text}
 
     # Default: verbose_json — adds horizon_meta extension
     return {
         "task": "transcribe",
         "language": detected_language,
         "duration": round(audio_duration, 2),
-        "text": transcript_text,
+        "text": enriched_text,
         "segments": segments,
         "horizon_meta": {
             "contact_name": contact_name,
@@ -193,8 +208,54 @@ async def create_transcription(
             "call_timestamp": call_timestamp or datetime.now(timezone.utc).isoformat(),
             "model_used": model,
             "processing_time_s": round(elapsed, 3),
+            "brief_generated": executive_brief is not None,
         },
     }
+
+
+def _format_enriched_response(transcript: str, brief: Optional[dict]) -> str:
+    """
+    Pack the executive brief above the transcript so the ACR app
+    displays intelligence at a glance in its note/text field.
+    """
+    if not brief:
+        return transcript
+
+    lines = ["━━━ HORIZON EXECUTIVE BRIEF ━━━"]
+
+    if brief.get("title"):
+        lines.append(f"📌 {brief['title']}")
+
+    if brief.get("summary"):
+        lines.append(f"\n{brief['summary']}")
+
+    if brief.get("sentiment"):
+        lines.append(f"\nSentiment: {brief['sentiment']}")
+
+    action_items = brief.get("action_items", [])
+    if action_items:
+        lines.append("\nAction Items:")
+        for item in action_items:
+            lines.append(f"  • {item}")
+
+    open_commitments = brief.get("open_commitments", [])
+    if open_commitments:
+        lines.append("\nCommitments:")
+        for c in open_commitments:
+            lines.append(f"  ◆ {c}")
+
+    tags = brief.get("tags", [])
+    if tags:
+        lines.append(f"\nTags: {', '.join(f'#{t}' for t in tags)}")
+
+    if brief.get("recommended_followup_date"):
+        lines.append(f"Follow-up: {brief['recommended_followup_date']}")
+
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append("")
+    lines.append(transcript)
+
+    return "\n".join(lines)
 
 
 # ── Background DB persist ──────────────────────────────────────────────────────
@@ -205,6 +266,7 @@ async def _persist_to_db(
     duration: str,
     call_timestamp: Optional[str],
     transcript_text: str,
+    executive_brief: Optional[dict] = None,
 ) -> None:
     """Background task: store the call record in Supabase."""
     try:
@@ -219,7 +281,7 @@ async def _persist_to_db(
                         res = db.table("contacts").select("id").ilike("phone", f"%{clean_phone[-10:]}%").limit(1).execute()
                         if res.data:
                             contact_id = res.data[0]["id"]
-                
+
                 # Try name if phone failed
                 if not contact_id and contact_name and contact_name != "Unknown":
                     res = db.table("contacts").select("id").ilike("full_name", f"%{contact_name}%").limit(1).execute()
@@ -228,21 +290,9 @@ async def _persist_to_db(
             except Exception as e:
                 logger.warning(f"[DB] Contact lookup failed (non-critical): {e}")
 
-        # 2. Generate AI Brief (REQ-035)
-        # Only if there's enough transcript to analyze
-        executive_brief = None
-        sentiment = "Neutral"
-        tags = []
-        if len(transcript_text) > 50:
-            try:
-                from services.ai_briefing_service import generate_call_brief
-                brief = generate_call_brief(transcript_text, contact_name)
-                executive_brief = brief
-                sentiment = brief.get("sentiment", "Neutral")
-                tags = brief.get("tags", [])
-                logger.info(f"[AI] Successfully generated brief for {contact_name!r}")
-            except Exception as ai_err:
-                logger.warning(f"[AI] Brief generation failed: {ai_err}")
+        # 2. Use pre-generated brief (already computed in the sync path)
+        sentiment = executive_brief.get("sentiment", "Neutral") if executive_brief else "Neutral"
+        tags = executive_brief.get("tags", []) if executive_brief else []
 
         # 3. Build record
         record = {
