@@ -10,7 +10,7 @@ SECRET = os.getenv("ACR_WEBHOOK_SECRET")
 AUDIO_FILE = "tests/test_audio.m4a"
 
 def test_full_ingestion():
-    print(f"🚀 Starting Ingestion Test...")
+    print("🚀 Starting Ingestion Test...")
     print(f"URL: {API_URL}")
     print(f"Secret: {'SET' if SECRET else 'NOT SET'}")
 
@@ -34,7 +34,7 @@ def test_full_ingestion():
     }
 
     try:
-        print(f"📡 Sending multipart request...")
+        print("📡 Sending multipart request...")
         response = requests.post(API_URL, headers=headers, data=data, files=files)
         
         print(f"📥 Status Code: {response.status_code}")

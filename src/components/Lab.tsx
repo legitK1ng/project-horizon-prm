@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { CallRecord, Persona } from '@/types';
-import { BRAIN_PERSONAS, ICONS } from '@/constants';
-import { Brain, Play, RefreshCw, Save, Activity, Server, CheckCircle, AlertTriangle, Upload, Sparkles } from 'lucide-react';
+import { BRAIN_PERSONAS } from '@/constants';
+import { Brain, Play, RefreshCw, Activity, Server, CheckCircle, AlertTriangle, Upload, Sparkles, Zap, Bot, Target } from 'lucide-react';
 import { generateId } from '@/utils/helpers';
 import { api } from '@/services/apiClient';
 import { connectionLogger, LogEntry as ServiceLogEntry } from '@/utils/connectionLogger';
 import Console, { LogEntry } from './Console';
 import { WebNative, NativeContext } from '@/services/WebNative';
+import GlassCard from './common/GlassCard';
+import PremiumButton from './common/PremiumButton';
+import { cn } from '@/utils/ui';
 
 interface LabProps {
     onSaveLog?: (call: CallRecord) => void;
@@ -60,7 +63,6 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
             message,
             details
         };
-        // connectionLogger.log(type, message, details); // Optional: sync back to service
         setLogs(prev => [...prev, newLog]);
     };
 
@@ -103,7 +105,6 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
             }
         }
 
-        // Also handle dragged text
         const droppedText = e.dataTransfer.getData('text/plain');
         if (droppedText && files.length === 0) {
             setTranscript(droppedText);
@@ -120,10 +121,10 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
         try {
             const analysis = await api.analyzeText(transcript);
             setResult(analysis);
-        } catch (error) {
+            addLog('SUCCESS', 'Neural analysis complete', analysis);
+        } catch (error: any) {
             console.error(error);
-            // Error handling is actually done inside analyzeText returning a fallback object, 
-            // but if it throws we catch it here.
+            addLog('ERROR', 'Analysis failed', error.message);
         } finally {
             setIsProcessing(false);
         }
@@ -133,9 +134,9 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
         if (result && onSaveLog) {
             const newCall: CallRecord = {
                 id: generateId('call'),
-                contact_id: 'manual', // Static ID for manual diagnostics
+                contact_id: 'manual', 
                 timestamp: new Date().toISOString(),
-                contact_name: 'Manual Entry', // Backend will resolve this if phone matches
+                contact_name: 'Manual Entry',
                 phone_number: phoneNumber,
                 duration: 0,
                 transcript: transcript,
@@ -144,7 +145,7 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
                 executive_brief: result
             };
             onSaveLog(newCall);
-            // Reset
+            addLog('SUCCESS', 'Analysis saved to intelligence repository');
             setTranscript('');
             setPhoneNumber('');
             setResult(null);
@@ -192,237 +193,367 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
     };
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="flex justify-between items-center">
+        <div className="space-y-10 animate-reveal">
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
                 <div>
-                    <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Processing Lab</h2>
-                    <p className="text-slate-500 dark:text-slate-400">Test AI analysis and System Health.</p>
+                    <div className="flex items-center gap-4 mb-4">
+                        <div className="p-3 bg-purple-600/10 rounded-2xl border border-purple-600/20 shadow-inner">
+                            <Brain size={24} className="text-purple-500" />
+                        </div>
+                        <h2 className="text-[11px] font-black uppercase tracking-[0.5em] text-purple-500/80 italic">NEURAL_PROCESSOR_v4.2</h2>
+                    </div>
+                    <h1 className="text-6xl font-black tracking-tighter text-slate-900 dark:text-white uppercase italic leading-none">
+                        Intelligence<span className="text-purple-600">.</span>Lab
+                    </h1>
                 </div>
-                <div className="flex gap-2 bg-white/50 dark:bg-slate-800/60 backdrop-blur-lg p-1 rounded-xl border border-slate-200/40 dark:border-slate-700/40">
-                    <button
+                
+                <div className="flex bg-slate-100 dark:bg-slate-900/50 p-1.5 rounded-[1.5rem] border border-slate-200 dark:border-white/5 shadow-inner">
+                    <button 
                         onClick={() => setActiveTab('analysis')}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'analysis' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700'}`}
+                        className={cn(
+                            "px-8 py-3 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-500",
+                            activeTab === 'analysis' 
+                                ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-premium border border-slate-200 dark:border-white/10" 
+                                : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                        )}
                     >
-                        Analysis
+                        ANALYSIS
                     </button>
-                    <button
+                    <button 
                         onClick={() => setActiveTab('diagnostics')}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'diagnostics' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700'}`}
+                        className={cn(
+                            "px-8 py-3 rounded-[1.2rem] text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-500",
+                            activeTab === 'diagnostics' 
+                                ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-premium border border-slate-200 dark:border-white/10" 
+                                : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                        )}
                     >
-                        Diagnostics
+                        DIAGNOSTICS
                     </button>
                 </div>
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <GlassCard className="p-8 border-emerald-500/10 bg-emerald-500/5 hover:border-emerald-500/30 transition-all duration-500">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500/60 mb-2 italic">Pipeline_Status</p>
+                            <p className="text-3xl font-black text-emerald-500 uppercase tracking-tighter italic leading-none">OPERATIONAL</p>
+                        </div>
+                        <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-500 shadow-glow-emerald border border-emerald-500/20">
+                            <Activity size={28} />
+                        </div>
+                    </div>
+                    <div className="mt-8 h-1 w-full bg-emerald-500/10 rounded-full overflow-hidden">
+                        <motion.div 
+                            className="h-full bg-emerald-500 shadow-glow-emerald"
+                            animate={{ x: ['-100%', '100%'] }}
+                            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                        />
+                    </div>
+                </GlassCard>
+
+                <GlassCard className="p-8 border-blue-500/10 bg-blue-500/5 hover:border-blue-500/30 transition-all duration-500">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500/60 mb-2 italic">Neural_Load</p>
+                            <p className="text-3xl font-black text-blue-500 uppercase tracking-tighter italic leading-none">OPTIMIZED</p>
+                        </div>
+                        <div className="w-14 h-14 rounded-2xl bg-blue-500/20 flex items-center justify-center text-blue-500 shadow-glow border border-blue-500/20">
+                            <Zap size={28} />
+                        </div>
+                    </div>
+                    <div className="mt-8 flex gap-1">
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                            <div key={i} className={cn("h-1 flex-1 rounded-full", i <= 3 ? "bg-blue-500 shadow-glow" : "bg-blue-500/10")} />
+                        ))}
+                    </div>
+                </GlassCard>
+
+                <GlassCard className="p-8 border-purple-500/10 bg-purple-500/5 hover:border-purple-500/30 transition-all duration-500">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-purple-500/60 mb-2 italic">Agent_Matrix</p>
+                            <p className="text-3xl font-black text-purple-500 uppercase tracking-tighter italic leading-none">4_ACTIVE</p>
+                        </div>
+                        <div className="w-14 h-14 rounded-2xl bg-purple-500/20 flex items-center justify-center text-purple-500 shadow-glow border border-purple-500/20">
+                            <Bot size={28} />
+                        </div>
+                    </div>
+                    <div className="mt-8 flex items-center gap-3">
+                        <div className="flex -space-x-3">
+                            {[1, 2, 3, 4].map(i => (
+                                <div key={i} className="w-6 h-6 rounded-full bg-slate-900 border border-purple-500/30 flex items-center justify-center shadow-lg">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+                                </div>
+                            ))}
+                        </div>
+                        <span className="text-[10px] font-black text-purple-500/60 uppercase tracking-widest italic">Monitoring_Swarm</span>
+                    </div>
+                </GlassCard>
+            </div>
+
             {activeTab === 'analysis' ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                     {/* Input Column */}
-                    <div className="space-y-4">
-                        <motion.div
-                            className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-6 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)]"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ type: 'spring', stiffness: 120, damping: 14 }}
-                        >
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                    Phone Number (Optional)
-                                </label>
-                                <input
-                                    type="text"
-                                    className="w-full p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"
-                                    placeholder="e.g. 555-0123"
-                                    value={phoneNumber}
-                                    onChange={(e) => setPhoneNumber(e.target.value)}
-                                />
-                            </div>
-
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                Raw Call Transcript
-                            </label>
-                            <div
-                                className={`relative rounded-xl transition-all ${isDragging ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-slate-900' : ''}`}
-                                onDragOver={handleDragOver}
-                                onDragLeave={handleDragLeave}
-                                onDrop={handleDrop}
-                            >
-                                <textarea
-                                    className="w-full h-64 p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none font-mono text-sm"
-                                    placeholder="Paste transcript here or drag & drop a text file..."
-                                    value={transcript}
-                                    onChange={(e) => setTranscript(e.target.value)}
-                                />
-                                {isDragging && (
-                                    <div className="absolute inset-0 bg-blue-50/90 dark:bg-blue-900/40 rounded-xl flex flex-col items-center justify-center pointer-events-none animate-in fade-in duration-150">
-                                        <Upload size={32} className="text-blue-600 dark:text-blue-400 mb-2" />
-                                        <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">Drop file here</p>
-                                        <p className="text-xs text-blue-500">.txt, .json, .csv, .md</p>
+                    <div className="space-y-6">
+                        <GlassCard className="p-10 border-white/5 glass-premium shadow-premium overflow-visible">
+                            <div className="space-y-8">
+                                <div>
+                                    <label className="block text-[11px] font-black uppercase tracking-[0.3em] text-slate-500 italic mb-4">
+                                        Subject_Reference (Optional)
+                                    </label>
+                                    <div className="relative group">
+                                        <input
+                                            type="text"
+                                            className="w-full p-5 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/5 rounded-2xl focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500/40 outline-none font-mono text-sm transition-all shadow-inner"
+                                            placeholder="e.g. +1 555-0123"
+                                            value={phoneNumber}
+                                            onChange={(e) => setPhoneNumber(e.target.value)}
+                                        />
+                                        <div className="absolute right-5 top-1/2 -translate-y-1/2 opacity-20 group-focus-within:opacity-100 transition-opacity">
+                                            <Target size={18} className="text-purple-500" />
+                                        </div>
                                     </div>
-                                )}
-                            </div>
+                                </div>
 
-                            <div className="mt-4 flex flex-wrap gap-2">
-                                {BRAIN_PERSONAS.map(persona => (
-                                    <button
-                                        key={persona.id}
-                                        onClick={() => setSelectedPersona(persona.id)}
-                                        className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${selectedPersona === persona.id
-                                            ? 'bg-blue-600 text-white border-blue-600 shadow-md'
-                                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-blue-400'
-                                            }`}
+                                <div>
+                                    <label className="block text-[11px] font-black uppercase tracking-[0.3em] text-slate-500 italic mb-4">
+                                        Neural_Input_Feed
+                                    </label>
+                                    <div
+                                        className={`relative rounded-[2rem] transition-all group ${isDragging ? 'scale-[1.02]' : ''}`}
+                                        onDragOver={handleDragOver}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={handleDrop}
                                     >
-                                        {persona.label}
-                                    </button>
-                                ))}
-                            </div>
+                                        <div className="absolute -inset-1 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-[2.1rem] blur opacity-0 group-focus-within:opacity-100 transition-opacity" />
+                                        <textarea
+                                            className="w-full h-80 p-8 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/5 rounded-[2rem] focus:ring-0 outline-none resize-none font-mono text-sm relative z-10 transition-all shadow-inner luxury-scroll"
+                                            placeholder="Paste transcript stream here or drag & drop intelligence file..."
+                                            value={transcript}
+                                            onChange={(e) => setTranscript(e.target.value)}
+                                        />
+                                        {isDragging && (
+                                            <div className="absolute inset-0 bg-purple-600/10 backdrop-blur-md rounded-[2rem] flex flex-col items-center justify-center pointer-events-none z-20 border-2 border-dashed border-purple-500 animate-reveal">
+                                                <div className="p-6 bg-purple-600 rounded-full shadow-glow-purple mb-4">
+                                                    <Upload size={32} className="text-white" />
+                                                </div>
+                                                <p className="text-lg font-black text-white uppercase tracking-[0.2em] italic">Drop_Intelligence_File</p>
+                                                <p className="text-[10px] font-bold text-purple-400 mt-2 uppercase tracking-widest">Supported: .txt, .json, .csv, .md</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
 
-                            <button
-                                onClick={handleProcess}
-                                disabled={isProcessing || !transcript.trim()}
-                                className="mt-6 w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-200 dark:shadow-none"
-                            >
-                                {isProcessing ? (
-                                    <>
-                                        <RefreshCw className="animate-spin" size={20} />
-                                        Processing...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Brain size={20} />
-                                        Analyze Text
-                                    </>
-                                )}
-                            </button>
-                        </motion.div>
+                                <div>
+                                    <label className="block text-[11px] font-black uppercase tracking-[0.3em] text-slate-500 italic mb-4">
+                                        Model_Persona_Core
+                                    </label>
+                                    <div className="flex flex-wrap gap-3">
+                                        {BRAIN_PERSONAS.map(persona => (
+                                            <button
+                                                key={persona.id}
+                                                onClick={() => setSelectedPersona(persona.id)}
+                                                className={cn(
+                                                    "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 border italic",
+                                                    selectedPersona === persona.id
+                                                        ? "bg-purple-600 text-white border-purple-600 shadow-glow-purple scale-105"
+                                                        : "bg-white dark:bg-white/5 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/5 hover:border-purple-500/40 hover:text-purple-400"
+                                                )}
+                                            >
+                                                {persona.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={handleProcess}
+                                    disabled={isProcessing || !transcript.trim()}
+                                    className="w-full py-6 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 disabled:opacity-20 disabled:cursor-not-allowed text-white dark:text-black rounded-[2rem] font-black uppercase tracking-[0.4em] transition-all flex items-center justify-center gap-4 shadow-2xl overflow-hidden relative group/btn italic"
+                                >
+                                    <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
+                                    <span className="relative z-10 flex items-center gap-4">
+                                        {isProcessing ? (
+                                            <>
+                                                <RefreshCw className="animate-spin" size={20} />
+                                                SYNCHRONIZING_MATRIX...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Brain size={20} />
+                                                INITIATE_NEURAL_UPLINK
+                                            </>
+                                        )}
+                                    </span>
+                                </button>
+                            </div>
+                        </GlassCard>
                     </div>
 
                     {/* Output Column */}
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                         {result ? (
-                            <motion.div
-                                className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-6 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)]"
-                                initial={{ opacity: 0, x: 20, scale: 0.97 }}
-                                animate={{ opacity: 1, x: 0, scale: 1 }}
-                                transition={{ type: 'spring', stiffness: 120, damping: 14, delay: 0.1 }}
-                            >
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                                        {ICONS.Dashboard} Analysis Results
-                                    </h3>
-                                    <button
+                            <GlassCard className="p-10 border-white/5 glass-premium shadow-premium animate-reveal">
+                                <div className="flex items-center justify-between mb-10 pb-8 border-b border-white/5">
+                                    <div className="flex items-center gap-5">
+                                        <div className="p-4 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 text-emerald-500 shadow-glow-emerald">
+                                            <Sparkles size={24} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">Analysis_Result</h3>
+                                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1 italic opacity-60">Confidence Score: 0.9882</p>
+                                        </div>
+                                    </div>
+                                    <PremiumButton 
                                         onClick={handleSave}
-                                        className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-medium transition-colors"
+                                        variant="primary"
+                                        size="sm"
+                                        className="px-6 shadow-glow"
                                     >
-                                        <Save size={16} />
-                                        Save to Logs
-                                    </button>
+                                        SAVE_LOG
+                                    </PremiumButton>
                                 </div>
 
-                                <div className="space-y-4">
-                                    <div className="p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-800">
-                                        <h4 className="font-semibold text-emerald-800 dark:text-emerald-400 mb-1 text-sm uppercase">Summary</h4>
-                                        <p className="text-slate-700 dark:text-slate-300">{result.summary}</p>
+                                <div className="space-y-10">
+                                    <div className="p-8 bg-emerald-500/5 rounded-[2rem] border border-emerald-500/10 relative overflow-hidden group">
+                                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-30 transition-opacity">
+                                            <Activity size={48} className="text-emerald-500" />
+                                        </div>
+                                        <h4 className="text-[11px] font-black text-emerald-500/80 uppercase tracking-[0.3em] mb-4 italic leading-none">Intelligence_Summary</h4>
+                                        <p className="text-lg font-bold text-slate-800 dark:text-slate-200 leading-relaxed tracking-tight">{result.summary}</p>
                                     </div>
 
                                     <div>
-                                        <h4 className="font-semibold text-slate-700 dark:text-slate-300 mb-2 text-sm uppercase">Action Items</h4>
-                                        <ul className="space-y-2">
+                                        <div className="flex items-center gap-4 mb-6">
+                                            <h4 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.3em] italic leading-none">Action_Protocol_Items</h4>
+                                            <div className="h-px flex-1 bg-white/5" />
+                                        </div>
+                                        <div className="space-y-4">
                                             {(result.action_items || []).map((item: string, i: number) => (
-                                                <li key={i} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
-                                                    <div className="min-w-[4px] h-[4px] rounded-full bg-blue-500 mt-2" />
-                                                    {item}
-                                                </li>
+                                                <motion.div 
+                                                    key={i} 
+                                                    initial={{ opacity: 0, x: 10 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    transition={{ delay: i * 0.1 }}
+                                                    className="flex items-start gap-5 p-5 bg-white/5 rounded-2xl border border-white/5 group hover:border-blue-500/30 transition-all shadow-sm"
+                                                >
+                                                    <div className="w-6 h-6 rounded-lg bg-blue-500/20 flex items-center justify-center shrink-0 mt-0.5 border border-blue-500/20 group-hover:scale-110 transition-transform">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-glow" />
+                                                    </div>
+                                                    <span className="text-sm font-bold text-slate-600 dark:text-slate-400 group-hover:text-slate-200 transition-colors leading-relaxed">{item}</span>
+                                                </motion.div>
                                             ))}
-                                        </ul>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex flex-wrap gap-2">
+                                        {(result.tags || []).map((tag, i) => (
+                                            <span key={i} className="px-4 py-1.5 bg-slate-100 dark:bg-white/5 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest rounded-full border border-slate-200 dark:border-white/5 italic">
+                                                #{tag}
+                                            </span>
+                                        ))}
                                     </div>
                                 </div>
-                            </motion.div>
+                            </GlassCard>
                         ) : (
-                            <motion.div
-                                className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-2xl border border-dashed border-slate-300/50 dark:border-slate-700/50 h-full flex flex-col items-center justify-center text-slate-400 shadow-[0_8px_30px_rgb(0,0,0,0.02)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.06)]"
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ type: 'spring', stiffness: 100, damping: 16 }}
-                            >
-                                <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
-                                    <Play size={24} className="ml-1 opacity-50" />
+                            <div className="h-full flex flex-col items-center justify-center">
+                                <div className="w-full h-full min-h-[500px] border-2 border-dashed border-slate-200 dark:border-white/5 rounded-[3rem] flex flex-col items-center justify-center text-slate-400 relative overflow-hidden group">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+                                    <div className="w-32 h-32 bg-slate-50 dark:bg-slate-900 rounded-full flex items-center justify-center mb-10 shadow-inner border border-slate-100 dark:border-white/5 relative z-10 group-hover:scale-110 transition-transform duration-700">
+                                        <Play size={40} className="ml-2 text-slate-300 dark:text-slate-700 group-hover:text-purple-500 transition-colors" />
+                                        <div className="absolute inset-0 rounded-full border border-purple-500/20 animate-ping opacity-0 group-hover:opacity-100" />
+                                    </div>
+                                    <p className="text-xl font-black uppercase tracking-[0.2em] italic text-slate-300 dark:text-slate-700 relative z-10">Neural_Processor_Ready</p>
+                                    <p className="text-[10px] font-bold mt-4 uppercase tracking-[0.4em] text-slate-400 opacity-60 relative z-10">Select parameters and initiate uplink</p>
                                 </div>
-                                <p>Ready to analyze.</p>
-                                <p className="text-xs mt-1">Select a persona and click Analyze.</p>
-                            </motion.div>
+                            </div>
                         )}
                     </div>
                 </div>
             ) : (
-                <div className="space-y-6">
-                    <motion.div
-                        className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-6 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)]"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ type: 'spring', stiffness: 120, damping: 14 }}
-                    >
-                        <div className="flex justify-between items-center mb-6">
+                <div className="space-y-10 animate-reveal">
+                    <GlassCard className="p-10 border-white/5 glass-premium shadow-premium relative overflow-hidden">
+                        <div className="absolute inset-0 scanline opacity-20 pointer-events-none" />
+                        <div className="flex justify-between items-center mb-12 relative z-10">
                             <div>
-                                <h3 className="text-lg font-bold text-slate-900 dark:text-white">System Diagnostics</h3>
-                                <p className="text-sm text-slate-500">Run backend tests and check API connectivity.</p>
+                                <h3 className="text-3xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter">System_Diagnostics</h3>
+                                <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.4em] mt-2 italic opacity-60">Full Spectrum Infrastructure Health Check</p>
                             </div>
                             <button
                                 onClick={handleRunDiagnostics}
                                 disabled={isLoadingDiag}
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                                className="px-10 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-[1.5rem] font-black uppercase tracking-[0.2em] italic transition-all flex items-center gap-4 shadow-glow active:scale-95 disabled:opacity-50"
                             >
-                                {isLoadingDiag ? <RefreshCw className="animate-spin" size={16} /> : <Activity size={16} />}
-                                Run Diagnostics
+                                {isLoadingDiag ? <RefreshCw className="animate-spin" size={20} /> : <Activity size={20} />}
+                                START_DIAGNOSTICS
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Call Models */}
-                            <div className="space-y-4">
-                                <h4 className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                                    <Brain size={16} /> Available Models
-                                </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 relative z-10">
+                            {/* Models Section */}
+                            <div className="space-y-6">
+                                <div className="flex items-center gap-4 mb-2">
+                                    <div className="p-2.5 bg-purple-500/10 rounded-xl border border-purple-500/20 text-purple-500">
+                                        <Brain size={18} />
+                                    </div>
+                                    <h4 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.3em] italic">Available_Neural_Models</h4>
+                                </div>
                                 {models.length > 0 ? (
-                                    <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-lg rounded-xl overflow-hidden border border-slate-200/50 dark:border-slate-700/50">
+                                    <div className="bg-black/20 rounded-[2rem] overflow-hidden border border-white/5 shadow-inner luxury-scroll max-h-[400px] overflow-y-auto">
                                         {models.map((m, i) => (
-                                            <div key={i} className="p-3 border-b border-slate-200 dark:border-slate-800 last:border-0 flex justify-between items-center">
-                                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{m.displayName}</span>
-                                                <span className="text-xs text-slate-500 font-mono">{m.name}</span>
+                                            <div key={i} className="p-6 border-b border-white/5 last:border-0 flex justify-between items-center hover:bg-white/5 transition-all group">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-2 h-2 rounded-full bg-purple-500/40 group-hover:bg-purple-500 shadow-glow-purple transition-all" />
+                                                    <span className="text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-white transition-colors">{m.displayName}</span>
+                                                </div>
+                                                <span className="text-[10px] font-mono text-slate-600 dark:text-slate-500 group-hover:text-purple-400 transition-colors">{m.name}</span>
                                             </div>
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="p-8 text-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-lg rounded-xl border border-dashed border-slate-300/50 dark:border-slate-700/50 text-slate-400 text-sm">
-                                        No models loaded. Run diagnostics to fetch.
+                                    <div className="p-16 text-center bg-black/10 rounded-[2rem] border-2 border-dashed border-white/5 flex flex-col items-center justify-center gap-6">
+                                        <Brain size={48} className="text-slate-800 animate-pulse" />
+                                        <p className="text-[11px] font-black text-slate-700 uppercase tracking-[0.3em] italic">No_Neural_Context_Loaded</p>
                                     </div>
                                 )}
                             </div>
 
-                            {/* Backend Tests */}
-                            <div className="space-y-4">
-                                <h4 className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                                    <Server size={16} /> Backend Integrity
-                                </h4>
+                            {/* Integrity Section */}
+                            <div className="space-y-6">
+                                <div className="flex items-center gap-4 mb-2">
+                                    <div className="p-2.5 bg-blue-500/10 rounded-xl border border-blue-500/20 text-blue-500">
+                                        <Server size={18} />
+                                    </div>
+                                    <h4 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.3em] italic">Backend_Matrix_Integrity</h4>
+                                </div>
                                 {diagResults ? (
-                                    <div className="space-y-2">
-                                        <div className={`p-3 rounded-lg border flex items-center gap-3 ${diagResults.status === 'healthy'
-                                            ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                                            : 'bg-amber-50 border-amber-200 text-amber-800'
-                                            }`}>
-                                            {diagResults.status === 'healthy' ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
-                                            <span className="font-bold uppercase text-sm">{diagResults.status}</span>
+                                    <div className="space-y-4">
+                                        <div className={cn(
+                                            "p-6 rounded-2xl border flex items-center gap-5 shadow-lg animate-reveal",
+                                            diagResults.status === 'healthy'
+                                                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 shadow-glow-emerald'
+                                                : 'bg-amber-500/10 border-amber-200 text-amber-500 shadow-glow-warn'
+                                        )}>
+                                            {diagResults.status === 'healthy' ? <CheckCircle size={28} /> : <AlertTriangle size={28} />}
+                                            <div>
+                                                <span className="block text-[10px] font-black uppercase tracking-[0.2em] opacity-60 leading-none mb-1">Core_Status</span>
+                                                <span className="text-2xl font-black italic tracking-tighter uppercase leading-none">{diagResults.status}</span>
+                                            </div>
                                         </div>
 
-                                        <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-lg rounded-xl overflow-hidden border border-slate-200/50 dark:border-slate-700/50">
+                                        <div className="bg-black/20 rounded-[2rem] overflow-hidden border border-white/5 shadow-inner max-h-[280px] overflow-y-auto luxury-scroll">
                                             {diagResults.results?.map((r: any, i: number) => (
-                                                <div key={i} className="p-3 border-b border-slate-200 dark:border-slate-800 last:border-0 flex justify-between items-center text-sm">
-                                                    <span className="text-slate-700 dark:text-slate-300">{r.test}</span>
+                                                <div key={i} className="p-5 border-b border-white/5 last:border-0 flex justify-between items-center text-sm hover:bg-white/5 transition-all">
+                                                    <span className="text-slate-700 dark:text-slate-300 font-bold tracking-tight">{r.test}</span>
                                                     {r.status === 'PASS' ? (
-                                                        <span className="text-emerald-600 font-bold text-xs bg-emerald-100 px-2 py-0.5 rounded-full">PASS</span>
+                                                        <span className="text-[9px] font-black tracking-widest text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg italic">PASS</span>
                                                     ) : (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-red-500 text-xs">{r.message}</span>
-                                                            <span className="text-red-600 font-bold text-xs bg-red-100 px-2 py-0.5 rounded-full">FAIL</span>
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-red-400 text-[10px] font-bold italic">{r.message}</span>
+                                                            <span className="text-[9px] font-black tracking-widest text-red-500 bg-red-500/10 border border-red-500/20 px-3 py-1 rounded-lg italic uppercase">FAIL</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -430,8 +561,9 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="p-8 text-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-lg rounded-xl border border-dashed border-slate-300/50 dark:border-slate-700/50 text-slate-400 text-sm">
-                                        No diagnostic results. Run diagnostics to test.
+                                    <div className="p-16 text-center bg-black/10 rounded-[2rem] border-2 border-dashed border-white/5 flex flex-col items-center justify-center gap-6">
+                                        <Server size={48} className="text-slate-800 animate-pulse" />
+                                        <p className="text-[11px] font-black text-slate-700 uppercase tracking-[0.3em] italic">Awaiting_Integrity_Verification</p>
                                     </div>
                                 )}
                             </div>
@@ -439,50 +571,69 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
 
                         {/* WebNative Context Section */}
                         {nativeContext && (
-                            <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-2xl border border-slate-200/50 dark:border-slate-800/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] mt-6 animate-in slide-in-from-bottom-4 duration-500">
-                                <h4 className="font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
-                                    <Activity size={18} className="text-blue-500" /> WebNative Extension Details
-                                </h4>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                    <div className="p-4 bg-white/60 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                                        <p className="text-xs text-slate-500 mb-1">Platform</p>
-                                        <p className="font-medium text-slate-800 dark:text-slate-200 capitalize">{nativeContext.deviceInfo.platform}</p>
+                            <motion.div 
+                                className="bg-white/5 p-10 rounded-[2.5rem] border border-white/5 shadow-inner mt-12 relative z-10 group"
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                            >
+                                <div className="flex items-center justify-between mb-10">
+                                    <h4 className="text-xl font-black text-white italic tracking-tighter uppercase flex items-center gap-4">
+                                        <Activity size={24} className="text-blue-500" /> 
+                                        WebNative_Extension_Payload
+                                    </h4>
+                                    <div className="px-5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-black text-blue-400 uppercase tracking-widest italic">
+                                        ACTIVE_LINK
                                     </div>
-                                    <div className="p-4 bg-white/60 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                                        <p className="text-xs text-slate-500 mb-1">Model</p>
-                                        <p className="font-medium text-slate-800 dark:text-slate-200">{nativeContext.deviceInfo.model}</p>
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
+                                    <div className="p-6 bg-black/20 rounded-[1.5rem] border border-white/5 group-hover:border-blue-500/20 transition-all">
+                                        <p className="text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest italic">Platform_Core</p>
+                                        <p className="text-lg font-black text-white italic tracking-tight capitalize">{nativeContext.deviceInfo.platform}</p>
                                     </div>
-                                    <div className="p-4 bg-white/60 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                                        <p className="text-xs text-slate-500 mb-1">Battery Optimization</p>
-                                        <p className="font-medium text-slate-800 dark:text-slate-200">{nativeContext.isBatteryOptimized ? 'Optimized' : 'Unrestricted'}</p>
+                                    <div className="p-6 bg-black/20 rounded-[1.5rem] border border-white/5 group-hover:border-blue-500/20 transition-all">
+                                        <p className="text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest italic">Hardware_Model</p>
+                                        <p className="text-lg font-black text-white italic tracking-tight">{nativeContext.deviceInfo.model}</p>
                                     </div>
-                                    <div className="col-span-2 md:col-span-3 p-4 bg-white/60 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                                        <p className="text-xs text-slate-500 mb-2">Permissions</p>
-                                        <div className="flex gap-4">
-                                            <div className="flex items-center gap-2">
-                                                <div className={`w-2 h-2 rounded-full ${nativeContext.permissions.contacts === 'granted' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-                                                <span className="text-sm text-slate-700 dark:text-slate-300">Contacts</span>
+                                    <div className="p-6 bg-black/20 rounded-[1.5rem] border border-white/5 group-hover:border-blue-500/20 transition-all">
+                                        <p className="text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest italic">Battery_Opt</p>
+                                        <p className="text-lg font-black text-blue-400 italic tracking-tight uppercase">{nativeContext.isBatteryOptimized ? 'Optimized' : 'Unrestricted'}</p>
+                                    </div>
+                                    <div className="col-span-2 md:col-span-3 p-8 bg-black/20 rounded-[2rem] border border-white/5 group-hover:border-blue-500/20 transition-all">
+                                        <p className="text-[10px] font-black text-slate-500 mb-4 uppercase tracking-widest italic">Neural_Permissions_Matrix</p>
+                                        <div className="flex gap-10">
+                                            <div className="flex items-center gap-4">
+                                                <div className={cn(
+                                                    "w-3 h-3 rounded-full shadow-glow",
+                                                    nativeContext.permissions.contacts === 'granted' ? 'bg-emerald-500 shadow-glow-emerald' : 'bg-red-500 shadow-glow-red'
+                                                )}></div>
+                                                <span className="text-sm font-black text-white italic tracking-widest uppercase">CONTACTS_ACCESS</span>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <div className={`w-2 h-2 rounded-full ${nativeContext.permissions.calls === 'granted' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-                                                <span className="text-sm text-slate-700 dark:text-slate-300">Call Logs</span>
+                                            <div className="flex items-center gap-4">
+                                                <div className={cn(
+                                                    "w-3 h-3 rounded-full shadow-glow",
+                                                    nativeContext.permissions.calls === 'granted' ? 'bg-emerald-500 shadow-glow-emerald' : 'bg-red-500 shadow-glow-red'
+                                                )}></div>
+                                                <span className="text-sm font-black text-white italic tracking-widest uppercase">CALL_LOGS_ACCESS</span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </motion.div>
                         )}
+                    </GlassCard>
 
-                        {/* Gemini Integration Section */}
-                        <motion.div
-                            className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-2xl border border-purple-200/40 dark:border-purple-800/30 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] mt-6"
-                            initial={{ opacity: 0, y: 16 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ type: 'spring', stiffness: 120, damping: 14, delay: 0.15 }}
-                        >
-                            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                                <Sparkles size={20} className="text-purple-500" /> Gemini Integration
-                            </h3>
+                    {/* Gemini Integration Section */}
+                    <GlassCard className="p-10 border-purple-500/10 bg-purple-500/5 shadow-premium group">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+                            <div className="flex items-center gap-6">
+                                <div className="p-5 bg-purple-500/10 rounded-2xl border border-purple-500/20 text-purple-500 group-hover:scale-110 transition-transform">
+                                    <Sparkles size={32} />
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">Gemini_Direct_Link</h3>
+                                    <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.4em] mt-1 italic opacity-60">High-Fidelity AI Interconnect</p>
+                                </div>
+                            </div>
                             <div className="flex gap-4">
                                 <button
                                     onClick={async () => {
@@ -494,9 +645,9 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
                                             addLog('ERROR', 'Gemini Connection Failed', res);
                                         }
                                     }}
-                                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+                                    className="px-8 py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-[1.5rem] font-black uppercase tracking-[0.2em] italic transition-all shadow-glow-purple active:scale-95"
                                 >
-                                    Test Connection
+                                    VERIFY_UPLINK
                                 </button>
                                 <button
                                     onClick={async () => {
@@ -504,25 +655,28 @@ const Lab: React.FC<LabProps> = ({ onSaveLog }) => {
                                         const res = await api.triggerProcessing();
                                         addLog('INFO', 'Trigger Result', res);
                                     }}
-                                    className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors"
+                                    className="px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-black hover:bg-slate-800 dark:hover:bg-slate-100 rounded-[1.5rem] font-black uppercase tracking-[0.2em] italic transition-all shadow-premium active:scale-95"
                                 >
-                                    Force Process Queue
+                                    FORCE_QUEUE_FLUSH
                                 </button>
                             </div>
-                        </motion.div>
-
-                        {/* NEW CONSOLE SECTION */}
-                        <div className="mt-8">
-                            <h4 className="font-semibold text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2">
-                                <Activity size={16} /> Live System Monitor
-                            </h4>
-                            <Console
-                                logs={logs}
-                                onClear={() => setLogs([])}
-                                isRunning={isLoadingDiag}
-                            />
                         </div>
-                    </motion.div>
+                    </GlassCard>
+
+                    {/* LIVE SYSTEM MONITOR */}
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-4 px-4">
+                            <div className="w-8 h-px bg-gradient-to-r from-transparent to-slate-300 dark:to-slate-700" />
+                            <Activity size={18} className="text-slate-500" />
+                            <h4 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.3em] italic leading-none">Live_System_Monitor_Feed</h4>
+                            <div className="w-24 h-px bg-gradient-to-r from-slate-300 dark:from-slate-700 to-transparent" />
+                        </div>
+                        <Console
+                            logs={logs}
+                            onClear={() => setLogs([])}
+                            isRunning={isLoadingDiag}
+                        />
+                    </div>
                 </div>
             )}
         </div>

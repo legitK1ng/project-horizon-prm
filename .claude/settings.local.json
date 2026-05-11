@@ -1,6 +1,41 @@
 {
   "permissions": {
-    "allow": []
+    "allow": [
+      "mcp__Desktop_Commander__list_processes",
+      "mcp__Desktop_Commander__list_directory",
+      "mcp__Desktop_Commander__start_search",
+      "mcp__Desktop_Commander__start_process",
+      "mcp__Desktop_Commander__read_process_output",
+      "mcp__Desktop_Commander__write_file",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "mcp__Claude_in_Chrome__browser_batch",
+      "mcp__Claude_in_Chrome__computer",
+      "mcp__Claude_in_Chrome__read_page",
+      "mcp__Claude_in_Chrome__read_console_messages",
+      "mcp__Claude_in_Chrome__navigate",
+      "mcp__Desktop_Commander__read_file",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git pull *)",
+      "Bash(git stash *)",
+      "Bash(gh pr *)",
+      "Bash(npx vite *)",
+      "Bash(timeout 8)",
+      "mcp__Claude_Preview__preview_start",
+      "PowerShell(Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue | Select-Object OwningProcess | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue })",
+      "PowerShell(Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"cd 'C:\\\\Users\\\\owner\\\\OneDrive\\\\Desktop\\\\horizon\\\\mcp-backend'; & 'C:\\\\Users\\\\owner\\\\OneDrive\\\\Desktop\\\\horizon\\\\.venv\\\\Scripts\\\\python.exe' -m uvicorn main:app --port 8000 --reload\")",
+      "PowerShell(Get-NetTCPConnection -LocalPort 9000 -ErrorAction SilentlyContinue)",
+      "mcp__01f79d8b-0500-48b3-a0e5-c5f0872a4621__execute_sql",
+      "PowerShell(try { $r = Invoke-RestMethod -Uri \"http://localhost:9000/v1/health\" -Method GET -ErrorAction Stop; $r | ConvertTo-Json } catch { $_.Exception.Message })",
+      "PowerShell(try { Invoke-WebRequest -Uri \"http://localhost:9000/v1/audio/audio/transcriptions\" -Method POST -Headers @{ \"Authorization\" = \"Bearer test\" } -ErrorAction Stop } catch { \"$\\($_.Exception.Response.StatusCode.value__\\): $\\($_.Exception.Message\\)\" })",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(curl -s http://localhost:8000)",
+      "Bash(findstr \"8000\\\\|3000\\\\|9000\")",
+      "PowerShell(netstat *)",
+      "PowerShell(Invoke-RestMethod -Uri \"http://localhost:8000/api/v1/health\" -Method GET -TimeoutSec 10 2>&1 | ConvertTo-Json -Depth 3)",
+      "PowerShell(Invoke-RestMethod -Uri \"http://localhost:8000/api/v1/data\" -Method GET -TimeoutSec 10 2>&1 | ConvertTo-Json -Depth 3)"
+    ]
   },
   "enabledMcpjsonServers": [
     "virtualtabs",

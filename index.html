@@ -5,6 +5,24 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Intelligent Personal Relationship Management with AI-powered call analysis" />
+    <!-- Theme Persistence Script to prevent FOUC -->
+    <script>
+      (function() {
+        try {
+          const item = localStorage.getItem('horizon-ui-state');
+          if (item) {
+            const state = JSON.parse(item);
+            if (state.state && state.state.theme === 'dark') {
+              document.documentElement.classList.add('dark');
+            } else if (state.state && state.state.theme === 'light') {
+              document.documentElement.classList.remove('dark');
+            }
+          } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />

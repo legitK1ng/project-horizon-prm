@@ -2,13 +2,16 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
     X, Mail, Phone, Building, User, Clock, FileText, ChevronRight,
     Shield, Activity, Globe, Linkedin, Twitter, ExternalLink,
-    MapPin, Calendar, Hash, Link2, Fingerprint
+    MapPin, Calendar, Hash, Link2, Fingerprint, Sparkles, Database
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { CallRecord, Contact } from '@/types';
 import { formatDuration, getInitials } from '@/utils/helpers';
 import { cn } from '@/utils/ui';
+import { triggerHaptic } from '@/utils/haptics';
 import EnrichmentCard from './EnrichmentCard';
 import OsintSignals from './OsintSignals';
+import PremiumButton from './PremiumButton';
 
 interface UnifiedContactDrawerProps {
     contactId?: string | null;
@@ -25,6 +28,18 @@ const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({
     contactId, contactName, onClose, calls, contacts
 }) => {
     const [activeTab, setActiveTab] = useState<Tab>('overview');
+
+    const handleClose = () => {
+        triggerHaptic('LIGHT');
+        onClose();
+    };
+
+    const handleTabChange = (tab: Tab) => {
+        if (tab !== activeTab) {
+            triggerHaptic('LIGHT');
+            setActiveTab(tab);
+        }
+    };
 
     const localContact = useMemo(() => {
         if (contactId) return contacts.find(c => c.id === contactId) || null;
@@ -86,10 +101,10 @@ const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({
     const healthColor = healthScore > 70 ? 'text-emerald-500' : healthScore > 40 ? 'text-amber-500' : 'text-rose-500';
 
     useEffect(() => {
-        const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        const h = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose(); };
         window.addEventListener('keydown', h);
         return () => window.removeEventListener('keydown', h);
-    }, [onClose]);
+    }, [handleClose]);
 
     if (!contactName && !contactId) return null;
 
@@ -102,12 +117,28 @@ const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({
     ];
 
     return (
-        <>
-            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] animate-in fade-in duration-300" onClick={onClose} />
-            <div className="fixed inset-y-0 right-0 w-full max-w-xl bg-white dark:bg-slate-950 z-[101] shadow-2xl border-l border-slate-200 dark:border-slate-800 flex flex-col animate-in slide-in-from-right duration-500">
+        <AnimatePresence>
+            <motion.div 
+                key="overlay"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-slate-950/40 backdrop-blur-md z-[100]" 
+                onClick={handleClose} 
+            />
+            <motion.div 
+                key="drawer"
+                initial={{ x: '100%', opacity: 0.5 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: '100%', opacity: 0.5 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className="fixed inset-y-0 right-0 w-full max-w-xl bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl z-[101] shadow-2xl border-l border-white/20 dark:border-slate-800/50 flex flex-col"
+            >
+                {/* Scanline Overlay */}
+                <div className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%] z-0" />
 
                 {/* Header */}
-                <div className="p-8 border-b border-slate-100 dark:border-slate-900 bg-slate-50/50 dark:bg-slate-900/50 relative overflow-hidden">
+                <div className="p-8 border-b border-white/10 dark:border-slate-800/50 bg-white/5 dark:bg-slate-900/20 relative overflow-hidden shrink-0">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full -mr-32 -mt-32 blur-3xl opacity-50" />
                     <div className="flex items-start justify-between relative z-10">
                         <div className="flex items-center gap-6">
@@ -147,43 +178,48 @@ const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({
                                 </p>
                                 {/* Quick-link icons for known profile URLs */}
                                 <div className="flex items-center gap-2 mt-3 flex-wrap">
-                                    <button className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-blue-500/20">
-                                        Call Log
-                                    </button>
+                                    <PremiumButton size="sm" className="h-8 px-3 text-[10px]" onClick={() => handleTabChange('timeline')}>
+                                        Interaction History
+                                    </PremiumButton>
                                     {allUrls.filter((u: any) => u.value?.includes('linkedin.com')).map((u: any, i: number) => (
                                         <a key={i} href={u.value} target="_blank" rel="noopener noreferrer"
-                                            className="p-1.5 text-blue-500 hover:text-blue-700 border border-slate-200 dark:border-slate-800 rounded-lg">
-                                            <Linkedin size={16} />
+                                            onClick={() => triggerHaptic('LIGHT')}
+                                            className="p-1.5 text-blue-500 hover:text-blue-700 bg-white/50 dark:bg-slate-800/50 border border-white/20 dark:border-slate-700/50 rounded-lg hover:border-horizon-500/30 transition-all shadow-sm">
+                                            <Linkedin size={14} />
                                         </a>
                                     ))}
                                     {allUrls.filter((u: any) => u.value?.includes('twitter.com') || u.value?.includes('x.com')).map((u: any, i: number) => (
                                         <a key={i} href={u.value} target="_blank" rel="noopener noreferrer"
-                                            className="p-1.5 text-sky-500 hover:text-sky-700 border border-slate-200 dark:border-slate-800 rounded-lg">
-                                            <Twitter size={16} />
+                                            onClick={() => triggerHaptic('LIGHT')}
+                                            className="p-1.5 text-sky-500 hover:text-sky-700 bg-white/50 dark:bg-slate-800/50 border border-white/20 dark:border-slate-700/50 rounded-lg hover:border-horizon-500/30 transition-all shadow-sm">
+                                            <Twitter size={14} />
                                         </a>
                                     ))}
                                 </div>
                             </div>
                         </div>
-                        <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-white dark:hover:bg-slate-800 rounded-xl transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-700 shadow-sm">
+                        <button onClick={handleClose} className="p-2 text-slate-400 hover:text-slate-100 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/10 hover:border-white/20 shadow-sm backdrop-blur-sm">
                             <X size={20} />
                         </button>
                     </div>
                 </div>
 
                 {/* Tabs */}
-                <div className="px-8 border-b border-slate-100 dark:border-slate-900 bg-white dark:bg-slate-950 flex items-center gap-5 overflow-x-auto">
+                <div className="px-8 border-b border-white/10 dark:border-slate-800/50 bg-white/50 dark:bg-slate-950/50 flex items-center gap-5 overflow-x-auto shrink-0 no-scrollbar">
                     {tabs.map(tab => (
-                        <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                        <button key={tab.id} onClick={() => handleTabChange(tab.id)}
                             className={cn(
-                                "flex items-center gap-2 py-4 text-xs font-bold tracking-wider uppercase transition-all relative whitespace-nowrap",
+                                "flex items-center gap-2 py-4 text-[10px] font-black tracking-widest uppercase transition-all relative whitespace-nowrap",
                                 activeTab === tab.id
-                                    ? "text-blue-600 dark:text-blue-400"
-                                    : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-500"
+                                    ? "text-horizon-500"
+                                    : "text-slate-400 hover:text-slate-200"
                             )}>
                             {tab.icon}{tab.label}
                             {activeTab === tab.id && (
-                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full animate-in fade-in duration-300" />
+                                <motion.div 
+                                    layoutId="activeTab"
+                                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-horizon-500 rounded-full" 
+                                />
                             )}
                         </button>
                     ))}
@@ -201,15 +237,15 @@ const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({
                                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Contact Intel</h4>
                                     <div className="space-y-2">
                                         {allPhones.length > 0 ? allPhones.map((p: any, i: number) => (
-                                            <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl">
-                                                <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                                            <div key={i} className="flex items-center gap-3 p-3 bg-white/5 dark:bg-slate-900/40 border border-white/10 dark:border-slate-800/50 rounded-xl hover:border-horizon-500/20 transition-all group shadow-sm">
+                                                <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 shrink-0 border border-emerald-500/20">
                                                     <Phone size={13} />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">{p.type || 'Phone'}</p>
+                                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tight">{p.type || 'Phone'}</p>
                                                     <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{p.value}</p>
                                                 </div>
-                                                {p.metadata?.primary && <span className="text-[9px] font-black text-blue-500 uppercase">Primary</span>}
+                                                {p.metadata?.primary && <span className="text-[9px] font-black text-horizon-500 uppercase tracking-tighter">Primary</span>}
                                             </div>
                                         )) : (
                                             <div className="p-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl">
@@ -221,15 +257,15 @@ const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({
 
                                         {/* All emails */}
                                         {allEmails.length > 0 ? allEmails.map((e: any, i: number) => (
-                                            <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl">
-                                                <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                                            <div key={i} className="flex items-center gap-3 p-3 bg-white/5 dark:bg-slate-900/40 border border-white/10 dark:border-slate-800/50 rounded-xl hover:border-horizon-500/20 transition-all group shadow-sm">
+                                                <div className="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 shrink-0 border border-blue-500/20">
                                                     <Mail size={13} />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">{e.type || 'Email'}</p>
+                                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tight">{e.type || 'Email'}</p>
                                                     <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{e.value}</p>
                                                 </div>
-                                                {e.metadata?.primary && <span className="text-[9px] font-black text-blue-500 uppercase">Primary</span>}
+                                                {e.metadata?.primary && <span className="text-[9px] font-black text-horizon-500 uppercase tracking-tighter">Primary</span>}
                                             </div>
                                         )) : localContact?.email ? (
                                             <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl">
@@ -240,12 +276,12 @@ const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({
 
                                         {/* All organizations */}
                                         {allOrgs.map((o: any, i: number) => (
-                                            <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl">
-                                                <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                                            <div key={i} className="flex items-center gap-3 p-3 bg-white/5 dark:bg-slate-900/40 border border-white/10 dark:border-slate-800/50 rounded-xl hover:border-horizon-500/20 transition-all group shadow-sm">
+                                                <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500 shrink-0 border border-indigo-500/20">
                                                     <Building size={13} />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">
+                                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tight">
                                                         {o.title ? `${o.title}${o.department ? ` · ${o.department}` : ''}` : 'Organization'}
                                                     </p>
                                                     <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{o.name}</p>
@@ -296,13 +332,29 @@ const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({
 
                                 {/* Relationship Pulse */}
                                 <section>
-                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Relationship Pulse</h4>
-                                    <div className="card p-5 border-none shadow-glow flex items-center justify-between">
-                                        <div>
-                                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">Health Score</p>
-                                            <p className="text-xs text-slate-500 mt-1">Based on interaction frequency and sentiment.</p>
+                                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <Activity size={12} className="text-horizon-500" />
+                                        Relationship Pulse
+                                    </h4>
+                                    <div className="bg-white/5 dark:bg-slate-900/40 border border-white/10 dark:border-slate-800/50 rounded-3xl p-6 shadow-glow relative overflow-hidden group">
+                                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                                            <Activity size={80} />
                                         </div>
-                                        <div className={cn("text-3xl font-black", healthColor)}>{healthScore}%</div>
+                                        <div className="flex items-center justify-between relative z-10">
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Health Score</p>
+                                                <p className="text-xs text-slate-500 mt-1">Based on interaction frequency and sentiment.</p>
+                                            </div>
+                                            <div className={cn("text-4xl font-black tabular-nums", healthColor)}>{healthScore}%</div>
+                                        </div>
+                                        <div className="mt-4 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                            <motion.div 
+                                                initial={{ width: 0 }}
+                                                animate={{ width: `${healthScore}%` }}
+                                                transition={{ duration: 1, ease: "easeOut" }}
+                                                className={cn("h-full", healthScore > 70 ? 'bg-emerald-500' : healthScore > 40 ? 'bg-amber-500' : 'bg-rose-500')} 
+                                            />
+                                        </div>
                                     </div>
                                 </section>
 
@@ -346,21 +398,21 @@ const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({
                                     ) : (
                                         <div className="space-y-3">
                                             {contactCalls.slice(0, 3).map(call => (
-                                                <div key={call.id} className="p-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl flex items-center justify-between group hover:border-blue-500/30 transition-all">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
-                                                            <Clock size={14} />
+                                                <div key={call.id} className="p-4 bg-white/5 dark:bg-slate-900/40 border border-white/10 dark:border-slate-800/50 rounded-2xl flex items-center justify-between group hover:border-horizon-500/30 transition-all shadow-sm">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 border border-white/10">
+                                                            <Clock size={16} />
                                                         </div>
                                                         <div>
-                                                            <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                                                            <p className="text-xs font-bold text-slate-800 dark:text-slate-100">
                                                                 {new Date(call.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                                             </p>
-                                                            <p className="text-[10px] text-slate-400 truncate max-w-[160px]">
+                                                            <p className="text-[10px] text-slate-500 font-medium truncate max-w-[160px] mt-0.5">
                                                                 {call.executive_brief?.summary || 'Call detected'}
                                                             </p>
                                                         </div>
                                                     </div>
-                                                    <span className="text-[10px] font-mono text-slate-400">{formatDuration(call.duration ?? undefined)}</span>
+                                                    <span className="text-[10px] font-mono text-slate-400 bg-white/5 px-2 py-1 rounded-md border border-white/5">{formatDuration(call.duration ?? undefined)}</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -419,14 +471,15 @@ const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({
                                     </div>
                                 ) : (
                                     actionItems.map((item, i) => (
-                                        <div key={i} className="flex gap-4 p-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl hover:border-blue-500/30 transition-all group">
+                                        <div key={i} className="flex gap-4 p-5 bg-white/5 dark:bg-slate-900/40 border border-white/10 dark:border-slate-800/50 rounded-3xl hover:border-horizon-500/30 transition-all group shadow-sm relative overflow-hidden">
+                                            <div className="absolute inset-y-0 left-0 w-1 bg-horizon-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                                             <div className="mt-1">
-                                                <div className="w-5 h-5 rounded-md border-2 border-slate-200 dark:border-slate-700 group-hover:border-blue-500 transition-colors" />
+                                                <div className="w-5 h-5 rounded-md border-2 border-slate-200 dark:border-slate-700 group-hover:border-horizon-500 group-hover:bg-horizon-500/10 transition-all flex items-center justify-center" />
                                             </div>
                                             <div>
-                                                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{item.text}</p>
-                                                <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
-                                                    <Clock size={10} />
+                                                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-snug">{item.text}</p>
+                                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight mt-2 flex items-center gap-1.5">
+                                                    <Clock size={10} className="text-horizon-500" />
                                                     Detected {new Date(item.date).toLocaleDateString()}
                                                 </p>
                                             </div>
@@ -439,13 +492,16 @@ const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({
                         {/* ── OSINT TAB ─────────────────────────────────────────── */}
                         {activeTab === 'osint' && (
                             <div className="space-y-6">
-                                <div className="p-4 bg-blue-600 rounded-2xl text-white shadow-lg shadow-blue-500/20">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <Shield size={20} />
-                                        <h4 className="font-bold text-sm tracking-wide uppercase">Intelligence Source: Google People</h4>
+                                <div className="p-6 bg-gradient-to-br from-horizon-600 to-horizon-800 rounded-3xl text-white shadow-xl shadow-horizon-500/20 relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                                        <Database size={64} />
                                     </div>
-                                    <p className="text-xs opacity-90 leading-relaxed">
-                                        Verified data from Google Contacts including all digital footprint signals.
+                                    <div className="flex items-center gap-3 mb-3 relative z-10">
+                                        <Shield size={20} className="text-horizon-200" />
+                                        <h4 className="font-black text-xs tracking-widest uppercase">Intelligence Source: Google</h4>
+                                    </div>
+                                    <p className="text-xs opacity-90 leading-relaxed font-medium relative z-10">
+                                        Verified enterprise-grade data synchronized from Google People Cloud including deep digital footprint signals.
                                     </p>
                                 </div>
 
@@ -556,14 +612,21 @@ const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({
                 </div>
 
                 {/* Footer */}
-                <div className="p-6 border-t border-slate-100 dark:border-slate-900 bg-slate-50/30 dark:bg-slate-900/30 flex items-center justify-between">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Intelligence Grade: Enterprise</p>
-                    <div className="flex items-center gap-2 text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase cursor-pointer hover:underline">
-                        Export Dossier <ChevronRight size={12} />
+                <div className="p-6 border-t border-white/10 dark:border-slate-800/50 bg-white/5 dark:bg-slate-900/20 flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-2">
+                        <Sparkles size={12} className="text-horizon-500" />
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Intelligence Grade: Enterprise</p>
+                    </div>
+                    <div 
+                        onClick={() => triggerHaptic('MEDIUM')}
+                        className="flex items-center gap-2 text-[10px] font-black text-horizon-500 uppercase tracking-widest cursor-pointer hover:text-horizon-400 transition-colors group"
+                    >
+                        Export Dossier 
+                        <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
                     </div>
                 </div>
-            </div>
-        </>
+            </motion.div>
+        </AnimatePresence>
     );
 };
 

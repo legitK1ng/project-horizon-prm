@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Network Security Configuration — Horizon PRM
+    Production policy: all traffic must use TLS; system CAs only.
+    Debug overrides: also trust user-installed CAs (for proxy/Burp analysis).
+
+    Domains allowed for navigation are defined in capacitor.config.ts
+    (server.allowNavigation) — they are all HTTPS, so no cleartext exemptions
+    are needed here.
+
+    If you need to reach a local dev server over HTTP during development,
+    temporarily set `android.allowMixedContent: true` in capacitor.config.ts
+    and re-run `npx cap sync android`. Do NOT change this file for dev convenience.
+-->
+<network-security-config>
+
+    <!-- Production baseline: block all cleartext (HTTP), system CAs only -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Debug builds: additionally trust user-installed CAs so Charles/Burp
+         can intercept HTTPS traffic for debugging. Cleartext still blocked. -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </debug-overrides>
+
+</network-security-config>

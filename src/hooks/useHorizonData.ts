@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../services/apiClient";
 import { Contact, CallRecord, Nudge, DashboardStats } from "../types";
+import { useDataStore } from "../store/dataStore";
 
 // REQ-022: Unified Query Keys
 export const queryKeys = {
@@ -43,7 +44,15 @@ export const useHealth = useCheckHealth;
 export const useContacts = () => {
   return useQuery<Contact[]>({
     queryKey: queryKeys.contacts.list(),
-    queryFn: () => api.getAllContacts(), // Auto-paginates all pages to load full 1822+ contacts
+    queryFn: async () => {
+      const data = await api.getAllContacts();
+      useDataStore.getState().setContacts(data);
+      return data;
+    },
+    initialData: () => {
+      const local = useDataStore.getState().contacts;
+      return local.length > 0 ? local : undefined;
+    },
     staleTime: 1000 * 60 * 10, // Contacts change infrequently — 10 min cache
   });
 };
@@ -59,7 +68,16 @@ export const useToggleFavorite = () => {
 export const useCalls = () => {
   return useQuery<CallRecord[]>({
     queryKey: queryKeys.calls.list(),
-    queryFn: () => api.getCalls().catch(() => []),
+    queryFn: async () => {
+      const data = await api.getCalls().catch(() => []);
+      useDataStore.getState().setCallRecords(data);
+      return data;
+    },
+    initialData: () => {
+      const local = useDataStore.getState().callRecords;
+      return local.length > 0 ? local : undefined;
+    },
+    staleTime: 1000 * 60 * 5, // Calls cache for 5 min
   });
 };
 
@@ -67,6 +85,7 @@ export const useNudges = () => {
   return useQuery<Nudge[]>({
     queryKey: queryKeys.nudges.all,
     queryFn: () => api.getNudges().catch(() => []),
+    staleTime: 1000 * 60 * 15, // Nudges change rarely — 15 min cache
   });
 };
 
@@ -74,6 +93,7 @@ export const useStats = () => {
   return useQuery<DashboardStats>({
     queryKey: queryKeys.stats.all,
     queryFn: () => api.getStats(),
+    staleTime: 1000 * 60 * 5, // Stats change moderately — 5 min cache
   });
 };
 
@@ -82,6 +102,13 @@ export const useEnrichments = (contactId: string) => {
     queryKey: queryKeys.enrichments.byContact(contactId),
     queryFn: () => api.getEnrichmentJobs(contactId),
     enabled: !!contactId,
+  });
+};
+
+export const useSystemTags = () => {
+  return useQuery<string[]>({
+    queryKey: ['system', 'tags'],
+    queryFn: () => api.getTags().catch(() => []),
   });
 };
 
@@ -108,6 +135,19 @@ export const useIngestCall = () => {
       // REQ-035: Invalidate logs to show new brief
       queryClient.invalidateQueries({ queryKey: queryKeys.calls.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.nudges.all });
+    },
+  });
+};
+
+export const useUpdateCall = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => api.updateCall(id, data),
+    onSuccess: (updatedCall) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.calls.all });
+      if (updatedCall.contact_id) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.contacts.detail(updatedCall.contact_id) });
+      }
     },
   });
 };

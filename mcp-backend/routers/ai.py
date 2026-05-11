@@ -13,9 +13,10 @@ from services.ai_briefing_service import (
     generate_call_brief,
     process_transcript_gemini,
     generate_embedding,
+    chat_gemini_sync,
 )
 from services.embedding_service import embed_query as semantic_embed_query
-from services.ollama_service import generate as ollama_generate, DEFAULT_MODEL
+import asyncio
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -136,7 +137,7 @@ async def _build_live_context(supabase, context_id: str | None, user_message: st
 async def ai_chat(req: Request, body: ChatRequest):
     """
     REQ-027: Contextual Assistant Chat.
-    Routes through gudzenkoi/kimi-k2:1t-cloud via Ollama (free, no VRAM).
+    Routes through Gemini 2.0 Flash instead of Ollama.
     Always injects live PRM state (recent calls + contacts) into every request.
     """
     supabase = getattr(req.app.state, "supabase", None)
@@ -157,16 +158,16 @@ async def ai_chat(req: Request, body: ChatRequest):
     full_prompt = f"{system_prompt}{context_text}\n\nUser: {body.message}\nAssistant:"
 
     try:
-        reply = await ollama_generate(full_prompt, model=DEFAULT_MODEL)
+        reply = await asyncio.to_thread(chat_gemini_sync, full_prompt)
         return {
             "status": "success",
             "message": reply.strip(),
-            "model": DEFAULT_MODEL,
+            "model": "gemini-2.0-flash",
             "context_used": bool(context_text),
         }
     except Exception as e:
         logger.error(f"[AI] chat error: {e}")
-        raise HTTPException(status_code=502, detail=f"Ollama error: {e} — ensure `ollama serve` is running.")
+        raise HTTPException(status_code=502, detail=f"Gemini error: {e}")
 
 @router.post("/analyze")
 async def analyze_text(req: Request):

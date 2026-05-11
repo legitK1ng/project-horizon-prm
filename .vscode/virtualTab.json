@@ -7,8 +7,11 @@
       "mcp-backend/.env",
       "kill.ps1",
       "mcp-backend/services/audio_processing_service.py",
-      "mcp-backend/scratch/check_db.py",
-      "mcp-backend/test_adb_push.py",
+      "mcp-backend/services/proposed_executive_briefing.md",
+      "mcp-backend/services/proposed_executive_briefing.json",
+      "docs/gemini-code-1777507744076.sh",
+      "../../../AppData/Roaming/Antigravity/User/workspaceStorage/9187cb650f58843b3d794fcf942d8a73/redhat.java/client.log.2026-04-30",
+      "../../../AppData/Roaming/Antigravity/User/workspaceStorage/9187cb650f58843b3d794fcf942d8a73/redhat.java/jdt_ws/.metadata/.log",
       "inspect_zeros.py",
       "audit_db_v2.py",
       "audit_schema.py",
@@ -18,9 +21,7 @@
       "capacitor-horizon/android/src/main/java/com/legitk1ng/capacitorhorizon/CapacitorHorizon.java",
       "capacitor-horizon/android/src/main/java/com/legitk1ng/capacitorhorizon/CapacitorHorizonPlugin.java",
       "mcp-backend/core/api_key_auth.py",
-      "mcp-backend/routers/transcriptions.py",
-      "start_api.ps1",
-      "start_ingest.ps1"
+      "mcp-backend/routers/transcriptions.py"
     ],
     "builtIn": true,
     "bookmarks": {}

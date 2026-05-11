@@ -1,4 +1,3 @@
-import os
 import subprocess
 import uuid
 import logging
@@ -12,57 +11,76 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 TEMP_DIR = BASE_DIR / "audio_ingest" / "temp"
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
+
+def _extract_ffmpeg_error(stderr: str) -> str:
+    """Return only the meaningful tail of FFmpeg's verbose stderr output."""
+    preamble_prefixes = (
+        "ffmpeg version", "  configuration:", "  built with",
+        "  lib", "    lib", "Copyright (c)",
+    )
+    lines = stderr.strip().splitlines()
+    meaningful = [
+        l for l in lines
+        if l.strip() and not any(l.startswith(p) for p in preamble_prefixes)
+    ]
+    tail = meaningful[-10:] if meaningful else lines[-10:]
+    return "\n".join(tail) if tail else stderr[-500:]
+
+
 def process_audio_ingest(audio_content: bytes, filename: str) -> str:
     """
     REQ-155: FFmpeg normalization pipeline (16kHz mono).
-    1. Saves incoming bytes to temporary .m4a.
-    2. Converts to .wav for high-fidelity transcription (REQ-151).
-    3. Returns path to .wav.
+    Sync — callers from async handlers must run this in a thread executor.
+    1. Saves incoming bytes to a temporary file.
+    2. Converts to 16kHz mono PCM WAV for Whisper.
+    3. Returns path to the .wav file.
     """
     job_id = str(uuid.uuid4())
-    # Ensure input and output paths are ALWAYS distinct to prevent FFmpeg collision
     input_ext = Path(filename).suffix or ".m4a"
     input_path = TEMP_DIR / f"{job_id}_raw{input_ext}"
     output_path = TEMP_DIR / f"{job_id}_final.wav"
 
     try:
-        # 1. Save raw bytes (REQ-024)
         with open(input_path, "wb") as f:
             f.write(audio_content)
-        
-        logger.info(f"[AUDIO] Saved raw file: {input_path}")
 
-        # 2. Convert to WAV (16kHz, Mono, PCM) - REQ-155
-        # Standard format for Whisper and NeMo diarization.
+        logger.info(f"[AUDIO] Saved raw file: {input_path} ({len(audio_content):,} bytes)")
+
         command = [
-            "ffmpeg",
-            "-y", # Overwrite if exists
+            "ffmpeg", "-y", "-hide_banner",
             "-i", str(input_path),
             "-ar", "16000",
             "-ac", "1",
             "-c:a", "pcm_s16le",
-            str(output_path)
+            str(output_path),
         ]
-        
-        logger.info(f"[AUDIO] Converting to WAV: {' '.join(command)}")
-        result = subprocess.run(command, capture_output=True, text=True)
-        
-        if result.returncode != 0:
-            logger.error(f"[AUDIO] FFmpeg failed: {result.stderr}")
-            raise RuntimeError(f"FFmpeg conversion failed: {result.stderr}")
 
-        # 3. Cleanup raw file immediately
+        logger.info(f"[AUDIO] Converting to WAV: {' '.join(command)}")
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+
+        if result.returncode != 0:
+            error_summary = _extract_ffmpeg_error(result.stderr)
+            logger.error(f"[AUDIO] FFmpeg failed (rc={result.returncode}):\n{result.stderr}")
+            raise RuntimeError(f"FFmpeg conversion failed: {error_summary}")
+
         if input_path.exists():
             input_path.unlink()
-            
+
         return str(output_path)
 
     except Exception as e:
         logger.error(f"[AUDIO] Processing error: {e}")
-        # Cleanup on failure
-        if input_path.exists(): input_path.unlink()
-        if output_path.exists(): output_path.unlink()
-        raise e
+        if input_path.exists():
+            input_path.unlink()
+        if output_path.exists():
+            output_path.unlink()
+        raise
 
 def cleanup_processed_audio(wav_path: str):
     """

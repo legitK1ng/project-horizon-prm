@@ -1,9 +1,23 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { AppView, CallRecord, Contact } from '@/types';
 import { APP_VIEW } from '@/constants';
-import { Search, ArrowRight, Phone, Users, FileText, LayoutDashboard, FlaskConical, History, Command } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { 
+    Search, 
+    ArrowRight, 
+    Phone, 
+    Users, 
+    FileText, 
+    LayoutDashboard, 
+    FlaskConical, 
+    History, 
+    X,
+    Sparkles,
+    Zap,
+    Target
+} from 'lucide-react';
+import { cn } from '@/utils/ui';
+import { triggerHaptic } from '@/utils/haptics';
 
 interface CommandPaletteProps {
     isOpen: boolean;
@@ -41,64 +55,43 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
         if (isOpen) {
             setQuery('');
             setSelectedIndex(0);
-            // Small delay to let animation start
+            triggerHaptic('MEDIUM');
             setTimeout(() => inputRef.current?.focus(), 50);
         }
     }, [isOpen]);
 
-    // View navigation results (always available)
+    // View navigation results
     const viewResults: SearchResult[] = useMemo(() => [
-        { id: 'nav-dashboard', type: 'view' as const, icon: <LayoutDashboard size={16} />, title: 'Dashboard', subtitle: 'Executive summary', onSelect: () => { onNavigate(APP_VIEW.DASHBOARD); onClose(); } },
-        { id: 'nav-logs', type: 'view' as const, icon: <Phone size={16} />, title: 'Call Logs', subtitle: 'History of conversations', onSelect: () => { onNavigate(APP_VIEW.LOGS); onClose(); } },
-        { id: 'nav-contacts', type: 'view' as const, icon: <Users size={16} />, title: 'Contacts', subtitle: 'Google Contacts sync', onSelect: () => { onNavigate(APP_VIEW.CONTACTS); onClose(); } },
-        { id: 'nav-actions', type: 'view' as const, icon: <History size={16} />, title: 'Actions Log', subtitle: 'Manage action items', onSelect: () => { onNavigate(APP_VIEW.ACTIONS); onClose(); } },
-        { id: 'nav-lab', type: 'view' as const, icon: <FlaskConical size={16} />, title: 'Processing Lab', subtitle: 'AI analysis & diagnostics', onSelect: () => { onNavigate(APP_VIEW.LAB); onClose(); } },
+        { id: 'nav-dashboard', type: 'view' as const, icon: <LayoutDashboard size={16} />, title: 'Dashboard', subtitle: 'Strategic overview', onSelect: () => { onNavigate(APP_VIEW.DASHBOARD); onClose(); } },
+        { id: 'nav-logs', type: 'view' as const, icon: <Phone size={16} />, title: 'Intelligence Logs', subtitle: 'Interaction history', onSelect: () => { onNavigate(APP_VIEW.LOGS); onClose(); } },
+        { id: 'nav-contacts', type: 'view' as const, icon: <Users size={16} />, title: 'Entity Matrix', subtitle: 'Relationship database', onSelect: () => { onNavigate(APP_VIEW.CONTACTS); onClose(); } },
+        { id: 'nav-actions', type: 'view' as const, icon: <History size={16} />, title: 'Mission Log', subtitle: 'Action item tracking', onSelect: () => { onNavigate(APP_VIEW.ACTIONS); onClose(); } },
+        { id: 'nav-lab', type: 'view' as const, icon: <FlaskConical size={16} />, title: 'Processing Lab', subtitle: 'AI diagnostics', onSelect: () => { onNavigate(APP_VIEW.LAB); onClose(); } },
     ], [onNavigate, onClose]);
 
-    // Quick Actions results (Semantic shortcuts)
+    // Quick Actions
     const quickActions: SearchResult[] = useMemo(() => [
-        { id: 'act-new-pulse', type: 'action' as const, icon: <FlaskConical size={16} />, title: 'Capture New Pulse', subtitle: 'Analyze a fresh call transcript', onSelect: () => { onNavigate(APP_VIEW.LAB); onClose(); } },
-        { id: 'act-log-call', type: 'action' as const, icon: <Phone size={16} />, title: 'Log Manual Call', subtitle: 'Record an interaction without transcription', onSelect: () => { onClose(); } },
-        { id: 'act-osint', type: 'action' as const, icon: <Search size={16} />, title: 'Run OSINT Enrichment', subtitle: 'Scrape professional signals for a contact', onSelect: () => { onClose(); } },
+        { id: 'act-new-pulse', type: 'action' as const, icon: <Sparkles size={16} />, title: 'Initialize Capture', subtitle: 'Analyze new transcript', onSelect: () => { onNavigate(APP_VIEW.LAB); onClose(); } },
+        { id: 'act-osint', type: 'action' as const, icon: <Target size={16} />, title: 'Signal Extraction', subtitle: 'Run OSINT enrichment', onSelect: () => { onClose(); } },
     ], [onNavigate, onClose]);
 
-    // Grouping logic for "Semantic" Search
+    // Search Results
     const results: SearchResult[] = useMemo(() => {
         const q = query.toLowerCase().trim();
-
-        // Always include matched actions at the top if there's a query
         const actionMatches = quickActions.filter(a => a.title.toLowerCase().includes(q) || a.subtitle?.toLowerCase().includes(q));
 
-        if (!q) {
-            return [...viewResults, ...quickActions];
-        }
+        if (!q) return [...viewResults, ...quickActions];
 
         const matches: SearchResult[] = [...actionMatches];
 
-        // Search views
         viewResults.forEach(v => {
-            if (v.title.toLowerCase().includes(q) || v.subtitle?.toLowerCase().includes(q)) {
-                matches.push(v);
-            }
+            if (v.title.toLowerCase().includes(q) || v.subtitle?.toLowerCase().includes(q)) matches.push(v);
         });
 
-        // Search calls
         calls.forEach(call => {
             const contactName = (call.contact_name || '').toLowerCase();
             const briefTitle = (call.executive_brief?.title || '').toLowerCase();
-            const briefSummary = (call.executive_brief?.summary || '').toLowerCase();
-            const tags = (call.tags || []).join(' ').toLowerCase();
-            const keywords = (call.keywords || []).join(' ').toLowerCase();
-            const briefKeywords = (call.executive_brief?.keywords || []).join(' ').toLowerCase();
-
-            if (
-                contactName.includes(q) ||
-                briefTitle.includes(q) ||
-                briefSummary.includes(q) ||
-                tags.includes(q) ||
-                keywords.includes(q) ||
-                briefKeywords.includes(q)
-            ) {
+            if (contactName.includes(q) || briefTitle.includes(q)) {
                 matches.push({
                     id: `call-${call.id}`,
                     type: 'call',
@@ -114,211 +107,216 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
             }
         });
 
-        // Search contacts
         contacts.forEach(contact => {
-            const displayName = contact.name || `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || 'Unknown Contact';
-            const org = (contact.organization_id || '').toLowerCase();
-            const notes = (contact.notes || '').toLowerCase();
-
-            if (displayName.toLowerCase().includes(q) || org.includes(q) || notes.includes(q)) {
+            const displayName = contact.name || `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || 'Unknown';
+            if (displayName.toLowerCase().includes(q)) {
                 matches.push({
                     id: `contact-${contact.id}`,
                     type: 'contact',
-                    icon: contact.photo_url ? (
-                        <img
-                            src={contact.photo_url}
-                            alt=""
-                            className="w-4 h-4 rounded-full object-cover"
-                            onError={(e) => {
-                                // Fallback if image fails
-                                (e.target as HTMLImageElement).style.display = 'none';
-                            }}
-                        />
-                    ) : (
-                        <Users size={16} />
-                    ),
+                    icon: <Users size={16} />,
                     title: displayName,
-                    subtitle: contact.organization_id || contact.organization || 'Professional Connection',
-                    onSelect: () => {
-                        onNavigate(APP_VIEW.CONTACTS);
-                        onClose();
-                    },
+                    subtitle: contact.organization_id || 'Connection',
+                    onSelect: () => { onNavigate(APP_VIEW.CONTACTS); onClose(); },
                 });
             }
         });
 
-        return matches.slice(0, 15);
+        return matches.slice(0, 10);
     }, [query, calls, contacts, viewResults, quickActions, onNavigate, onClose, onSelectCall]);
-
-    // Keep selected index in bounds
-    useEffect(() => {
-        setSelectedIndex(0);
-    }, [query]);
-
-    // Scroll selected item into view
-    useEffect(() => {
-        if (listRef.current) {
-            const selected = listRef.current.children[selectedIndex] as HTMLElement;
-            if (selected) {
-                selected.scrollIntoView({ block: 'nearest' });
-            }
-        }
-    }, [selectedIndex]);
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
         switch (e.key) {
-            case 'ArrowDown':
-                e.preventDefault();
-                setSelectedIndex(i => Math.min(i + 1, results.length - 1));
+            case 'ArrowDown': 
+                e.preventDefault(); 
+                setSelectedIndex(i => {
+                    const next = Math.min(i + 1, results.length - 1);
+                    if (next !== i) triggerHaptic('LIGHT');
+                    return next;
+                }); 
                 break;
-            case 'ArrowUp':
-                e.preventDefault();
-                setSelectedIndex(i => Math.max(i - 1, 0));
+            case 'ArrowUp': 
+                e.preventDefault(); 
+                setSelectedIndex(i => {
+                    const next = Math.max(i - 1, 0);
+                    if (next !== i) triggerHaptic('LIGHT');
+                    return next;
+                }); 
                 break;
-            case 'Enter':
-                e.preventDefault();
-                results[selectedIndex]?.onSelect();
+            case 'Enter': 
+                e.preventDefault(); 
+                if (results[selectedIndex]) {
+                    triggerHaptic('MEDIUM');
+                    results[selectedIndex].onSelect();
+                }
                 break;
-            case 'Escape':
-                e.preventDefault();
-                onClose();
+            case 'Escape': 
+                e.preventDefault(); 
+                triggerHaptic('LIGHT');
+                onClose(); 
                 break;
         }
     }, [results, selectedIndex, onClose]);
 
-    // NOTE: Global Ctrl+K keyboard shortcut is managed by parent (Dashboard).
-    // This component only handles internal keyboard navigation (arrows, enter, esc).
-
-    if (!isOpen) return null;
-
-    const typeLabels: Record<string, string> = {
-        view: 'Navigation',
-        call: 'Calls',
-        contact: 'Contacts',
-        action: 'Actions',
-    };
-
-    // Group results by type
-    const groupedResults = results.reduce<Record<string, SearchResult[]>>((acc, r) => {
-        if (!acc[r.type]) acc[r.type] = [];
-        acc[r.type]!.push(r);
-        return acc;
-    }, {});
-
-    let flatIndex = 0;
+    const typeLabels: Record<string, string> = { view: 'Navigation', call: 'Intelligence', contact: 'Entities', action: 'Directives' };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]" onClick={onClose}>
-            {/* Backdrop */}
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-150" />
-
-            {/* Palette */}
-            <motion.div
-                className={cn(
-                  "relative w-full max-w-lg mx-4 overflow-hidden",
-                  "glass card backdrop-blur-xl",
-                  "bg-white/90 dark:bg-slate-900/90",
-                  "border border-slate-200/50 dark:border-slate-700/50",
-                  "rounded-2xl shadow-2xl"
-                )}
-                initial={{ opacity: 0, scale: 0.95, y: -20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ type: 'spring', stiffness: 120, damping: 14 }}
-                onClick={(e) => e.stopPropagation()}
-            >
-                {/* Search Input */}
-                <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-800">
-                    <Search size={20} className="text-slate-400 flex-shrink-0" />
-                    <input
-                        ref={inputRef}
-                        type="text"
-                        placeholder="Search calls, contacts, or navigate..."
-                        className="flex-1 bg-transparent text-slate-900 dark:text-white placeholder:text-slate-400 outline-none text-base"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        onKeyDown={handleKeyDown}
+        <AnimatePresence mode="wait">
+            {isOpen && (
+                <div className="fixed inset-0 z-[200] flex items-start justify-center pt-[12vh] px-4">
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={onClose}
+                        className="absolute inset-0 bg-slate-950/40 backdrop-blur-md"
                     />
-                    <kbd className="hidden md:inline-flex items-center gap-1 px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-400 text-xs rounded-md font-mono">
-                        ESC
-                    </kbd>
-                </div>
 
-                {/* Results */}
-                <div ref={listRef} className="max-h-80 overflow-y-auto thin-scrollbar py-2">
-                    {results.length === 0 ? (
-                        <div className="px-5 py-8 text-center text-slate-400 text-sm">
-                            No results found for "{query}"
-                        </div>
-                    ) : (
-                        Object.entries(groupedResults).map(([type, items]) => (
-                            <div key={type}>
-                                <div className="px-5 py-1.5 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                                    {typeLabels[type] || type}
-                                </div>
-                                {items.map((result) => {
-                                    const currentIndex = flatIndex++;
-                                    return (
-                                        <button
-                                            key={result.id}
-                                            onClick={result.onSelect}
-                                            onMouseEnter={() => setSelectedIndex(currentIndex)}
-                                            className={`w-full flex items-center gap-3 px-5 py-3 text-left transition-colors ${selectedIndex === currentIndex
-                                                ? 'bg-blue-50 dark:bg-blue-900/20'
-                                                : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                                                }`}
-                                        >
-                                            <div className={`flex-shrink-0 w-4 flex justify-center ${selectedIndex === currentIndex
-                                                ? 'text-blue-600 dark:text-blue-400'
-                                                : 'text-slate-400'
-                                                }`}>
-                                                {result.icon}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className={`text-sm font-medium truncate ${selectedIndex === currentIndex
-                                                    ? 'text-blue-700 dark:text-blue-300'
-                                                    : 'text-slate-800 dark:text-slate-200'
-                                                    }`}>
-                                                    {result.title}
-                                                </p>
-                                                {result.subtitle && (
-                                                    <p className="text-xs text-slate-400 truncate">{result.subtitle}</p>
-                                                )}
-                                            </div>
-                                            {selectedIndex === currentIndex && (
-                                                <ArrowRight size={14} className="text-blue-400 flex-shrink-0" />
-                                            )}
-                                        </button>
-                                    );
-                                })}
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 30 } as const}
+                        className={cn(
+                            "relative w-full max-w-2xl overflow-hidden glass-effect",
+                            "rounded-[2.5rem] shadow-elevated border-white/20 dark:border-white/5"
+                        )}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="absolute inset-0 scanline opacity-[0.03] pointer-events-none" />
+                        
+                        {/* Search Input */}
+                        <div className="relative flex items-center gap-4 px-10 py-8 border-b border-slate-200/20 dark:border-white/5 bg-white/10 dark:bg-black/10">
+                            <Search size={24} className="text-blue-500 animate-pulse" />
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                placeholder="EXECUTE_SEARCH_COMMAND..."
+                                className="flex-1 bg-transparent text-slate-900 dark:text-white placeholder:text-slate-400/50 outline-none text-2xl font-black tracking-tighter uppercase italic"
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                            />
+                            <div className="flex items-center gap-3">
+                                <kbd className="hidden md:inline-flex items-center gap-1 px-3 py-1.5 bg-slate-950/10 dark:bg-white/5 text-slate-500 text-[10px] rounded-xl border border-slate-950/10 dark:border-white/5 font-black">
+                                    ESC
+                                </kbd>
+                                <button 
+                                    onClick={() => { triggerHaptic('LIGHT'); onClose(); }} 
+                                    className="p-2 hover:bg-slate-950/10 dark:hover:bg-white/5 rounded-full transition-colors text-slate-400 hover:text-blue-500"
+                                >
+                                    <X size={20} />
+                                </button>
                             </div>
-                        ))
-                    )}
-                </div>
+                        </div>
 
-                {/* Footer */}
-                <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-                    <div className="flex items-center gap-4 text-[11px] text-slate-400">
-                        <span className="flex items-center gap-1">
-                            <kbd className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 rounded text-[10px] font-mono">↑↓</kbd>
-                            Navigate
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <kbd className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 rounded text-[10px] font-mono">↵</kbd>
-                            Select
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <kbd className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 rounded text-[10px] font-mono">esc</kbd>
-                            Close
-                        </span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                        <Command size={11} />
-                        <span>K to open</span>
-                    </div>
+                        {/* Results Container */}
+                        <div 
+                            ref={listRef} 
+                            className="max-h-[60vh] overflow-y-auto luxury-scroll p-6 space-y-8"
+                        >
+                            {results.length === 0 ? (
+                                <div className="py-24 flex flex-col items-center justify-center text-center">
+                                    <div className="w-24 h-24 rounded-3xl bg-slate-950/5 dark:bg-white/5 flex items-center justify-center mb-8 border border-slate-200/50 dark:border-white/5 animate-float-slow">
+                                        <Search size={36} className="text-slate-300 dark:text-slate-600" />
+                                    </div>
+                                    <p className="text-slate-400 dark:text-slate-500 font-black uppercase tracking-[0.4em] text-[10px] italic">No matching signals found</p>
+                                </div>
+                            ) : (
+                                Object.entries(results.reduce<Record<string, SearchResult[]>>((acc, r) => {
+                                    if (!acc[r.type]) acc[r.type] = [];
+                                    acc[r.type]!.push(r);
+                                    return acc;
+                                }, {})).map(([type, items]) => (
+                                    <div key={type} className="space-y-4">
+                                        <div className="px-4 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] italic flex items-center gap-4">
+                                            <span className="text-blue-500/50">#</span>
+                                            {typeLabels[type]}
+                                            <div className="h-px flex-1 bg-gradient-to-r from-slate-200/50 to-transparent dark:from-white/5 dark:to-transparent" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            {items.map((result) => {
+                                                const globalIndex = results.indexOf(result);
+                                                const isSelected = selectedIndex === globalIndex;
+                                                return (
+                                                    <motion.button
+                                                        key={result.id}
+                                                        onClick={() => { triggerHaptic('MEDIUM'); result.onSelect(); }}
+                                                        onMouseEnter={() => {
+                                                            if (selectedIndex !== globalIndex) {
+                                                                setSelectedIndex(globalIndex);
+                                                                triggerHaptic('LIGHT');
+                                                            }
+                                                        }}
+                                                        className={cn(
+                                                            "w-full flex items-center gap-6 px-6 py-5 rounded-[1.5rem] text-left transition-all duration-500 relative group overflow-hidden",
+                                                            isSelected 
+                                                                ? "bg-white dark:bg-slate-800 shadow-premium border border-slate-200/50 dark:border-white/10" 
+                                                                : "hover:bg-white/40 dark:hover:bg-white/5 border border-transparent"
+                                                        )}
+                                                    >
+                                                        {isSelected && (
+                                                            <motion.div 
+                                                                layoutId="selection-glow"
+                                                                className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-transparent opacity-50"
+                                                            />
+                                                        )}
+                                                        <div className={cn(
+                                                            "flex-shrink-0 w-12 h-12 rounded-2xl flex justify-center items-center transition-all duration-700",
+                                                            isSelected ? "bg-blue-600 text-white shadow-glow rotate-3" : "bg-slate-100 dark:bg-white/5 text-slate-400 group-hover:rotate-6"
+                                                        )}>
+                                                            {result.icon}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0 relative z-10">
+                                                            <p className={cn(
+                                                                "text-base font-black uppercase tracking-tight italic transition-colors",
+                                                                isSelected ? "text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-300"
+                                                            )}>
+                                                                {result.title}
+                                                            </p>
+                                                            {result.subtitle && (
+                                                                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mt-1 opacity-70 italic">{result.subtitle}</p>
+                                                            )}
+                                                        </div>
+                                                        <ArrowRight 
+                                                            size={20} 
+                                                            className={cn(
+                                                                "transition-all duration-700",
+                                                                isSelected ? "text-blue-500 translate-x-0 opacity-100" : "text-slate-300 -translate-x-4 opacity-0"
+                                                            )} 
+                                                        />
+                                                    </motion.button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        {/* Footer Overlay */}
+                        <div className="flex items-center justify-between px-10 py-6 border-t border-slate-200/20 dark:border-white/5 bg-slate-50/30 dark:bg-black/20 backdrop-blur-xl">
+                            <div className="flex items-center gap-8 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest italic">
+                                <span className="flex items-center gap-3">
+                                    <kbd className="px-2.5 py-1.5 bg-slate-950/10 dark:bg-white/5 rounded-xl text-[9px] font-mono text-slate-500 border border-slate-950/10 dark:border-white/5">↑↓</kbd>
+                                    NAVIGATE
+                                </span>
+                                <span className="flex items-center gap-3">
+                                    <kbd className="px-2.5 py-1.5 bg-slate-950/10 dark:bg-white/5 rounded-xl text-[9px] font-mono text-slate-500 border border-slate-950/10 dark:border-white/5">ENTER</kbd>
+                                    EXECUTE
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-3 text-[10px] font-black text-blue-500/80 uppercase tracking-[0.3em] italic">
+                                <Zap size={14} className="animate-pulse" />
+                                <span>SYSTEM_READY</span>
+                            </div>
+                        </div>
+                    </motion.div>
                 </div>
-            </motion.div>
-        </div>
+            )}
+        </AnimatePresence>
     );
 };
 
 export default CommandPalette;
+
+

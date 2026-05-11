@@ -1,7 +1,9 @@
 import React from 'react';
 import { useEnrichments, useTriggerEnrichment } from '@/hooks/useHorizonData';
-import { Info, Mail, Phone, Globe, Linkedin, Twitter, RefreshCw, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+import { Info, Mail, Phone, Globe, Linkedin, Twitter, RefreshCw, Loader2, AlertCircle } from 'lucide-react';
 import { cn } from '@/utils/ui';
+import { triggerHaptic } from '../../utils/haptics';
+import { motion } from 'framer-motion';
 
 interface EnrichmentCardProps {
   contactId: string;
@@ -22,30 +24,35 @@ const EnrichmentCard: React.FC<EnrichmentCardProps> = ({ contactId, className })
 
   const handleTrigger = async () => {
     if (triggerMutation.isPending) return;
+    triggerHaptic('MEDIUM');
     await triggerMutation.mutateAsync(contactId);
     refetch();
   };
 
+  const handleSocialClick = () => {
+    triggerHaptic('LIGHT');
+  };
+
   if (isLoading) {
     return (
-      <div className={cn("glass p-6 rounded-3xl animate-pulse flex flex-col items-center justify-center min-h-[200px]", className)}>
-        <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-4" />
-        <p className="text-slate-500 text-sm font-medium">Scanning OSINT signals...</p>
+      <div className={cn("glass-premium p-6 rounded-[2.5rem] animate-pulse flex flex-col items-center justify-center min-h-[200px]", className)}>
+        <Loader2 className="w-8 h-8 text-horizon-500 animate-spin mb-4" />
+        <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Scanning OSINT signals...</p>
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className={cn("glass p-6 rounded-3xl border-red-500/20 bg-red-500/5", className)}>
-        <div className="flex items-center gap-3 text-red-600 mb-2">
+      <div className={cn("glass-premium p-6 rounded-[2.5rem] border-premium-error/20 bg-premium-error/5", className)}>
+        <div className="flex items-center gap-3 text-premium-error mb-2">
           <AlertCircle size={20} />
-          <h3 className="font-bold">Intelligence Gap</h3>
+          <h3 className="text-xs font-black uppercase tracking-widest">Intelligence Gap</h3>
         </div>
-        <p className="text-xs text-slate-500 mb-4">Failed to fetch enrichment data for this contact.</p>
+        <p className="text-[10px] text-slate-500 mb-4 font-medium">Failed to fetch enrichment data for this contact.</p>
         <button 
-          onClick={() => refetch()}
-          className="text-xs font-bold text-blue-600 uppercase tracking-widest hover:underline"
+          onClick={() => { triggerHaptic('MEDIUM'); refetch(); }}
+          className="text-[9px] font-black text-horizon-600 dark:text-horizon-400 uppercase tracking-[0.2em] hover:opacity-80"
         >
           Retry Scan
         </button>
@@ -72,111 +79,140 @@ const EnrichmentCard: React.FC<EnrichmentCardProps> = ({ contactId, className })
   const isScanning = latestJobs.some((j: any) => j.status === 'IN_PROGRESS');
 
   return (
-    <div className={cn("glass p-8 rounded-[2rem] border-slate-200/50 dark:border-slate-800/50 relative overflow-hidden group", className)}>
+    <div className={cn("glass-premium p-8 rounded-[2.5rem] border-white/10 dark:border-slate-800 relative overflow-hidden group shadow-2xl shadow-black/20", className)}>
+      {/* Scanline Effect */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.07] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]" />
+      
       {/* Background Decor */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-blue-500/20 transition-all duration-700" />
+      <div className="absolute top-0 right-0 w-48 h-48 bg-horizon-500/10 rounded-full -mr-24 -mt-24 blur-[80px] group-hover:bg-horizon-500/20 transition-all duration-1000" />
       
       <div className="relative z-10">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-600/10 text-blue-600 rounded-2xl">
-              <Info size={24} />
+        <div className="flex items-center justify-between mb-10">
+          <div className="flex items-center gap-5">
+            <div className="p-4 bg-horizon-500/10 text-horizon-600 dark:text-horizon-400 rounded-2xl shadow-inner border border-white/10">
+              <Info size={28} strokeWidth={2.5} />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white leading-none">Intelligence Profile</h3>
-              <p className="text-[10px] text-slate-500 mt-1.5 uppercase font-black tracking-widest">
+              <h3 className="text-xl font-black uppercase tracking-tighter italic text-slate-900 dark:text-white leading-none">Intelligence Profile</h3>
+              <p className="text-[10px] text-horizon-500 mt-2 uppercase font-black tracking-[0.25em]">
                 {isScanning ? 'Scan in Progress...' : 'Verified Intelligence'}
               </p>
             </div>
           </div>
           
-          <button 
+          <motion.button 
+            whileHover={{ rotate: 180, scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
             onClick={handleTrigger}
             disabled={triggerMutation.isPending}
-            className="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all disabled:opacity-50"
+            className="p-3 hover:bg-white/10 dark:hover:bg-slate-800 rounded-2xl transition-all disabled:opacity-50 border border-transparent hover:border-white/10"
             title="Refresh Intelligence"
           >
-            <RefreshCw size={18} className={cn("text-slate-500", triggerMutation.isPending && "animate-spin")} />
-          </button>
+            <RefreshCw size={20} className={cn("text-slate-500", (triggerMutation.isPending || isScanning) && "animate-spin")} />
+          </motion.button>
         </div>
 
         {latestJobs.length === 0 ? (
-          <div className="py-10 text-center">
-            <p className="text-slate-400 text-sm font-medium italic">No deep intelligence found yet.</p>
+          <div className="py-12 text-center border-2 border-dashed border-white/5 rounded-[2rem] bg-white/5">
+            <p className="text-slate-400 text-xs font-black uppercase tracking-widest italic mb-6">No deep intelligence found yet.</p>
             <button 
               onClick={handleTrigger}
-              className="mt-4 px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all"
+              className="px-8 py-3.5 bg-horizon-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-glow hover:bg-horizon-600 transition-all active:scale-95"
             >
-              Start Enrichment
+              Initialize Deep Scan
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Identity Column */}
-            <div className="space-y-4">
-              <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-3 text-slate-400 mb-3">
-                  <Mail size={14} />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Professional Identity</span>
+            <div className="space-y-6">
+              <div className="p-5 bg-white/5 dark:bg-slate-950/40 rounded-[1.75rem] border border-white/10 dark:border-slate-800 shadow-xl shadow-black/5">
+                <div className="flex items-center gap-3 text-horizon-500 mb-4 opacity-70">
+                  <Mail size={12} strokeWidth={3} />
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em]">Professional Identity</span>
                 </div>
-                <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{emailRes?.email || 'N/A'}</p>
+                <p className="text-xs font-black text-slate-800 dark:text-slate-100 truncate tracking-tight">{emailRes?.email || 'NOT_FOUND'}</p>
                 {emailJob?.confidence && (
-                  <div className="mt-2 flex items-center gap-2">
-                    <CheckCircle2 size={12} className={cn(emailJob.confidence === 'HIGH' ? "text-emerald-500" : "text-amber-500")} />
-                    <span className="text-[10px] text-slate-500 font-bold italic">
-                      {emailJob.source_name} Confidence: {String(emailJob.confidence)}
+                  <div className="mt-3 flex items-center gap-2">
+                    <div className={cn("w-1.5 h-1.5 rounded-full shadow-sm", emailJob.confidence === 'HIGH' ? "bg-emerald-500 shadow-emerald-500/50" : "bg-amber-500 shadow-amber-500/50")} />
+                    <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest italic">
+                      {emailJob.confidence} Confidence
                     </span>
                   </div>
                 )}
               </div>
 
-              <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-3 text-slate-400 mb-3">
-                  <Globe size={14} />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Digital Presence</span>
+              <div className="p-5 bg-white/5 dark:bg-slate-950/40 rounded-[1.75rem] border border-white/10 dark:border-slate-800 shadow-xl shadow-black/5">
+                <div className="flex items-center gap-3 text-horizon-500 mb-4 opacity-70">
+                  <Globe size={12} strokeWidth={3} />
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em]">Digital Footprint</span>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex gap-4">
                   {socialRes?.linkedin_url && (
-                    <a href={socialRes.linkedin_url} target="_blank" rel="noreferrer" className="p-2 bg-[#0077b5]/10 text-[#0077b5] rounded-lg hover:scale-105 transition-transform">
-                      <Linkedin size={16} />
-                    </a>
+                    <motion.a 
+                      whileHover={{ scale: 1.1, y: -2 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={handleSocialClick}
+                      href={socialRes.linkedin_url} 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      className="p-3 bg-[#0077b5]/10 text-[#0077b5] rounded-xl border border-[#0077b5]/20 shadow-sm"
+                    >
+                      <Linkedin size={18} />
+                    </motion.a>
                   )}
                   {socialRes?.x_handle && (
-                    <a href={`https://x.com/${socialRes.x_handle}`} target="_blank" rel="noreferrer" className="p-2 bg-slate-900/10 text-slate-900 dark:text-white rounded-lg hover:scale-105 transition-transform">
-                      <Twitter size={16} />
-                    </a>
+                    <motion.a 
+                      whileHover={{ scale: 1.1, y: -2 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={handleSocialClick}
+                      href={`https://x.com/${socialRes.x_handle}`} 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      className="p-3 bg-slate-900/10 dark:bg-white/10 text-slate-900 dark:text-white rounded-xl border border-white/10 shadow-sm"
+                    >
+                      <Twitter size={18} />
+                    </motion.a>
                   )}
                   {orgRes?.website && (
-                    <a href={`https://${orgRes.website}`} target="_blank" rel="noreferrer" className="p-2 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg hover:scale-105 transition-transform">
-                      <Globe size={16} />
-                    </a>
+                    <motion.a 
+                      whileHover={{ scale: 1.1, y: -2 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={handleSocialClick}
+                      href={`https://${orgRes.website}`} 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      className="p-3 bg-horizon-500/10 text-horizon-600 dark:text-horizon-400 rounded-xl border border-horizon-500/20 shadow-sm"
+                    >
+                      <Globe size={18} />
+                    </motion.a>
                   )}
                 </div>
               </div>
             </div>
 
             {/* Context Column */}
-            <div className="space-y-4">
-               <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-3 text-slate-400 mb-3">
-                  <Phone size={14} />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Connectivity</span>
+            <div className="space-y-6">
+               <div className="p-5 bg-white/5 dark:bg-slate-950/40 rounded-[1.75rem] border border-white/10 dark:border-slate-800 shadow-xl shadow-black/5">
+                <div className="flex items-center gap-3 text-horizon-500 mb-4 opacity-70">
+                  <Phone size={12} strokeWidth={3} />
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em]">Connectivity</span>
                 </div>
-                <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{phoneRes?.carrier || 'N/A'}</p>
+                <p className="text-xs font-black text-slate-800 dark:text-slate-100 tracking-tight">{phoneRes?.carrier || 'CARRIER_UNKNOWN'}</p>
                 {phoneRes?.validity === true && (
-                  <span className="mt-2 inline-block px-2 py-0.5 bg-emerald-500/10 text-emerald-600 text-[10px] font-black rounded-md border border-emerald-500/20">
-                    VERIFIED
+                  <span className="mt-3 inline-block px-2 py-0.5 bg-emerald-500/10 text-emerald-500 text-[8px] font-black rounded border border-emerald-500/20 tracking-[0.1em]">
+                    VALIDATED_LINE
                   </span>
                 )}
               </div>
 
-              <div className="p-4 bg-blue-600/5 dark:bg-blue-600/10 rounded-2xl border border-blue-600/20">
-                <div className="flex items-center gap-3 text-blue-500 mb-3">
-                  <RefreshCw size={14} />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">AI Synthesis</span>
+              <div className="p-5 bg-horizon-500/5 dark:bg-horizon-500/10 rounded-[1.75rem] border border-horizon-500/20 shadow-xl shadow-horizon-500/5">
+                <div className="flex items-center gap-3 text-horizon-500 mb-4">
+                  <RefreshCw size={12} strokeWidth={3} />
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em]">Executive Synthesis</span>
                 </div>
-                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed italic">
-                  {aiRes?.narrative || (isScanning ? "Synthesizing intelligence signals..." : "No narrative available.")}
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed italic font-medium">
+                  {aiRes?.narrative || (isScanning ? "Synthesizing intelligence signals..." : "NO_SYNTH_AVAILABLE")}
                 </p>
               </div>
             </div>

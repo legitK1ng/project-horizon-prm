@@ -187,6 +187,15 @@ def compute_relationship_strength_score(
     return round(min(100, recency + frequency + sentiment + latency), 2)
 
 
+def chat_gemini_sync(prompt: str) -> str:
+    """
+    REQ-027: Contextual Assistant Chat via Gemini.
+    """
+    model = _get_model()
+    response = model.generate_content(prompt)
+    return response.text.strip()
+
+
 # ── Transcript Pipeline (Item 5 / 15) — Gemini ───────────────────────────────
 
 def process_transcript_gemini(transcript: str, contact_name: str = "Unknown") -> dict:

@@ -23,8 +23,8 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  throw new Error(
-    '[Horizon] VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set in .env.local'
+  console.error(
+    '[Horizon] VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set in .env.local — Supabase client disabled'
   );
 }
 
@@ -54,8 +54,9 @@ const storageAdapter = Capacitor.isNativePlatform()
 // ── Client Singleton ───────────────────────────────────────────────────────
 let _client: SupabaseClient | null = null;
 
-export function getSupabase(): SupabaseClient {
+export function getSupabase(): SupabaseClient | null {
   if (_client) return _client;
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
 
   _client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
@@ -74,5 +75,9 @@ export function getSupabase(): SupabaseClient {
   return _client;
 }
 
-/** Pre-built singleton — import this everywhere */
-export const supabase = getSupabase();
+/**
+ * Pre-built singleton — import this everywhere.
+ * Requires VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env.local.
+ * Cast is safe when env vars are present; getSupabase() guards the null case.
+ */
+export const supabase = getSupabase() as SupabaseClient;

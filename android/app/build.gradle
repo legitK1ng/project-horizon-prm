@@ -1,8 +1,31 @@
 apply plugin: 'com.android.application'
 
+// Kotlin runtime version alignment — prevents version conflicts between
+// Capacitor transitive deps and AGP on the same Kotlin stdlib.
+configurations.all {
+    resolutionStrategy.eachDependency { details ->
+        if (details.requested.group == 'org.jetbrains.kotlin') {
+            details.useVersion rootProject.ext.kotlinVersion
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Signing — loaded in priority order:
+//   1. android/keystore.properties  (local developer machine, gitignored)
+//   2. Environment variables         (CI/CD pipelines)
+//   3. No signing                    (unsigned APK with a build warning)
+// ---------------------------------------------------------------------------
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace = "com.legitk1ng.horizon"
     compileSdk = rootProject.ext.compileSdkVersion
+
     defaultConfig {
         applicationId "com.legitk1ng.horizon"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -10,23 +33,88 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
         aaptOptions {
-             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
-             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            // Omit VCS metadata and OS-specific junk from packaged assets.
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
-    buildTypes {
+
+    signingConfigs {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            def storeFilePath = keystoreProperties['KEYSTORE_FILE']    ?: System.getenv('KEYSTORE_FILE')
+            def storePass     = keystoreProperties['KEYSTORE_PASSWORD'] ?: System.getenv('KEYSTORE_PASSWORD')
+            def alias         = keystoreProperties['KEY_ALIAS']         ?: System.getenv('KEY_ALIAS')
+            def keyPass       = keystoreProperties['KEY_PASSWORD']      ?: System.getenv('KEY_PASSWORD')
+
+            if (storeFilePath) {
+                // rootProject.file() resolves relative to android/ — so keystore.jks
+                // placed at android/keystore.jks maps to KEYSTORE_FILE=keystore.jks
+                storeFile     = rootProject.file(storeFilePath)
+                storePassword = storePass
+                keyAlias      = alias
+                keyPassword   = keyPass
+            }
         }
     }
-}
 
-repositories {
-    flatDir{
-        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    buildTypes {
+        debug {
+            debuggable true
+            jniDebuggable true
+        }
+        release {
+            debuggable false
+            minifyEnabled true
+            shrinkResources true
+            // proguard-android-optimize.txt enables R8 full-mode optimisation passes
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+            def sc = signingConfigs.release
+            if (sc.storeFile != null && sc.storeFile.exists()) {
+                signingConfig signingConfigs.release
+            } else {
+                logger.warn(
+                    '\n⚠  [Horizon] Release signing config is INCOMPLETE — APK will be unsigned.\n' +
+                    '   Provide android/keystore.properties or set these env vars:\n' +
+                    '   KEYSTORE_FILE, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD\n'
+                )
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    // AAB ABI/density/language splits (effective when publishing via Play Store)
+    bundle {
+        language { enableSplit = true }
+        density  { enableSplit = true }
+        abi      { enableSplit = true }
+    }
+
+    lint {
+        abortOnError      = false
+        checkReleaseBuilds = false
+        disable           += ['MissingTranslation', 'ExtraTranslation']
+    }
+
+    packaging {
+        resources {
+            excludes += ['/META-INF/{AL2.0,LGPL2.1}', '/*.proto']
+        }
+        // AGP 8.x: set useLegacyPackaging=false here instead of
+        // android:extractNativeLibs="false" in AndroidManifest.xml.
+        // Reduces install time on Android 6.0+ by keeping native libs compressed in APK.
+        jniLibs {
+            useLegacyPackaging = false
+        }
     }
 }
 
@@ -49,6 +137,6 @@ try {
     if (servicesJSON.text) {
         apply plugin: 'com.google.gms.google-services'
     }
-} catch(Exception e) {
-    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+} catch (Exception e) {
+    logger.info("google-services.json not found — Push Notifications won't work")
 }

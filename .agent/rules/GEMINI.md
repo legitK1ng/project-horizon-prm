@@ -1,39 +1,44 @@
-# 🪐 PROJECT HORIZON: MASTER CONTEXT & DIRECTIVES
-# Role: Senior Product Architect & AI technical Co-Pilot
+---
+trigger: always_on
+---
 
-## 1. MISSION & IDENTITY
-You are the technical co-pilot for "Project Horizon," a Relationship Intelligence Platform (PRM). Your primary directive is to evolve the platform from a "Proof of Concept" (Google Apps Script/Sheets) into a premium "Enterprise-Grade" architecture (Topology v1).
+# 🪐 PROJECT HORIZON: EXECUTION ROADMAP & TASK LIST
 
-## 2. THE TECH STACK (STRICT)
-* **Frontend:** React, TypeScript, Vite, Tailwind CSS, Capacitor (Cross-platform).
-* **Database:** Supabase (PostgreSQL) - *No NoSQL allowed.*
-* **Backend:** Python (FastAPI) structured as an **MCP (Model Context Protocol) Server**.
-* **Deployment:** GCP Cloud Run.
-* **State Management:** TanStack Query (React Query) for data fetching/caching.
-* **Validation:** Zod for runtime schema validation at all API boundaries.
+## Phase 1: Frontend UI/UX Accommodations (Priority 1)
+* **Audit React/Vite Components:** Review the existing live beta UI to identify components dependent on the deprecated Google Apps Script backend.
+* **Review and Maintain SSOT Document:** Before executing any new task, or responding to a user request review the @filename'constitution-enforcement.md' to initiate acceptable behavior. To reference specific context or a high point of view ALWAYS REVIEW the @filename'constitution.md'.
+* **Notion State Management:** Implement UI loading states, error boundaries, and optimistic UI updates to handle Notion's API rate limits (average 3 requests/second).
+* **OSINT & Call Dashboard Layout:** Redesign the primary client view to replace the legacy 4-column layout with new data containers built specifically to display:
+    * Enriched OSINT profiles from the Google People API.
+    * Call metadata, AI-generated `executive_brief` objects, and extracted actionable items.
+* **Transcription UI:** Build the interface components for viewing raw transcript logs and interacting with the processed call data.
 
-## 3. THE 5 CRITICAL PIVOTS (The Strategic Law)
-Every recommendation must move the project toward these scores: (Target: 10/10)
-1. **Decoupling:** Complete migration away from `Code.gs`.
-2. **Relational Intelligence:** Move beyond flat lists into a 3-tier model (Entities, Relationships, Touchpoints).
-3. **Proactive AI:** Transition Gemini from "Reactive Summarization" to "Proactive Nudging" (Relationship Health Scores, Follow-up alerts).
-4. **OSINT Pipeline:** Asynchronous enrichment for phone/email/org/social signals.
-5. **Security:** Field-level encryption for sensitive transcripts and relationship notes.
+## Phase 2: Backend Infrastructure & Tailscale Mesh (Priority 2)
+* **Environment Setup:** Initialize the Python FastAPI application and define the core MCP (Model Context Protocol) Server structure.
+* **Local Node Configuration:** Deploy the FastAPI server on the designated bare-metal hardware.
+* **Daemonization:** Wrap the FastAPI application in a robust service manager to ensure the transcription pipeline runs headless and survives system reboots.
+* **Tailnet Integration:** Connect the local node to the Tailscale mesh network to secure internal API traffic.
+* **Webhook Listener (Tailscale Funnel):** Configure Tailscale Funnel to securely expose the FastAPI webhook endpoint to the public web for ACR Phone app payloads, Notion updates, and Google People API changes.
 
-## 4. DATA MODEL (Supabase/PostgreSQL)
-The system architecture centers on three core tables linked by UUIDs:
-* `profiles`: User auth, subscription tiers, and usage limits.
-* `contacts`: Core entity records (the "Master Truth").
-* `call_records`: Transcripts, metadata, and JSONB `executive_brief` objects.
-* *Expansion:* `enriched_entities` (JSONB) for OSINT data storage.
+## Phase 3: ACR Phone Ingestion & AI Pipeline (Priority 3)
+* **ACR Phone Webhook Endpoint:** Build a specific route in FastAPI designed to strictly mimic the OpenAI Whisper endpoint communication flow (Handshake -> Confirm -> Receive -> Process -> Send Back).
+* **Payload Handling:** Configure the endpoint to securely accept the JSON call data and physical audio file based on the ACR Phone App payload structure:
+    * `Secret`: Authentication key for the device.
+    * `Source`: Metadata regarding call direction (Incoming/Outgoing).
+    * `Number`: Phone number associated with the recording.
+    * `Date`: Unix timestamp of the call.
+    * `Duration`: Length of the call in seconds.
+    * `Note`: Any attached strings or context.
+    * `File`: The physical binary audio file (.mp3, .m4a, etc.).
+* **Transcription & AI Processing:** * Process the received audio file into raw text transcripts.
+    * Pass the transcript through the AI MCP layer to generate the `executive_brief` and extract a structured list of actionable items.
+* **Notion Dual-Sync & Pipeline Routing:**
+    * Push the processed ACR metadata, executive summaries, and actionable items to the `call_records` and `contacts` Notion tables via the local caching queue to populate the backend and UI.
+* **Google People API Integration:**
+    * Push validated CRM contact data directly into Google Contacts (one-way sync).
+    * Pull OSINT metadata (job titles, associated links) to enrich the Horizon dashboard.
 
-## 5. UI/UX & INTELLIGENCE PHILOSOPHY
-* **Invisible OSINT:** Use React `<Suspense>` and GlassCard components to show intelligence without clutter.
-* **Command Center:** The Dashboard is an intelligence surface (Health Scores, "Needs Attention"), not a list.
-* **Power Interface:** The `CommandPalette` is the primary interaction point for power users.
-* **Timeline-First:** All interactions are rendered in a scrollable, chronological feed (Linear/Notion style).
-
-## 6. OPERATIONAL WORKFLOW
-* **MCP First:** All backend functions must be tools available to the AI agent.
-* **Async Everything:** Enrichment and AI processing must be backgrounded to keep the UI snappy.
-* **Blueprint Alignment:** All code must strictly align with the detailed roadmap in `horizon_prm_architecture_review.md`.
+## Phase 4: Mobile Bridge & Testing
+* **Capacitor Initialization:** Wrap the finalized React/Vite web application using Capacitor.
+* **Mobile Network Configuration:** Verify secure communication between the Capacitor app and the local FastAPI server by routing traffic through the Tailnet.
+* **End-to-End Testing:** Validate full pipeline functionality (ACR audio capture -> Tailscale Funnel -> FastAPI Whisper-mimic Endpoint -> AI Processing -> Notion -> Google Contacts -> UI Dashboard).

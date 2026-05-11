@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Horizon PRM brand palette — mirrors the web app's glass-morphism design system -->
+    <color name="colorPrimary">#6366F1</color>       <!-- Indigo-500  -->
+    <color name="colorPrimaryDark">#4F46E5</color>   <!-- Indigo-600  -->
+    <color name="colorAccent">#06B6D4</color>        <!-- Cyan-500    -->
+    <color name="colorBackground">#0F0F23</color>    <!-- Deep navy   -->
+    <color name="colorSurface">#1A1A3E</color>       <!-- Glass dark  -->
+</resources>

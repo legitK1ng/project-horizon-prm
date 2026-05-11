@@ -17,6 +17,7 @@ POST /v1/audio/transcriptions
     duration      — call duration string
     call_timestamp — ISO timestamp of the call
 """
+import asyncio
 import logging
 import time
 from datetime import datetime, timezone
@@ -48,13 +49,27 @@ def _run_transcription(
 
     model = TranscriptionManager().get_model()
 
-    kwargs: dict = dict(beam_size=5, language=language or None, temperature=temperature)
+    kwargs: dict = dict(
+        beam_size=5,
+        language=language or None,
+        temperature=temperature,
+        vad_filter=True,                  # strip silence/music before transcription
+        vad_parameters=dict(
+            min_silence_duration_ms=500,
+            speech_pad_ms=200,
+        ),
+        condition_on_previous_text=False, # prevent "oh oh oh" hallucination loops
+        no_speech_threshold=0.6,          # discard segments Whisper isn't confident about
+        compression_ratio_threshold=2.4,  # discard repetitive/looping output
+    )
     if prompt:
         kwargs["initial_prompt"] = prompt
 
     seg_gen, info = model.transcribe(wav_path, **kwargs)
 
     segments = list(seg_gen)
+    # Drop any remaining hallucinated segments (high no_speech_prob after VAD)
+    segments = [s for s in segments if getattr(s, "no_speech_prob", 0.0) < 0.8]
     text_parts = [seg.text.strip() for seg in segments]
     
     segments_list = [
@@ -120,47 +135,51 @@ async def create_transcription(
         f"model={model} lang={language} fmt={response_format}"
     )
 
-    # ── Parse ACR filename for contact metadata ──────────────────
-    # ACR apps encode contact + phone + direction in the filename:
-    #   "Hailey With Newport Academy (+17142747952) [2026-05-05 16-45-18] [Incoming].m4a"
+    # ── Parse ACR filename for contact metadata (REQ-160) ─────────
+    # Uses the authoritative parser from services/acr_parser_reference.py
+    metadata = {}
     try:
+        from services.acr_parser_reference import full_parse
         from pathlib import Path
-        from services.acr_parser_reference import parse_acr_filename, norm_phone
-        fname = file.filename or "audio.m4a"
-        stem = Path(fname).stem
-        ext = Path(fname).suffix
-        parsed_meta = parse_acr_filename(stem, ext)
-        logger.info(
-            f"[ACR-PARSE] pattern={parsed_meta['pattern']} "
-            f"contact={parsed_meta['contact']!r} phone={parsed_meta['phone']!r} "
-            f"direction={parsed_meta['direction']}"
-        )
+        
+        # Write temporary file to disk to allow full_parse to read its stats (size/mtime)
+        temp_input = Path(f"temp_{file.filename}")
+        with open(temp_input, "wb") as f:
+            f.write(await file.read())
+        await file.seek(0)  # async seek — required for FastAPI UploadFile
+
+        metadata = full_parse(temp_input)
+        temp_input.unlink() # Cleanup
+        
+        logger.info(f"[ACR-PARSE] Pattern: {metadata['pattern']} | Canonical: {metadata['canonical_name']}")
+        
         # Enrich from filename if form fields were empty/default
-        if (not contact_name or contact_name == "Unknown") and parsed_meta.get("contact"):
-            contact_name = parsed_meta["contact"]
-        if not phone_number and parsed_meta.get("phone"):
-            phone_number = parsed_meta["phone"]
-        if not duration and parsed_meta.get("dt"):
-            # Use parsed timestamp as call_timestamp if not provided
-            if not call_timestamp:
-                dt_str = parsed_meta["dt"]  # Format: YYYY-MM-DD_HHMMSS
-                try:
-                    call_timestamp = datetime.strptime(dt_str, "%Y-%m-%d_%H%M%S").replace(
-                        tzinfo=timezone.utc
-                    ).isoformat()
-                except ValueError:
-                    pass
+        if (not contact_name or contact_name == "Unknown") and metadata.get("contact_name"):
+            contact_name = metadata["contact_name"]
+        if not phone_number and metadata.get("phone_e164"):
+            phone_number = metadata["phone_e164"]
+        if not call_timestamp and metadata.get("datetime_str"):
+            # Convert YYYY-MM-DD_HHMMSS to ISO
+            try:
+                dt = datetime.strptime(metadata["datetime_str"], "%Y-%m-%d_%H%M%S")
+                call_timestamp = dt.replace(tzinfo=timezone.utc).isoformat()
+            except:
+                pass
     except Exception as e:
         logger.warning(f"[ACR-PARSE] Filename parse failed (non-critical): {e}")
+        await file.seek(0)  # async seek — required for FastAPI UploadFile
 
     # ── Audio → WAV ───────────────────────────────────────────────
     wav_path: Optional[str] = None
     try:
+        # Note: file.read() was already called above for metadata parsing
+        # but we reset the pointer with file.file.seek(0)
         content = await file.read()
         if not content:
             raise HTTPException(status_code=400, detail="Uploaded file is empty.")
         logger.info(f"[TRANSCRIBE] Received {len(content):,} bytes from client.")
-        wav_path = process_audio_ingest(content, file.filename or "audio.m4a")
+        loop = asyncio.get_event_loop()
+        wav_path = await loop.run_in_executor(None, process_audio_ingest, content, file.filename or "audio.m4a")
         logger.info(f"[TRANSCRIBE] Normalized to WAV: {wav_path}")
     except HTTPException:
         raise
@@ -218,6 +237,7 @@ async def create_transcription(
             call_timestamp=call_timestamp,
             transcript_text=transcript_text,
             executive_brief=executive_brief,
+            metadata=metadata, # Pass full metadata for canonical name
         )
 
     # ── Build response to match Whisper v1 format ─────────────────
@@ -300,6 +320,7 @@ async def _persist_to_db(
     call_timestamp: Optional[str],
     transcript_text: str,
     executive_brief: Optional[dict] = None,
+    metadata: Optional[dict] = None,
 ) -> None:
     """Background task: store the call record in Supabase."""
     try:
@@ -327,7 +348,13 @@ async def _persist_to_db(
         sentiment = executive_brief.get("sentiment", "Neutral") if executive_brief else "Neutral"
         tags = executive_brief.get("tags", []) if executive_brief else []
 
-        # 3. Build record
+        # 3. Handle empty transcripts (REQ-151 optimization)
+        status = "completed"
+        if not transcript_text or len(transcript_text.strip()) < 5:
+            status = "empty"
+            logger.warning(f"[DB] Call for {contact_name!r} resulted in empty transcript. Status set to 'empty'.")
+
+        # 4. Build record
         record = {
             "contact_name": contact_name,
             "phone_number": phone_number,
@@ -337,12 +364,14 @@ async def _persist_to_db(
             "executive_brief": executive_brief,
             "sentiment": sentiment,
             "tags": tags,
-            "status": "completed",
+            "status": status,
             "timestamp": call_timestamp or datetime.now(timezone.utc).isoformat(),
             "contact_id": contact_id,  # Linked UUID if found
+            "canonical_name": metadata.get("canonical_name") if metadata else None,
+            "pattern": metadata.get("pattern") if metadata else None,
         }
         
-        # 4. Insert
+        # 5. Insert
         db.table("call_records").insert(record).execute()
         logger.info(
             f"[DB] Successfully persisted call record for {contact_name!r}. "

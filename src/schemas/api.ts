@@ -87,9 +87,10 @@ export const DigestResponseSchema = z.object({
 
 export function ApiListResponseSchema<T extends z.ZodTypeAny>(itemSchema: T) {
   return z.object({
-    status: z.string(),
+    status: z.string().optional(),
     data: z.array(itemSchema),
-    count: z.number().int(),
+    count: z.number().int().optional(),
+    total_count: z.number().int().optional(),
   });
 }
 

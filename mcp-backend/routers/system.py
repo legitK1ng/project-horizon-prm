@@ -73,3 +73,29 @@ async def analyze_text(req: Request):
     except Exception as e:
         logger.error(f"[SYSTEM] Analysis failed: {e}")
         return {"status": "error", "message": str(e)}
+
+@router.get("/tags")
+async def get_tags(req: Request):
+    """
+    Returns available tags for the frontend.
+    """
+    db = getattr(req.app.state, "supabase", None)
+    default_tags = ["Follow-up", "Urgent", "Sales", "Personal", "Meeting", "Strategic", "Networking"]
+    
+    if not db:
+        return {"tags": default_tags}
+    
+    try:
+        # Aggregate tags from existing records
+        response = db.table("call_records").select("tags").execute()
+        tags_set = set(default_tags)
+        for record in response.data:
+            record_tags = record.get("tags")
+            if record_tags and isinstance(record_tags, list):
+                for t in record_tags:
+                    tags_set.add(t)
+        
+        return {"status": "success", "tags": sorted(list(tags_set))}
+    except Exception as e:
+        logger.warning(f"[SYSTEM] Failed to fetch tags from DB: {e}")
+        return {"status": "success", "tags": sorted(default_tags)}

@@ -14,14 +14,15 @@ export default {
       colors: {
         'horizon': {
           '50': '#f0f9ff',
-          '500': '#0066ff',
-          '600': '#0052cc',
+          '400': '#3385ff',  // Lighter interactive / dark-mode text
+          '500': '#0066ff',  // Primary brand (distinct blue)
+          '600': '#0052cc',  // Interactive state
         },
         'premium': {
-          'success': '#10b981',
-          'warning': '#f59e0b',
-          'error': '#ef4444',
-        },
+          'success': '#10b981',  // Emerald (keep—good for health)
+          'warning': '#f59e0b',   // Amber (attention)
+          'error': '#ef4444',     // Smooth red
+        }
       },
       boxShadow: {
         'xs': 'var(--shadow-xs)',
@@ -29,7 +30,7 @@ export default {
         'md': 'var(--shadow-md)',
         'lg': 'var(--shadow-lg)',
         'xl': 'var(--shadow-xl)',
-        'glow': 'var(--shadow-glow)',
+        'glow': '0 0 40px rgba(59,130,246,0.15)',
         'glass': 'inset 0 1px 0 rgba(255,255,255,0.1), 0 8px 32px rgba(0,0,0,0.08)',
         'xl-premium': '0 20px 40px rgba(0,0,0,0.12), 0 0 1px rgba(0,0,0,0.05)',
       },
@@ -47,8 +48,10 @@ export default {
       animation: {
         'in': 'fadeIn 0.3s ease-in-out',
         'shimmer': 'shimmer 1.5s ease-in-out infinite',
-        'pulse-dot': 'pulse-dot 2s infinite',
+        'pulse-dot': 'pulse-dot 2s ease-in-out infinite',
         'view-enter': 'viewEnter 0.35s ease-out',
+        'scan': 'scan 3s linear infinite',
+        'pulse-glow': 'pulse-glow 4s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
@@ -62,6 +65,18 @@ export default {
         viewEnter: {
           '0%': { opacity: '0', transform: 'translateY(8px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        scan: {
+          '0%': { transform: 'translateY(-100%)' },
+          '100%': { transform: 'translateY(100%)' },
+        },
+        'pulse-glow': {
+          '0%, 100%': { opacity: '0.4', filter: 'blur(8px)' },
+          '50%': { opacity: '0.8', filter: 'blur(12px)' },
+        },
+        'pulse-dot': {
+          '0%, 100%': { transform: 'scale(1)', opacity: '1' },
+          '50%': { transform: 'scale(1.4)', opacity: '0.6' },
         },
       },
     },

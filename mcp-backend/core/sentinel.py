@@ -264,11 +264,11 @@ class HorizonSentinel:
                         db.table("call_records").update({
                             "status": "INCOMPLETE",
                         }).eq("id", rec["id"]).execute()
-                    except Exception:
-                        pass
+                    except Exception as update_err:
+                        logger.error(f"[SENTINEL] Failed to update record {rec['id']} to INCOMPLETE: {update_err}")
         except Exception as e:
             # Non-critical — some Supabase setups don't support is_ null queries well
-            logger.debug(f"[SENTINEL] Missing transcript check skipped: {e}")
+            logger.error(f"[SENTINEL] Missing transcript check failed: {e}")
 
     def stop(self):
         self.is_running = False

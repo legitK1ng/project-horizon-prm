@@ -43,7 +43,7 @@ function TranscriptCard({ call }: { call: CallRecord }) {
       className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-lg p-4 space-y-3 hover:border-violet-500/30 transition-colors shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.08)]"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+      transition={{ type: 'spring', stiffness: 120, damping: 14 } as const}
       whileHover={{ y: -1, scale: 1.005 }}
     >
       {/* Header */}
@@ -206,7 +206,7 @@ export function IntelligenceDossier({ contactId }: IntelligenceDossierProps) {
           className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.06)]"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+          transition={{ type: 'spring', stiffness: 120, damping: 14 } as const}
         >
           <div className="flex items-start justify-between">
             <div>

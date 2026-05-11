@@ -1,0 +1,1 @@
+openclaw config set bridges.antigravity '{"enabled": true, "path": "/mnt/c/Users/owner/AppData/Local/cursor-agent/cursor-agent.cmd"}'

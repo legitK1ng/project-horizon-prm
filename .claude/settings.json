@@ -3,7 +3,8 @@
     "allow": [
       "Bash(curl -s -X POST http://localhost:8000/api/v1/calls -H 'x-horizon-key: hzn_F7j1kFGOp-wbzSHyuYu_5R2_9my9_e9zd1GyTYCFSeM' -F 'contact_name=Verify Schema' -F phone_number= -F duration=1 -F 'note=schema check')",
       "Bash(curl -s -X POST http://localhost:8000/api/v1/calls -H 'x-horizon-key: hzn_F7j1kFGOp-wbzSHyuYu_5R2_9my9_e9zd1GyTYCFSeM' -F 'contact_name=Pipeline Ready' -F phone_number=+15555550000 -F duration=30 -F 'note=End to end pipeline verification. The call ingested successfully and the schema is clean.')",
-      "Bash(powershell -Command ' *)"
+      "Bash(powershell -Command ' *)",
+      "Bash(./gradlew assembleDebug)"
     ]
   }
 }

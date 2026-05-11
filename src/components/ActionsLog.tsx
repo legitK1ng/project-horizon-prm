@@ -75,7 +75,7 @@ const ActionsLog: React.FC = () => {
                       )}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+                      transition={{ type: 'spring', stiffness: 120, damping: 14 } as const}
                     >
                         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-purple-50 dark:bg-purple-900/20 text-purple-500 dark:text-purple-400 mb-4">
                             <ClipboardList size={28} />
@@ -98,7 +98,7 @@ const ActionsLog: React.FC = () => {
                           )}
                           initial={{ opacity: 0, scale: 0.95 }}
                           animate={{ opacity: 1, scale: 1 }}
-                          transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+                          transition={{ type: 'spring', stiffness: 120, damping: 14 } as const}
                           whileHover={{ scale: 1.02 }}
                         >
                             <div
@@ -141,7 +141,7 @@ const ActionsLog: React.FC = () => {
                                           )}
                                           initial={{ opacity: 0, x: -10 }}
                                           animate={{ opacity: 1, x: 0 }}
-                                          transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+                                          transition={{ type: 'spring', stiffness: 120, damping: 14 } as const}
                                         >
                                             <CheckSquare className="mt-0.5 text-slate-400" size={18} />
                                             <div className="flex-1">

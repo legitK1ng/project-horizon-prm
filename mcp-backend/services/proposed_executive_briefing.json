@@ -1,0 +1,79 @@
+{
+    "objective": "Summarize tasks, owners, and deadlines",
+    "steps": [
+        {
+            "step_number": 1,
+            "title": "Identify the central point of the content",
+            "guidelines": [
+                "Look for action verbs often related to an office, like create, send, review, schedule, follow up",
+                "Identify commitments made, like 'i will', 'we agreed', and 'action item'",
+                "Note requests or assignments like 'please', 'can you', and 'you'll need to'"
+            ]
+        },
+        {
+            "step_number": 2,
+            "title": "Determine who is responsible for a task",
+            "guidelines": [
+                "Find names associated with tasks",
+                "Identify role-based assignments like 'engineering will...' or 'the team should...'"
+            ]
+        },
+        {
+            "step_number": 3,
+            "title": "Identify deadlines",
+            "guidelines": [
+                "Find explicit dates or times",
+                "Convert relative references like 'by friday' and 'next week' to specific dates when possible",
+                "Note urgency indicators like 'asap', 'before the meeting', and 'blocker'"
+            ]
+        },
+        {
+            "step_number": 4,
+            "title": "Identify resolved items",
+            "guidelines": [
+                "Identify conclusions reached, like 'we decided', 'agreed', and 'approved'",
+                "Note what was explicitly rejected or deferred",
+                "Identify items that need follow-up confirmation"
+            ]
+        },
+        {
+            "step_number": 5,
+            "title": "Handling exceptions",
+            "guidelines": [
+                "Prioritize excellent content in your response",
+                "Respond as best you can and acknowledge any limitations or challenges faced if criteria aren't met"
+            ]
+        },
+        {
+            "step_number": 6,
+            "title": "Final response formatting",
+            "guidelines": {
+                "style": [
+                    "Use sentence case for titles, labels, and content",
+                    "Favor simple sentences and common words"
+                ],
+                "components": {
+                    "action_items_table": {
+                        "columns": [
+                            "Action item",
+                            "Owner",
+                            "Deadline",
+                            "Status"
+                        ],
+                        "placeholders": [
+                            "[Specific task]",
+                            "[Name or 'not specified']",
+                            "[Date or 'not specified']",
+                            "[Open/blocked/waiting]"
+                        ]
+                    },
+                    "decisions_section": {
+                        "header": "Decisions made",
+                        "format": "Bullet list"
+                    },
+                    "lists": "Optimize long lists for scanability with bold labels"
+                }
+            }
+        }
+    ]
+}

@@ -1,25 +1,41 @@
-Write-Host "🛑 Killing Project Horizon processes..." -ForegroundColor Red
+Write-Host "Killing Project Horizon processes..." -ForegroundColor Red
 
-# Kill process on port 8000 (Backend)
-$backendPids = Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique
-foreach ($pid in $backendPids) {
-    if ($pid) {
-        Write-Host "Killing Backend (PID: $pid)"
-        Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
+$ports = @(8000, 9000, 3000)
+
+foreach ($port in $ports) {
+    $pids = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue |
+            Select-Object -ExpandProperty OwningProcess -Unique
+    foreach ($procId in $pids) {
+        if ($procId -and $procId -gt 4) {
+            $proc = Get-Process -Id $procId -ErrorAction SilentlyContinue
+            if ($proc) {
+                Write-Host "  Killing port $port -> PID $procId ($($proc.Name))" -ForegroundColor Yellow
+                Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+            }
+        }
     }
 }
 
-# Kill process on port 5173 (Frontend)
-$frontendPids = Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique
-foreach ($pid in $frontendPids) {
-    if ($pid) {
-        Write-Host "Killing Frontend (PID: $pid)"
-        Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
-    }
+# Kill any remaining stale Python processes from previous supervisor runs
+# (anything with a high CPU count and old start time is a zombie worker)
+$stalePython = Get-Process python -ErrorAction SilentlyContinue |
+               Where-Object { $_.StartTime -lt (Get-Date).AddHours(-1) }
+foreach ($proc in $stalePython) {
+    Write-Host "  Killing stale python PID $($proc.Id) (started $($proc.StartTime))" -ForegroundColor DarkYellow
+    Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
 }
 
-# Also kill common uvicorn/node processes if they are dangling
-Get-Process python -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*uvicorn*" } | Stop-Process -Force -ErrorAction SilentlyContinue
-Get-Process node -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*vite*" } | Stop-Process -Force -ErrorAction SilentlyContinue
+# Kill uvicorn process if still alive
+Get-Process uvicorn -ErrorAction SilentlyContinue | ForEach-Object {
+    Write-Host "  Killing uvicorn PID $($_.Id)" -ForegroundColor Yellow
+    Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+}
 
-Write-Host "✅ Done." -ForegroundColor Gray
+# Kill node/vite frontend
+Get-Process node -ErrorAction SilentlyContinue | ForEach-Object {
+    Write-Host "  Killing node PID $($_.Id)" -ForegroundColor Yellow
+    Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+}
+
+Start-Sleep -Seconds 2
+Write-Host "Done. Run .\start.ps1 to restart cleanly." -ForegroundColor Green

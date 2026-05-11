@@ -8,8 +8,13 @@ import {
   ApiListResponseSchema
 } from '../schemas/api';
 import { Contact, CallRecord, DashboardStats, Nudge, GoogleTokenResponse } from '../types';
+import { Capacitor } from '@capacitor/core';
 
-const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+// On native (APK) the device's localhost is the phone itself, not the dev machine.
+// Switch to the Tailscale Funnel URL so every API call reaches the real backend.
+const BACKEND_WEB    = import.meta.env.VITE_BACKEND_URL        || 'http://localhost:8000';
+const BACKEND_NATIVE = import.meta.env.VITE_BACKEND_URL_MOBILE || 'https://hp-z2g3-mini-workstation.tailb79f25.ts.net';
+const API_BASE = Capacitor.isNativePlatform() ? BACKEND_NATIVE : BACKEND_WEB;
 
 class ApiClient {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -285,27 +290,10 @@ class ApiClient {
     await this.request(`/api/v1/actions/projects/${id}`, { method: 'DELETE' });
   }
 
-  // --- OLLAMA / kimi-k2:1t-cloud (Item 5) ---
-  // Cloud-hosted via Ollama daemon — no local VRAM needed.
-
-  async ollamaGenerate(prompt: string, model = 'minimax-m2.7:cloud'): Promise<{ response: string }> {
-    return this.request('/api/v1/ollama/generate', {
-      method: 'POST',
-      body: JSON.stringify({ prompt, model }),
-    });
-  }
-
-  async ollamaModels(): Promise<{ models: string[]; default_model: string }> {
-    return this.request('/api/v1/ollama/models');
-  }
-
-  async ollamaHealth(): Promise<{ status: string; version?: string; model?: string }> {
-    return this.request('/api/v1/ollama/health');
-  }
+  // --- AI / GEMINI ---
 
   async processTranscript(transcript: string, contactName = 'Unknown'): Promise<any> {
-    // Routes to kimi-k2:1t-cloud via Ollama daemon
-    const res = await this.request<any>('/api/v1/ollama/process-transcript', {
+    const res = await this.request<any>('/api/v1/ai/process-transcript', {
       method: 'POST',
       body: JSON.stringify({ transcript, contact_name: contactName }),
     });
@@ -323,8 +311,7 @@ class ApiClient {
   // --- SSE REAL-TIME (Item 18) ---
 
   subscribeToEvents(onEvent: (event: any) => void): () => void {
-    const BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
-    const source = new EventSource(`${BASE}/api/v1/events/stream`);
+    const source = new EventSource(`${API_BASE}/api/v1/events/stream`);
     source.onmessage = (e) => {
       try { onEvent(JSON.parse(e.data)); } catch { /* non-JSON heartbeat */ }
     };
