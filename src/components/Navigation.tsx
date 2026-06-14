@@ -9,7 +9,8 @@ import {
   ListTodo,
   Sun,
   Moon,
-  Activity
+  Activity,
+  Settings2
 } from 'lucide-react';
 import { cn } from '@/utils/ui';
 import { useUiStore } from '@/store/appStore';
@@ -35,11 +36,12 @@ const Navigation: React.FC<NavigationProps> = ({ isOnline }) => {
   }, []);
 
   const navItems = [
-    { to: '/',         label: 'Dashboard',     icon: LayoutDashboard },
-    { to: '/calls',    label: 'Calls',         icon: PhoneCall },
-    { to: '/contacts', label: 'Contacts',      icon: Users },
-    { to: '/actions',  label: 'Actions',       icon: ListTodo },
-    { to: '/console',  label: 'Console',       icon: Terminal },
+    { to: '/',          label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/calls',     label: 'Calls',     icon: PhoneCall },
+    { to: '/contacts',  label: 'Contacts',  icon: Users },
+    { to: '/actions',   label: 'Actions',   icon: ListTodo },
+    { to: '/console',   label: 'Console',   icon: Terminal },
+    { to: '/settings',  label: 'Ingest',    icon: Settings2 },
   ];
 
   const containerVariants = {

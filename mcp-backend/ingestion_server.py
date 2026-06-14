@@ -47,6 +47,7 @@ from starlette.responses import StreamingResponse
 from middleware.inspector import InspectorMiddleware, inspector_sse_stream
 from routers import transcriptions
 from db.supabase_client import init_supabase
+from core.security.verify_key import verify_encryption_key
 
 
 try:
@@ -66,6 +67,10 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"[DB] Supabase init failed/timed out: {e}. Running in LOCAL-ONLY mode.")
         app.state.supabase = None
+
+    # PATCH-07: Verify encryption key before Sentinel starts processing records.
+    # Raises SystemExit(1) if key is absent or fails round-trip — prevents silent data corruption.
+    verify_encryption_key()
 
     # Start the Sentinel Bot (if it loaded successfully)
     if sentinel:
@@ -113,7 +118,8 @@ app.add_middleware(
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
-app.include_router(transcriptions.router, prefix="/v1/audio")
+app.include_router(transcriptions.router, prefix="/v1/audio")   # OpenAI standard
+app.include_router(transcriptions.router, prefix="/audio")       # ACR Phone strips /v1 from Server URL
 
 
 @app.get("/v1/sentinel/status", tags=["meta"])

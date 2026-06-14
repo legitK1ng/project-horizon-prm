@@ -1,3 +1,4 @@
+import asyncio
 import os
 import sys
 import json
@@ -28,7 +29,6 @@ class CallIngestRequest(BaseModel):
     timestamp: str | None = None
     external_id: str | None = None
 
-@router.post("/")
 @router.post("")
 async def ingest_call(
     req: Request,
@@ -58,9 +58,10 @@ async def ingest_call(
     if file:
         logger.info(f"[INGEST] Receiving file: {file.filename}")
         try:
-            # Save and normalize audio (FFmpeg)
+            # Save and normalize audio (FFmpeg) — run_in_executor prevents event loop blocking
             content = await file.read()
-            wav_path = process_audio_ingest(content, file.filename)
+            loop = asyncio.get_event_loop()
+            wav_path = await loop.run_in_executor(None, process_audio_ingest, content, file.filename)
             logger.info(f"[INGEST] Audio converted to: {wav_path}")
             
             # REQ-151: Real Transcription
@@ -171,10 +172,11 @@ async def ingest_call(
     }
 
     try:
-        # Validate record against schema before insert
+        # Validate record against schema and insert the VALIDATED data (not raw dict)
         validated_record = CallRecordCreate(**record)
-        
-        response = db.table("call_records").insert(record).execute()
+        clean = validated_record.model_dump(exclude_none=True)
+
+        response = db.table("call_records").insert(clean).select("id").execute()
         return {
             "status": "success",
             "message": "Call ingested and processed",

@@ -149,7 +149,7 @@ class HorizonSentinel:
         try:
             response = db.table("call_records") \
                 .select("id, status, external_id, audio_path, contact_name, created_at") \
-                .in_("status", ["QUEUED", "PROCESSING", "queued", "processing"]) \
+                .in_("status", ["pending", "processing"]) \
                 .lt("created_at", stale_threshold.isoformat()) \
                 .execute()
         except Exception as e:
@@ -166,8 +166,53 @@ class HorizonSentinel:
         for record in stuck_records:
             await self._attempt_fix(db, record)
 
+    async def _alert_ollama(self, context: dict) -> str:
+        """
+        Silent alert to the onboard LLM (Ollama/minimax) when a pipeline
+        anomaly is detected. Ollama diagnoses the issue and returns a corrective
+        action string. No user permission required — Sentinel acts autonomously.
+
+        Returns the LLM's recommended action string, or "" if Ollama is down.
+        """
+        try:
+            from services.ollama_service import generate, health_check
+            health = await health_check()
+            if health.get("status") != "ok":
+                logger.debug(f"[SENTINEL] Ollama unreachable — skipping LLM alert: {health.get('hint', '')}")
+                return ""
+
+            prompt = f"""You are the autonomous pipeline guardian for Horizon PRM.
+A pipeline anomaly has been detected. Diagnose and return ONE recommended action.
+
+CONTEXT:
+{context}
+
+Respond with ONLY a JSON object:
+{{
+  "diagnosis": "brief description of what went wrong",
+  "action": "reset_pending | mark_error | retry_transcription | ignore | escalate",
+  "reason": "one sentence explaining why",
+  "severity": "low | medium | high | critical"
+}}"""
+
+            raw = await generate(prompt, system="You are a silent pipeline monitoring agent. Respond only with valid JSON.")
+            raw = raw.strip()
+            if raw.startswith("```"):
+                raw = raw.split("```")[1].lstrip("json").strip()
+
+            import json
+            result = json.loads(raw)
+            logger.info(
+                f"[SENTINEL→LLM] diagnosis={result.get('diagnosis', '?')} "
+                f"action={result.get('action', '?')} severity={result.get('severity', '?')}"
+            )
+            return result.get("action", "")
+        except Exception as e:
+            logger.debug(f"[SENTINEL] LLM alert failed silently: {e}")
+            return ""
+
     async def _attempt_fix(self, db, record: dict):
-        """Attempt to fix a single stuck record."""
+        """Attempt to fix a single stuck record — with silent LLM consultation."""
         record_id = record["id"]
         audio_path = record.get("audio_path")
         contact = record.get("contact_name", "Unknown")
@@ -186,24 +231,41 @@ class HorizonSentinel:
                 except (ValueError, TypeError):
                     pass
 
-            # If stuck for more than 2 hours, mark as FAILED — don't keep retrying forever
-            if age_hours > 2:
+            # Silent LLM consultation — Ollama diagnoses and recommends action
+            llm_action = await self._alert_ollama({
+                "record_id": record_id,
+                "contact": contact,
+                "status": record.get("status"),
+                "age_hours": round(age_hours, 2),
+                "has_audio": bool(audio_path),
+                "audio_exists_on_disk": bool(audio_path and os.path.exists(audio_path)),
+            })
+
+            # Emit pipeline event so dashboard reflects the anomaly
+            try:
+                from services.event_emitter import emit_event
+                emit_event(db, "sentinel", "warning", record_id=record_id,
+                           detail={"age_hours": age_hours, "llm_action": llm_action, "contact": contact})
+            except Exception:
+                pass
+
+            # If stuck for more than 2 hours, mark as error — don't keep retrying forever
+            if age_hours > 2 or llm_action == "mark_error":
                 db.table("call_records").update({
-                    "status": "FAILED",
+                    "status": "error",
                 }).eq("id", record_id).execute()
                 self.metrics.records_errored += 1
                 logger.warning(
                     f"[SENTINEL] Record {record_id} stuck for {age_hours:.1f}h. "
-                    f"Marked FAILED to prevent infinite retry."
+                    f"LLM action={llm_action or 'mark_error'}. Marked error."
                 )
                 return
 
             # If it has an audio path and Whisper is available, re-queue for transcription
             if audio_path and _WHISPER_AVAILABLE and os.path.exists(audio_path):
-                # Re-run transcription
+                # Re-run transcription via TranscriptionManager (PATCH-05: no longer imports from router)
                 try:
-                    from routers.transcriptions import _run_transcription
-                    transcript, segments, lang, duration = _run_transcription(audio_path)
+                    transcript, segments, lang, duration = TranscriptionManager().run_transcription(audio_path)
 
                     if transcript and len(transcript.strip()) > 0:
                         # Generate brief if we have enough text
@@ -232,11 +294,11 @@ class HorizonSentinel:
                 except Exception as e:
                     logger.warning(f"[SENTINEL] Re-transcription failed for {record_id}: {e}")
 
-            # No audio file or transcription failed — reset to QUEUED for one more try
+            # No audio file or transcription failed — reset to pending for one more try
             db.table("call_records").update({
-                "status": "QUEUED",
+                "status": "pending",
             }).eq("id", record_id).execute()
-            logger.info(f"[SENTINEL] Reset record {record_id} to QUEUED for retry.")
+            logger.info(f"[SENTINEL] Reset record {record_id} to pending for retry.")
 
         except Exception as e:
             self.metrics.records_errored += 1
@@ -257,12 +319,12 @@ class HorizonSentinel:
             if orphans:
                 logger.warning(
                     f"[SENTINEL] Found {len(orphans)} 'completed' records with no transcript. "
-                    f"Marking as INCOMPLETE for review."
+                    f"Marking as error for review."
                 )
                 for rec in orphans:
                     try:
                         db.table("call_records").update({
-                            "status": "INCOMPLETE",
+                            "status": "error",
                         }).eq("id", rec["id"]).execute()
                     except Exception as update_err:
                         logger.error(f"[SENTINEL] Failed to update record {rec['id']} to INCOMPLETE: {update_err}")

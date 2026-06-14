@@ -167,7 +167,9 @@ def parse_acr_filename(stem: str, ext: str, mtime: float = None) -> dict:
         'notes':      '',
     }
 
-    # ── 1. PATTERN H — Cube Call Recorder ────────────────────────────────────
+    # ── 1a. PATTERN H — Named contact: "Name (+phone) [date time] [Dir]" ──────
+    # Covers: ACR Phone current format for known contacts
+    # Example: "Gabby Cajucom (+17146240529) [2026-05-30 13-00-39] [Incoming]"
     h = re.match(
         r'^(.+?)\s*\((\+[\d]+)\)\s*'
         r'\[(\d{4}-\d{2}-\d{2})\s+(\d{2}-\d{2}-\d{2})\]\s*'
@@ -186,6 +188,27 @@ def parse_acr_filename(stem: str, ext: str, mtime: float = None) -> dict:
         )
         if is_uuid:
             result['notes'] = f'UUID label: {name.strip()[:20]}'
+        return result
+
+    # ── 1b. PATTERN H2 — Phone-only: "+phone [date time] [Dir]" ─────────────
+    # Covers: ACR Phone format for unknown contacts (no name, no parentheses)
+    # Example: "+13209109898 [2026-05-31 18-16-56] [Incoming]"
+    h2 = re.match(
+        r'^(\+[\d]{7,15})\s*'
+        r'\[(\d{4}-\d{2}-\d{2})\s+(\d{2}-\d{2}-\d{2})\]\s*'
+        r'\[(Incoming|Outgoing)\]',
+        stem, re.I)
+    if h2:
+        phone, date, time_, dir_ = h2.groups()
+        result.update(
+            pattern='H2',
+            contact='',
+            phone=norm_phone(phone),
+            direction='OUT' if 'out' in dir_.lower() else 'IN',
+            channel='phone',
+            dt=f"{date}_{time_.replace('-', '')}",
+            notes='unknown contact — phone only',
+        )
         return result
 
     # ── 2. PATTERN E/F — Transcription app underscore ────────────────────────

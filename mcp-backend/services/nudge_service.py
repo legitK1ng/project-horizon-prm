@@ -63,7 +63,7 @@ def check_immediate_alerts() -> List[Dict]:
     # Fetch upcoming recommended follow-up dates
     response = supabase.table("call_records") \
         .select("id, contact_id, contact_name, recommended_followup_date") \
-        .eq("status", "COMPLETED") \
+        .eq("status", "completed") \
         .lte("recommended_followup_date", now.isoformat()) \
         .execute()
     

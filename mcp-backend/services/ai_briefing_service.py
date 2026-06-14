@@ -1,20 +1,35 @@
 """
 AI Briefing Service — AGENT-3a | REQ-006, REQ-027, REQ-033, REQ-034, REQ-035, REQ-036
 Handles ALL Gemini interactions server-side. Frontend never calls Gemini directly.
+Migrated to google-genai (v2) SDK — replaces deprecated google-generativeai.
 """
 import os
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 
-def _get_model() -> genai.GenerativeModel:
+def _get_client() -> genai.Client:
     api_key = os.environ.get("GOOGLE_API_KEY", "")
     if not api_key:
         raise EnvironmentError("GOOGLE_API_KEY environment variable not set.")
-    genai.configure(api_key=api_key)
-    return genai.GenerativeModel("gemini-2.0-flash")
+    return genai.Client(api_key=api_key)
+
+
+def _generate(prompt: str, model: str = "gemini-2.0-flash") -> str:
+    """Single-call helper — returns response text, strips markdown fences."""
+    client = _get_client()
+    response = client.models.generate_content(model=model, contents=prompt)
+    text = response.text.strip()
+    # Strip markdown code fences if model wrapped the JSON
+    for fence in ("```json", "```"):
+        if text.startswith(fence):
+            text = text[len(fence):]
+    if text.endswith("```"):
+        text = text[:-3]
+    return text.strip()
 
 
 def generate_call_brief(transcript: str, contact_name: str) -> dict:
@@ -22,7 +37,6 @@ def generate_call_brief(transcript: str, contact_name: str) -> dict:
     REQ-035: Generate proactive executive brief with followup date,
     draft message, open commitments, and deadline alerts.
     """
-    model = _get_model()
     today = datetime.now(timezone.utc).date().isoformat()
 
     prompt = f"""
@@ -47,16 +61,7 @@ def generate_call_brief(transcript: str, contact_name: str) -> dict:
     {transcript}
     """
 
-    response = model.generate_content(prompt)
-    text = response.text.strip()
-    if text.startswith("```json"):
-        text = text[7:]
-    if text.startswith("```"):
-        text = text[3:]
-    if text.endswith("```"):
-        text = text[:-3]
-
-    return json.loads(text.strip())
+    return json.loads(_generate(prompt))
 
 
 def generate_weekly_digest(call_summaries: list[dict]) -> str:
@@ -64,8 +69,6 @@ def generate_weekly_digest(call_summaries: list[dict]) -> str:
     REQ-006: Generate a weekly digest paragraph from recent call summaries.
     Called by /api/v1/digest endpoint — never from frontend.
     """
-    model = _get_model()
-
     if not call_summaries:
         return "No relationship activity recorded this week."
 
@@ -87,36 +90,29 @@ def generate_weekly_digest(call_summaries: list[dict]) -> str:
     {summaries_text}
     """
 
-    response = model.generate_content(prompt)
-    return response.text.strip()
+    return _generate(prompt)
 
 
 def generate_nudge(contact_name: str, last_interaction: str, sentiment: str) -> str:
     """
     REQ-036: Generate a 1-sentence proactive nudge for a declining relationship.
     """
-    model = _get_model()
-    
     prompt = f"""
     Create a proactive, 1-sentence follow-up nudge for {contact_name}.
     Context:
     - Last meaningful contact: {last_interaction}
     - Most recent sentiment: {sentiment}
-    
+
     The nudge should be low-friction, high-value, and encourage a simple check-in.
     Avoid generic 'checking in' phrases. Be specific but concise.
     """
-    
-    response = model.generate_content(prompt)
-    return response.text.strip()
+    return _generate(prompt)
 
 
 def classify_social_signal(content: str, contact_name: str) -> dict:
     """
     REQ-033: Classify a social signal from a contact into a structured category.
     """
-    model = _get_model()
-
     prompt = f"""
     Classify this social media post from {contact_name} into EXACTLY one category.
     Return ONLY valid JSON with this structure:
@@ -130,25 +126,13 @@ def classify_social_signal(content: str, contact_name: str) -> dict:
     Content:
     {content}
     """
-
-    response = model.generate_content(prompt)
-    text = response.text.strip()
-    if text.startswith("```json"):
-        text = text[7:]
-    if text.startswith("```"):
-        text = text[3:]
-    if text.endswith("```"):
-        text = text[:-3]
-
-    return json.loads(text.strip())
+    return json.loads(_generate(prompt))
 
 
 def generate_reply_suggestion(signal_content: str, contact_name: str, call_history_summaries: list[str]) -> str:
     """
     REQ-034: Generate a personalized reply suggestion referencing shared call history.
     """
-    model = _get_model()
-
     history_context = "\n".join(call_history_summaries[:5]) if call_history_summaries else "No prior call history."
 
     prompt = f"""
@@ -165,9 +149,7 @@ def generate_reply_suggestion(signal_content: str, contact_name: str, call_histo
 
     Return ONLY the reply text, no JSON.
     """
-
-    response = model.generate_content(prompt)
-    return response.text.strip()
+    return _generate(prompt)
 
 
 def compute_relationship_strength_score(
@@ -191,20 +173,16 @@ def chat_gemini_sync(prompt: str) -> str:
     """
     REQ-027: Contextual Assistant Chat via Gemini.
     """
-    model = _get_model()
-    response = model.generate_content(prompt)
-    return response.text.strip()
+    return _generate(prompt)
 
 
 # ── Transcript Pipeline (Item 5 / 15) — Gemini ───────────────────────────────
 
 def process_transcript_gemini(transcript: str, contact_name: str = "Unknown") -> dict:
     """
-    Item 5: Full transcript pipeline via Gemini 1.5 Flash (cloud).
+    Item 5: Full transcript pipeline via Gemini 2.0 Flash.
     Stages: speaker structuring → summary → action items → entity extraction.
-    Returns a dict matching the executive_brief schema.
     """
-    model = _get_model()
     today = datetime.now(timezone.utc).date().isoformat()
 
     prompt = f"""Analyse this call transcript and return ONLY valid JSON with this structure:
@@ -235,15 +213,7 @@ TRANSCRIPT:
 
 Return ONLY the JSON object."""
 
-    response = model.generate_content(prompt)
-    text = response.text.strip()
-    for fence in ("```json", "```"):
-        if text.startswith(fence):
-            text = text[len(fence):]
-    if text.endswith("```"):
-        text = text[:-3]
-
-    return json.loads(text.strip())
+    return json.loads(_generate(prompt))
 
 
 # ── Embeddings (Item 14) — Google text-embedding-004 ─────────────────────────
@@ -253,13 +223,9 @@ def generate_embedding(text: str) -> list[float]:
     Item 14: Generate a 768-dim embedding via Google text-embedding-004.
     Used for semantic search over contacts, transcripts, tasks, projects.
     """
-    api_key = os.environ.get("GOOGLE_API_KEY", "")
-    if not api_key:
-        raise EnvironmentError("GOOGLE_API_KEY not set.")
-    genai.configure(api_key=api_key)
-    result = genai.embed_content(
+    client = _get_client()
+    result = client.models.embed_content(
         model="models/text-embedding-004",
-        content=text,
-        task_type="retrieval_document",
+        contents=text,
     )
-    return result["embedding"]
+    return result.embeddings[0].values

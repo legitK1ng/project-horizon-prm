@@ -271,6 +271,7 @@ const ContactList: React.FC<ContactListProps> = () => {
                     >
                         {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                             const rowContacts = rows[virtualRow.index];
+                            if (!rowContacts) return null;
                             return (
                                 <div
                                     key={virtualRow.key}

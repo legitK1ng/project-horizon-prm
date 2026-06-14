@@ -41,12 +41,13 @@ from fastapi.responses import JSONResponse
 
 from routers import (
     calls, health, auth, system, contacts,
-    sync, data, nudges, enrichments, ai, transcriptions,
+    sync, data, nudges, enrichments, ai,
 )
 from routers import ollama        as ollama_router
 from routers import actions       as actions_router
 from routers import events        as events_router
 from routers import batch_ingest  as batch_ingest_router
+from routers import digest        as digest_router
 
 from db.supabase_client import init_supabase
 
@@ -208,11 +209,16 @@ app.include_router(ollama_router.router,  prefix="/api/v1/ollama",         tags=
 app.include_router(actions_router.router, prefix="/api/v1/actions",        tags=["actions"])  # Item 11
 app.include_router(events_router.router,  prefix="/api/v1/events",         tags=["events"])   # Item 18
 
-# ACR / Whisper-compatible transcription webhook
-app.include_router(transcriptions.router,          prefix="/v1/audio",              tags=["transcription"])
+# NOTE: ACR / Whisper transcription endpoint is registered ONLY on the ingestion
+# server (ingestion_server.py, port 9000). It must NOT be registered here on
+# port 8000 — doing so bypasses the InspectorMiddleware, the Sentinel, and
+# Tailscale Funnel isolation. See CONSTITUTION Section 2 (Two-Server Architecture).
 
 # ACR batch archive ingestion
 app.include_router(batch_ingest_router.router,     prefix="/api/v1/batch-ingest",   tags=["batch-ingest"])
+
+# Weekly AI digest — REQ-006
+app.include_router(digest_router.router,           prefix="/api/v1/digest",         tags=["digest"])
 
 
 if __name__ == "__main__":

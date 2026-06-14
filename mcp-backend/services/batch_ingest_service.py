@@ -180,6 +180,13 @@ def run_batch_ingest(source_path: str, db: Any, min_size_bytes: int = 4096) -> I
             msg = f"{audio_path.name}: {e}"
             stats.error_details.append(msg)
             logger.error(f"[BATCH] ERROR {msg}")
+            # Emit to pipeline_events so the dashboard registers the failure
+            try:
+                from services.event_emitter import emit_event
+                emit_event(db, "batch_ingest", "error", error=msg[:500],
+                           detail={"file": audio_path.name})
+            except Exception:
+                pass
 
     logger.info(
         f"[BATCH] Done — scanned={stats.scanned} inserted={stats.inserted} "

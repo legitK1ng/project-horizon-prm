@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { CallRecord } from '@/types';
 import { ICONS } from '@/constants';
@@ -346,6 +346,7 @@ const CallLog: React.FC<CallLogProps> = ({ activeTag, onContactClick }) => {
                                 >
                                     {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                                         const call = filteredCalls[virtualRow.index];
+                                        if (!call) return null;
                                         return (
                                             <div
                                                 key={virtualRow.key}

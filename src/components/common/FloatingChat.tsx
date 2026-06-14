@@ -96,7 +96,6 @@ const FloatingChat: React.FC = () => {
   const [resizing, setResizing]   = useState(false);
   const resizeStart = useRef({ x: 0, y: 0, w: chatWidth, h: chatHeight });
 
-  const containerRef  = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef      = useRef<HTMLInputElement>(null);
 

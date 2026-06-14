@@ -34,7 +34,16 @@
       "Bash(findstr \"8000\\\\|3000\\\\|9000\")",
       "PowerShell(netstat *)",
       "PowerShell(Invoke-RestMethod -Uri \"http://localhost:8000/api/v1/health\" -Method GET -TimeoutSec 10 2>&1 | ConvertTo-Json -Depth 3)",
-      "PowerShell(Invoke-RestMethod -Uri \"http://localhost:8000/api/v1/data\" -Method GET -TimeoutSec 10 2>&1 | ConvertTo-Json -Depth 3)"
+      "PowerShell(Invoke-RestMethod -Uri \"http://localhost:8000/api/v1/data\" -Method GET -TimeoutSec 10 2>&1 | ConvertTo-Json -Depth 3)",
+      "Bash(curl -s http://localhost:9000/api/health)",
+      "PowerShell(Get-Process -Id 20316 -ErrorAction SilentlyContinue)",
+      "Bash(curl -s http://localhost:8000/api/calls/count)",
+      "Bash(curl -s http://localhost:8000/calls)",
+      "Bash(curl -s http://localhost:8000/docs)",
+      "Bash(curl -s http://localhost:8000/api/v1/calls/)",
+      "Bash(curl -s http://localhost:8000/api/v1/system/status)",
+      "Bash(curl -s http://localhost:8000/api/v1/health/)",
+      "PowerShell(Get-Process | Where-Object { $_.ProcessName -match 'python|node|npm' } | Select-Object ProcessName, Id, WorkingSet64 -First 10)"
     ]
   },
   "enabledMcpjsonServers": [

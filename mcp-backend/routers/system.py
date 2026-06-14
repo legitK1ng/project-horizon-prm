@@ -6,6 +6,80 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+
+# ── Health deep (v_system_health view) ───────────────────────────────────────
+
+@router.get("/health-deep")
+async def health_deep(req: Request):
+    """
+    Live pipeline health snapshot from the v_system_health Supabase view.
+    Returns counts for pending/processing/completed/error call_records,
+    total contacts, recent pipeline_events, and enrichment job status.
+    """
+    db = getattr(req.app.state, "supabase", None)
+    if not db:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    try:
+        result = db.rpc("query_view", {"view_name": "v_system_health"}).execute()
+        # Some Supabase setups don't support rpc() for views — fall back to direct select
+        if not result.data:
+            raise Exception("rpc empty — using direct select fallback")
+        return {"status": "success", "data": result.data}
+    except Exception:
+        pass
+
+    # Direct select fallback (most reliable path)
+    try:
+        result = db.table("v_system_health").select("*").execute()
+        return {"status": "success", "data": result.data}
+    except Exception as e:
+        # v_system_health view may not be available via PostgREST — query raw tables
+        logger.warning(f"[SYSTEM] v_system_health view not accessible via REST: {e}. Running raw queries.")
+
+    try:
+        from datetime import datetime, timezone, timedelta
+
+        # Aggregate call_records pipeline stats
+        pending    = db.table("call_records").select("id", count="exact").eq("status", "pending").execute().count or 0
+        processing = db.table("call_records").select("id", count="exact").eq("status", "processing").execute().count or 0
+        completed  = db.table("call_records").select("id", count="exact").eq("status", "completed").execute().count or 0
+        error      = db.table("call_records").select("id", count="exact").eq("status", "error").execute().count or 0
+        total_records = (pending or 0) + (processing or 0) + (completed or 0) + (error or 0)
+
+        # Contacts count
+        contacts_count = db.table("contacts").select("id", count="exact").execute().count or 0
+
+        # Recent pipeline events (last hour)
+        one_hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+        recent_events = db.table("pipeline_events").select("source,status,emitted_at,error") \
+            .gte("emitted_at", one_hour_ago) \
+            .order("emitted_at", desc=True) \
+            .limit(20) \
+            .execute().data or []
+
+        recent_errors = [e for e in recent_events if e.get("status") == "error"]
+
+        return {
+            "status": "success",
+            "data": {
+                "pipeline": {
+                    "pending":    pending,
+                    "processing": processing,
+                    "completed":  completed,
+                    "error":      error,
+                    "total":      total_records,
+                },
+                "contacts":      contacts_count,
+                "recent_events": recent_events,
+                "error_count_1h": len(recent_errors),
+                "health":        "degraded" if len(recent_errors) > 5 else "ok",
+            }
+        }
+    except Exception as e:
+        logger.error(f"[SYSTEM] health-deep fallback queries failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Health check failed: {str(e)}")
+
 @router.get("/models")
 async def get_models():
     """

@@ -22,11 +22,12 @@ import SystemStatusBar from './components/SystemStatusBar';
 import { SyncService } from './services/syncService';
 
 // Lazy-load page components
-const Dashboard   = lazy(() => import('./components/Dashboard'));
-const ContactList = lazy(() => import('./components/ContactList'));
-const CallLog     = lazy(() => import('./components/CallLog'));
-const Actions     = lazy(() => import('./components/Actions'));
-const Console     = lazy(() => import('./components/Console'));
+const Dashboard        = lazy(() => import('./components/Dashboard'));
+const ContactList      = lazy(() => import('./components/ContactList'));
+const CallLog          = lazy(() => import('./components/CallLog'));
+const Actions          = lazy(() => import('./components/Actions'));
+const Console          = lazy(() => import('./components/Console'));
+const IngestionSettings = lazy(() => import('./components/IngestionSettings'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -59,8 +60,9 @@ const AnimatedRoutes: React.FC = () => {
             <Route path="/calls"    element={<CallLog />} />
             <Route path="/contacts" element={<ContactList />} />
             <Route path="/actions"  element={<Actions />} />
-            <Route path="/console"  element={<Console />} />
-            <Route path="/lab"      element={<Navigate to="/console" replace />} />
+            <Route path="/console"   element={<Console />} />
+            <Route path="/settings"  element={<IngestionSettings />} />
+            <Route path="/lab"       element={<Navigate to="/console" replace />} />
             <Route path="*"         element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
@@ -130,7 +132,7 @@ const AppContent: React.FC = () => {
 
   return (
     <Router>
-      <div className="flex flex-col min-h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-700 w-full overflow-x-hidden bg-mesh selection:bg-blue-500/30">
+      <div className="flex flex-col min-h-[100dvh] horizon-scene text-[rgb(235,230,225)] transition-colors duration-700 w-full overflow-x-hidden bg-mesh selection:bg-[rgba(210,148,158,0.22)]">
         <SystemStatusBar />
         <Navigation isOnline={isOnline} />
 
@@ -141,7 +143,7 @@ const AppContent: React.FC = () => {
         </main>
 
         <footer 
-          className="py-16 border-t border-slate-200/50 dark:border-white/5 text-center relative overflow-hidden"
+          className="py-16 border-t border-[rgba(255,255,255,0.07)] text-center relative overflow-hidden"
           style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}
         >
           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-100/50 dark:to-white/[0.02] pointer-events-none" />

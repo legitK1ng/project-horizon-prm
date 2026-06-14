@@ -1,6 +1,6 @@
 export default {
   plugins: {
-    tailwindcss: {},
+    tailwindcss: { config: 'C:/Users/owner/Desktop/horizon/tailwind.config.js' },
     autoprefixer: {},
   },
 }

@@ -15,8 +15,11 @@ def verify_acr_secret(
     provided = x_horizon_key or x_acr_secret
 
     if not horizon_key and not legacy_key:
-        print("[AUTH] WARNING: No API key set in environment — allowing request.")
-        return True
+        # Fail closed — a misconfigured server must not silently accept all requests
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Server mis-configured: neither HORIZON_API_KEY nor ACR_WEBHOOK_SECRET is set.",
+        )
 
     valid_keys = set(filter(None, [horizon_key, legacy_key]))
     if provided not in valid_keys:

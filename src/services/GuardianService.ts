@@ -13,7 +13,7 @@ class GuardianService {
     
     // Start background monitoring loops
     this.startHealthCheck();
-    this.startAutonomousMissions();
+    this.startMissionSimulation();
     this.subscribeToLogs();
   }
 
@@ -108,8 +108,13 @@ class GuardianService {
     }, 400);
   }
 
-  private startAutonomousMissions() {
-    // Random "optimization" missions to keep system "feeling alive" and healthy
+  /**
+   * COSMETIC_ONLY — generates randomized UI animation events for Guardian agent cards.
+   * Does NOT perform real AI operations, backend calls, or health assessments.
+   * Real health is provided by startHealthCheck() which calls /api/v1/health every 60s.
+   * Do not add real backend calls here. See Constitution §13.
+   */
+  private startMissionSimulation() {
     setInterval(() => {
       const agents = useGuardianStore.getState().agents;
       const idleAgents = agents.filter(a => a.status === 'idle');

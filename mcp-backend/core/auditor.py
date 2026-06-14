@@ -57,9 +57,9 @@ class SystemAuditor:
         print("[INGESTION] Auditing Pipeline Status...")
         try:
             # Check for queued vs completed records
-            queued = self.supabase.table("call_records").select("id").eq("status", "QUEUED").execute().data or []
-            processing = self.supabase.table("call_records").select("id").eq("status", "PROCESSING").execute().data or []
-            errors = self.supabase.table("call_records").select("id").eq("status", "ERROR").execute().data or []
+            queued = self.supabase.table("call_records").select("id").eq("status", "pending").execute().data or []
+            processing = self.supabase.table("call_records").select("id").eq("status", "processing").execute().data or []
+            errors = self.supabase.table("call_records").select("id").eq("status", "error").execute().data or []
             
             print(f"  [+] Queued: {len(queued)}")
             print(f"  [+] Processing: {len(processing)}")
@@ -72,7 +72,8 @@ class SystemAuditor:
 
     def audit_environment(self):
         print("[ENVIRONMENT] Checking Backend Configuration...")
-        required_vars = ["SUPABASE_URL", "SUPABASE_KEY", "HORIZON_API_KEY", "OPENAI_API_KEY"]
+        required_vars = ["SUPABASE_URL", "SUPABASE_KEY", "HORIZON_API_KEY", "GEMINI_API_KEY",
+                         "HUGGINGFACE_TOKEN", "FIELD_ENCRYPTION_MASTER_KEY"]
         for var in required_vars:
             val = os.environ.get(var)
             if val:

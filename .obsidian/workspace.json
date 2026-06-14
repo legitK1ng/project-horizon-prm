@@ -4,19 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "6f15cbdf60f41463",
+        "id": "67f6d8fa87d572c4",
         "type": "tabs",
         "children": [
           {
-            "id": "b8ddca2deb166b40",
+            "id": "59453130202b50a2",
             "type": "leaf",
             "state": {
-              "type": "image",
+              "type": "markdown",
               "state": {
-                "file": "docs/topography.png"
+                "file": "CODE_REVIEW.md",
+                "mode": "source",
+                "source": false
               },
-              "icon": "lucide-image",
-              "title": "topography"
+              "icon": "lucide-file",
+              "title": "CODE_REVIEW"
             }
           }
         ]
@@ -92,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "docs/topography.png",
+                "file": "CODE_REVIEW.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -102,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for topography"
+              "title": "Backlinks for CODE_REVIEW"
             }
           },
           {
@@ -167,8 +169,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300,
-    "collapsed": true
+    "width": 300
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -178,11 +179,19 @@
       "daily-notes:Open today's daily note": false,
       "templates:Insert template": false,
       "command-palette:Open command palette": false,
-      "bases:Create new base": false
+      "bases:Create new base": false,
+      "obsidian-excalidraw-plugin:New drawing": false,
+      "terminal:Open terminal": false
     }
   },
-  "active": "e5ababc5587f942e",
+  "active": "59453130202b50a2",
   "lastOpenFiles": [
+    "docs/API_CONTRACT.md",
+    "mcp-backend/audio_ingest/temp/ef0e52f9-7588-4511-89d1-5f1354e41fed_final.wav",
+    "mcp-backend/audio_ingest/temp/ef0e52f9-7588-4511-89d1-5f1354e41fed_raw.m4a",
+    "mcp-backend/audio_ingest/temp/meta_41155bbb-1832-479f-9437-cfd2fa35f92f.m4a",
+    "docs/topography.png",
+    "node_modules/cross-spawn/README.md",
     "New folder",
     "mcp-backend/audio_ingest/temp/6831ba7f-7e8e-4d43-960d-2d04c1c4294e_raw.m4a",
     "mcp-backend/audio_ingest/temp/7aa43b2a-75ea-485e-9df3-bf41306c3378_raw.m4a",
@@ -190,10 +199,6 @@
     "mcp-backend/audio_ingest/temp/af1e3b9f-a56a-489a-897c-577f7b9b80a3_final.wav",
     "mcp-backend/audio_ingest/temp/59d70385-2e4c-4dcf-978c-4e69ed8a51ff_raw.m4a",
     "mcp-backend/audio_ingest/temp/3ac4b6f2-62ae-413b-85b6-4c250221e6ef_final.wav",
-    "mcp-backend/audio_ingest/temp/226b1981-fe67-4f72-9e24-786857d73f52_raw.m4a",
-    "mcp-backend/audio_ingest/temp/f2a9f644-db23-4fc3-b3d8-b7b9ff562b1c_final.wav",
-    "mcp-backend/audio_ingest/temp/02c6223a-6c57-4102-a03b-18c4a6b5a027_raw.m4a",
-    "node_modules/web-worker/src/node/index.js",
     "node_modules/web-worker/README.md",
     "node_modules/socket.io-parser/Readme.md",
     "node_modules/@types/ws/README.md",
@@ -220,7 +225,6 @@
     "node_modules/@supabase/phoenix/LICENSE.md",
     "node_modules/@supabase/functions-js/README.md",
     "node_modules/@supabase/auth-js/README.md",
-    "node_modules/iceberg-js/README.md",
     "dist/assets/horizon_logo.png",
     "node_modules/layout-base/layout-schema.png"
   ]

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+﻿import React, { useState, useEffect, useMemo } from "react";
 import { Capacitor } from "@capacitor/core";
 import { motion, AnimatePresence } from "framer-motion";
 import WidgetGrid from "./WidgetGrid";
@@ -167,7 +167,7 @@ const Dashboard: React.FC = () => {
       className="space-y-16 pb-20 pt-12 relative max-w-[1600px] mx-auto px-6"
     >
       {/* 🌌 Atmospheric Background Elements */}
-      <div className="fixed inset-0 bg-slate-50 dark:bg-slate-950 pointer-events-none -z-20" />
+      <div className="fixed inset-0 bg-[rgb(6,4,12)] pointer-events-none -z-20" />
       <div className="fixed inset-0 bg-carbon opacity-[0.03] dark:opacity-[0.08] pointer-events-none -z-10" />
       <div className="fixed inset-0 bg-grid opacity-[0.05] dark:opacity-[0.1] pointer-events-none -z-10" />
       
@@ -179,7 +179,7 @@ const Dashboard: React.FC = () => {
           y: [0, 30, 0]
         }}
         transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-        className="fixed top-[-10%] right-[-10%] w-[1000px] h-[1000px] bg-blue-600/5 blur-[180px] rounded-full pointer-events-none -z-10" 
+        className="fixed top-[-10%] right-[-10%] w-[1000px] h-[1000px] bg-[#40909C]/5 blur-[180px] rounded-full pointer-events-none -z-10" 
       />
       <motion.div 
         animate={{ 
@@ -195,8 +195,8 @@ const Dashboard: React.FC = () => {
       <motion.div variants={itemVariants} className="flex flex-col 2xl:flex-row justify-between items-start 2xl:items-end gap-16">
         <div className="relative group">
           <div className="flex items-center gap-6 mb-6">
-            <span className="text-[12px] font-black uppercase tracking-[0.5em] text-blue-500 italic flex items-center gap-3">
-              <div className="w-8 h-[2px] bg-blue-500" />
+            <span className="text-[12px] font-black uppercase tracking-[0.5em] text-[#60BAC6] italic flex items-center gap-3">
+              <div className="w-8 h-[2px] bg-[#60BAC6]" />
               Horizon_OS v2.5.0
             </span>
             <div className="flex items-center gap-2 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
@@ -216,7 +216,7 @@ const Dashboard: React.FC = () => {
                 Network
               </motion.span>
             </span>
-            <span className="block text-blue-500 not-italic overflow-hidden">
+            <span className="block text-[#7CD0DA] not-italic overflow-hidden">
               <motion.span 
                 initial={{ y: "100%" }} 
                 animate={{ y: 0 }} 
@@ -229,8 +229,8 @@ const Dashboard: React.FC = () => {
           </h1>
           
           <div className="flex flex-wrap items-center gap-6">
-            <p className="text-slate-500 dark:text-slate-400 text-lg lg:text-xl font-medium leading-relaxed max-w-2xl border-l-[3px] border-blue-500 pl-6 lg:pl-8 py-2">
-              Orchestrating <span className="text-slate-950 dark:text-white font-black italic underline decoration-blue-500/30 decoration-[8px] underline-offset-[12px]">{stats?.totalContacts || 0}</span> high-value strategic relationships. 
+            <p className="text-slate-500 dark:text-slate-400 text-lg lg:text-xl font-medium leading-relaxed max-w-2xl border-l-[3px] border-[#60BAC6] pl-6 lg:pl-8 py-2">
+              Orchestrating <span className="text-slate-950 dark:text-white font-black italic underline decoration-[rgba(96,186,198,0.30)] decoration-[8px] underline-offset-[12px]">{stats?.totalContacts || 0}</span> high-value strategic relationships. 
               <br />
               <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 dark:text-slate-600 mt-4 block">Security Protocol: Level_5_Stealth</span>
             </p>
@@ -243,10 +243,10 @@ const Dashboard: React.FC = () => {
               onClick={() => setIsCommandPaletteOpen(true)}
               whileHover={{ scale: 1.02, y: -2 }}
               whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-4 px-6 lg:px-8 py-4 lg:py-5 rounded-[2rem] bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-slate-200 dark:border-white/5 shadow-2xl-premium transition-all text-slate-500 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:border-blue-500/40 w-full"
+              className="flex items-center gap-4 px-6 lg:px-8 py-4 lg:py-5 rounded-[2rem] bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-slate-200 dark:border-white/5 shadow-2xl-premium transition-all text-slate-500 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:border-[#60BAC6]/40 w-full"
             >
-              <div className="p-2 bg-blue-500/10 rounded-xl border border-blue-500/20">
-                <Search className="w-5 h-5 text-blue-500" />
+              <div className="p-2 bg-[#60BAC6]/10 rounded-xl border border-[#60BAC6]/20">
+                <Search className="w-5 h-5 text-[#60BAC6]" />
               </div>
               <span className="flex-1 text-left italic uppercase tracking-[0.2em] font-black text-xs">Access Global Command...</span>
               <div className="flex items-center gap-2">
@@ -306,7 +306,7 @@ const Dashboard: React.FC = () => {
             <div className="flex justify-between items-start mb-8 lg:mb-10">
               <div className={cn(
                 "p-4 rounded-2xl transition-all duration-1000 transform group-hover:rotate-[360deg] shadow-xl",
-                kpi.color === 'blue' && "bg-blue-600 text-white shadow-blue-600/30",
+                kpi.color === 'blue' && "bg-[#40909C] text-white shadow-[rgba(64,144,156,0.30)]",
                 kpi.color === 'emerald' && "bg-emerald-600 text-white shadow-emerald-600/30",
                 kpi.color === 'amber' && "bg-amber-600 text-white shadow-amber-600/30",
                 kpi.color === 'purple' && "bg-purple-600 text-white shadow-purple-600/30",
@@ -316,7 +316,7 @@ const Dashboard: React.FC = () => {
               <div className="text-right">
                 <span className={cn(
                   "text-[10px] font-black uppercase tracking-[0.4em] italic",
-                  kpi.color === 'blue' ? "text-blue-500" : 
+                  kpi.color === 'blue' ? "text-[#60BAC6]" : 
                   kpi.color === 'emerald' ? "text-emerald-500" :
                   kpi.color === 'amber' ? "text-amber-500" : "text-purple-500"
                 )}>
@@ -328,7 +328,7 @@ const Dashboard: React.FC = () => {
             
             <div className="space-y-1">
               <p className="text-[10px] lg:text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.4em] italic mb-2">{kpi.label}</p>
-              <h3 className="text-5xl lg:text-6xl font-black text-slate-950 dark:text-white tracking-tighter leading-none group-hover:text-blue-500 transition-colors duration-700">
+              <h3 className="text-5xl lg:text-6xl font-black text-slate-950 dark:text-white tracking-tighter leading-none group-hover:text-[#60BAC6] transition-colors duration-700">
                 {kpi.val}
               </h3>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-4 opacity-0 group-hover:opacity-100 transition-all duration-1000 translate-y-2 group-hover:translate-y-0">
@@ -339,7 +339,7 @@ const Dashboard: React.FC = () => {
             {/* Background Accent */}
             <div className={cn(
               "absolute -bottom-10 -right-10 w-40 h-40 opacity-[0.03] group-hover:opacity-[0.08] transition-all duration-1000 group-hover:scale-150 group-hover:rotate-12",
-              kpi.color === 'blue' && "text-blue-500",
+              kpi.color === 'blue' && "text-[#60BAC6]",
               kpi.color === 'emerald' && "text-emerald-500",
               kpi.color === 'amber' && "text-amber-500",
               kpi.color === 'purple' && "text-purple-500",
@@ -354,15 +354,15 @@ const Dashboard: React.FC = () => {
       <motion.div variants={itemVariants} className="space-y-8 lg:space-y-12">
         <div className="flex items-center gap-6 px-4">
             <div className="relative">
-              <div className="absolute inset-0 bg-blue-500 blur-lg opacity-40 animate-pulse" />
-              <div className="h-3 w-3 rounded-full bg-blue-500 relative z-10 shadow-glow border-2 border-white" />
+              <div className="absolute inset-0 bg-[#60BAC6] blur-lg opacity-40 animate-pulse" />
+              <div className="h-3 w-3 rounded-full bg-[#60BAC6] relative z-10 shadow-glow border-2 border-white" />
             </div>
             <h2 className="text-3xl lg:text-4xl font-black italic tracking-tight uppercase text-slate-950 dark:text-white">
-              Autonomous <span className="text-blue-500 not-italic">Sentinel</span>
+              Autonomous <span className="text-[#60BAC6] not-italic">Sentinel</span>
             </h2>
             <div className="h-[2px] flex-1 bg-gradient-to-r from-slate-200 via-slate-100 to-transparent dark:from-slate-800 dark:via-slate-900 dark:to-transparent" />
             <div className="flex items-center gap-3 text-[10px] lg:text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] italic">
-              Active_Bots: <span className="text-blue-500">4</span>
+              Active_Bots: <span className="text-[#60BAC6]">4</span>
             </div>
         </div>
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 lg:gap-10">
@@ -384,11 +384,11 @@ const Dashboard: React.FC = () => {
             <div className="flex items-center justify-between mb-10 relative z-10">
               <div>
                 <div className="flex items-center gap-4 mb-2">
-                  <div className="p-3 rounded-2xl bg-blue-600 text-white shadow-xl shadow-blue-600/30">
+                  <div className="p-3 rounded-2xl bg-[#40909C] text-white shadow-xl shadow-[rgba(64,144,156,0.30)]">
                     <Users size={24} />
                   </div>
                   <h3 className="text-3xl lg:text-4xl font-black tracking-tighter text-slate-950 dark:text-white italic uppercase">
-                    Topology <span className="text-blue-500 not-italic">Engine v1.2</span>
+                    Topology <span className="text-[#60BAC6] not-italic">Engine v1.2</span>
                   </h3>
                 </div>
                 <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[10px] ml-16 lg:ml-20 italic opacity-80">Autonomous mapping of elite network clusters</p>
@@ -440,15 +440,15 @@ const Dashboard: React.FC = () => {
                       )}
                     </div>
                     <div className="flex-1 min-w-0 relative z-10">
-                      <h4 className="font-black text-slate-950 dark:text-white truncate group-hover:text-blue-500 transition-colors text-xl lg:text-2xl tracking-tight uppercase italic leading-tight">
+                      <h4 className="font-black text-slate-950 dark:text-white truncate group-hover:text-[#60BAC6] transition-colors text-xl lg:text-2xl tracking-tight uppercase italic leading-tight">
                         {contact.first_name} <br /> {contact.last_name}
                       </h4>
                       <div className="flex items-center gap-3 mt-3">
-                        <div className="h-[2px] w-8 bg-blue-500/30 rounded-full overflow-hidden">
+                        <div className="h-[2px] w-8 bg-[#60BAC6]/30 rounded-full overflow-hidden">
                           <motion.div 
                             initial={{ width: 0 }}
                             animate={{ width: '100%' }}
-                            className="h-full bg-blue-500 shadow-glow" 
+                            className="h-full bg-[#60BAC6] shadow-glow" 
                           />
                         </div>
                         <p className="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] italic flex items-center gap-2">
@@ -551,7 +551,7 @@ const Dashboard: React.FC = () => {
             "bg-slate-950 dark:bg-black border-slate-800/80"
           )}>
             {/* Pulsing engine core */}
-            <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-blue-600/15 blur-[80px] rounded-full group-hover:bg-blue-600/25 transition-all duration-1000 animate-pulse" />
+            <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-[#40909C]/15 blur-[80px] rounded-full group-hover:bg-[#40909C]/25 transition-all duration-1000 animate-pulse" />
             <div className="absolute bottom-[-10%] left-[-10%] w-[300px] h-[300px] bg-purple-600/10 blur-[80px] rounded-full opacity-60" />
             
             <div className="relative z-10">
@@ -559,11 +559,11 @@ const Dashboard: React.FC = () => {
                 <div>
                   <h3 className="text-3xl lg:text-4xl font-black text-white tracking-tighter flex items-center gap-4 italic uppercase">
                     <Sparkles className="text-amber-400" size={28} />
-                    Strategic <span className="text-blue-500 not-italic">Nudges</span>
+                    Strategic <span className="text-[#60BAC6] not-italic">Nudges</span>
                   </h3>
                   <p className="text-slate-500 font-black text-[9px] uppercase tracking-[0.3em] mt-2 italic opacity-70 ml-12">Engine: Gemini_Ultra_v4</p>
                 </div>
-                <BrainCircuit className="text-blue-500/30 group-hover:text-blue-400 transition-all group-hover:rotate-[45deg] duration-1000 hidden sm:block" size={48} />
+                <BrainCircuit className="text-[#60BAC6]/30 group-hover:text-blue-400 transition-all group-hover:rotate-[45deg] duration-1000 hidden sm:block" size={48} />
               </div>
               <NudgeShelf nudges={nudges ?? []} />
             </div>
@@ -623,7 +623,7 @@ const Dashboard: React.FC = () => {
                   </button>
                 ))}
               {(contacts || []).filter(c => c.is_favorite).length === 0 && (
-                <div className="text-center py-12 px-8 rounded-[2.5rem] bg-slate-50/50 dark:bg-slate-900/30 border-[2px] border-dashed border-slate-200 dark:border-slate-800 transition-all hover:border-blue-500/30 duration-700">
+                <div className="text-center py-12 px-8 rounded-[2.5rem] bg-slate-50/50 dark:bg-slate-900/30 border-[2px] border-dashed border-slate-200 dark:border-slate-800 transition-all hover:border-[#60BAC6]/30 duration-700">
                   <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-6 shadow-inner">
                     <Users className="text-slate-300 dark:text-slate-600" size={32} />
                   </div>

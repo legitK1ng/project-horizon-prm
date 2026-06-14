@@ -11,7 +11,7 @@ python-dotenv
 google-api-python-client
 google-auth
 google-auth-oauthlib
-google-generativeai
+google-genai>=1.16.0
 torch
 faster-whisper
 pyannote.audio

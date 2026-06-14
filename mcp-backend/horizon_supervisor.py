@@ -21,13 +21,13 @@ Usage:
   # 2. Create Basic Task → "Horizon Pipeline Supervisor"
   # 3. Trigger: "At startup"
   # 4. Action: Start a program
-  #    Program: C:\\Users\\owner\\OneDrive\\Desktop\\horizon\\.venv\\Scripts\\python.exe
+  #    Program: C:\\Users\\owner\\Desktop\\horizon\\.venv\\Scripts\\python.exe
   #    Arguments: horizon_supervisor.py
-  #    Start in: C:\\Users\\owner\\OneDrive\\Desktop\\horizon\\mcp-backend
+  #    Start in: C:\\Users\\owner\\Desktop\\horizon\\mcp-backend
   # 5. Check "Run whether user is logged on or not"
 
   # Or use pythonw.exe for invisible background mode:
-  #    Program: C:\\Users\\owner\\OneDrive\\Desktop\\horizon\\.venv\\Scripts\\pythonw.exe
+  #    Program: C:\\Users\\owner\\Desktop\\horizon\\.venv\\Scripts\\pythonw.exe
 """
 
 import subprocess
@@ -40,6 +40,10 @@ from datetime import datetime
 from pathlib import Path
 from urllib.request import urlopen, Request
 from urllib.error import URLError
+
+# PATCH-01 (C6): Skip --reload in production to avoid inotify overhead on Z2G3.
+# Set PRODUCTION=1 in Task Scheduler or start.ps1 when running live.
+_PRODUCTION = os.getenv("PRODUCTION", "").strip().lower() in ("1", "true", "yes")
 
 # ── Configuration ────────────────────────────────────────────────────────────
 PROJECT_ROOT = Path(__file__).parent.parent.resolve()
@@ -110,9 +114,9 @@ class ManagedProcess:
             self.module,
             "--host", "0.0.0.0",
             "--port", str(self.port),
-            "--reload",
-            "--reload-dir", str(BACKEND_DIR),
         ]
+        if not _PRODUCTION:
+            cmd.extend(["--reload", "--reload-dir", str(BACKEND_DIR)])
 
         log_file = LOG_DIR / f"{self.name}.log"
         log.info(f"[{self.name}] Starting: {' '.join(cmd)}")
@@ -231,6 +235,7 @@ def main():
     log.info(f"  Started: {datetime.now().isoformat()}")
     log.info(f"  Backend dir: {BACKEND_DIR}")
     log.info(f"  Python: {VENV_PYTHON if VENV_PYTHON.exists() else sys.executable}")
+    log.info(f"  Mode: {'PRODUCTION' if _PRODUCTION else 'DEVELOPMENT'} | reload: {'disabled' if _PRODUCTION else 'enabled'}")
     log.info("=" * 60)
 
     # Initialize managed processes
