@@ -167,7 +167,7 @@ const Dashboard: React.FC = () => {
       className="space-y-16 pb-20 pt-12 relative max-w-[1600px] mx-auto px-6"
     >
       {/* 🌌 Atmospheric Background Elements */}
-      <div className="fixed inset-0 bg-[rgb(6,4,12)] pointer-events-none -z-20" />
+      {/* Sunset sky bleeds through — no opaque overlay */}
       <div className="fixed inset-0 bg-carbon opacity-[0.03] dark:opacity-[0.08] pointer-events-none -z-10" />
       <div className="fixed inset-0 bg-grid opacity-[0.05] dark:opacity-[0.1] pointer-events-none -z-10" />
       

@@ -14,53 +14,60 @@ export default {
         data:    ['JetBrains Mono', 'monospace'],
       },
       colors: {
-        // ── Futuristic Command Center Palette ────────────────────────
+        // ── Dusk Horizon Palette ──────────────────────────────────────
         hz: {
-          bg:          '#12161A',   // deep charcoal void
-          surface:     '#161B21',   // raised surface
-          panel:       '#1A2028',   // glass panel base
-          overlay:     '#1E2530',   // modal/dropdown
-          // Electric Cyan — primary HUD accent
-          cyan:        '#00F0FF',
-          'cyan-soft': '#50F5FF',
-          'cyan-dim':  '#00B4C8',
-          // Coral/Pink — alert and danger only
-          coral:       '#E07A5F',
-          pink:        '#D4A5B8',
-          'pink-dim':  '#A86A8C',
-          // Warm Amber — secondary accent
+          bg:          '#05040E',   // near-black glass base
+          surface:     '#080614',   // raised surface
+          panel:       '#0A0818',   // glass panel base
+          overlay:     '#0E0C20',   // modal/dropdown
+          // Sunset Rose — primary accent
+          rose:        '#C6586E',
+          'rose-soft': '#DE8294',
+          'rose-dim':  '#9A3A4E',
+          // Professional Teal — secondary precision accent
+          teal:        '#64C0CC',
+          'teal-soft': '#82D2DA',
+          'teal-dim':  '#44949E',
+          // Backward-compat aliases
+          cyan:        '#64C0CC',   // remapped: was electric, now soft teal
+          'cyan-soft': '#82D2DA',
+          'cyan-dim':  '#44949E',
+          coral:       '#C6586E',
+          pink:        '#DE8294',
+          'pink-dim':  '#9A3A4E',
+          // Warm Amber — horizon glow
           gold:        '#D4A460',
           'gold-dim':  '#A88040',
           // Semantic
           success:     '#6CAC82',
           warn:        '#D4A460',
-          danger:      '#E07A5F',
-          info:        '#00F0FF',
-          // Text
-          text:        '#F0F5F8',
-          'text-sec':  '#8291A0',
-          muted:       '#465564',
+          danger:      '#D85858',
+          info:        '#64C0CC',
+          // Text — warm cream
+          text:        '#EEE8DE',
+          'text-sec':  '#948A7C',
+          muted:       '#60584C',
         },
         // ── Backward-compatible syn.* aliases ────────────────────────
         syn: {
-          bg:          '#12161A',
-          surface:     '#161B21',
-          panel:       '#1A2028',
-          overlay:     '#1E2530',
+          bg:          '#05040E',
+          surface:     '#080614',
+          panel:       '#0A0818',
+          overlay:     '#0E0C20',
           border:      'rgba(255,255,255,0.07)',
-          cyan:        '#00F0FF',   // electric cyan — primary
-          'cyan-dim':  '#00B4C8',  // cyan deep
-          pink:        '#D4A5B8',  // soft pink — alert only
-          'pink-dim':  '#A86A8C',  // rose deep
-          purple:      '#9478DC',  // electric indigo
-          gold:        '#D4A460',  // warm amber
-          orange:      '#E07A5F',  // coral
-          green:       '#6CAC82',  // sage green
-          red:         '#E07A5F',  // coral-red
-          amber:       '#D4A460',  // amber
-          text:        '#F0F5F8',  // cool near-white
-          'text-sec':  '#8291A0',  // blue-gray secondary
-          muted:       '#465564',  // cool muted
+          cyan:        '#64C0CC',   // remapped to soft teal
+          'cyan-dim':  '#44949E',
+          pink:        '#DE8294',
+          'pink-dim':  '#9A3A4E',
+          purple:      '#9478DC',
+          gold:        '#D4A460',
+          orange:      '#C6586E',
+          green:       '#6CAC82',
+          red:         '#D85858',
+          amber:       '#D4A460',
+          text:        '#EEE8DE',   // warm cream
+          'text-sec':  '#948A7C',
+          muted:       '#60584C',
         },
         // ── Legacy horizon.* ─────────────────────────────────────────
         horizon: {
@@ -81,12 +88,12 @@ export default {
         'md':          'var(--shadow-md)',
         'lg':          'var(--shadow-lg)',
         'xl':          'var(--shadow-xl)',
-        'glow':        '0 4px 24px rgba(0,240,255,0.18)',
-        'glow-cyan':   '0 4px 24px rgba(0,240,255,0.22)',
-        'glow-pink':   '0 4px 24px rgba(224,122,95,0.20)',
+        'glow':        '0 4px 24px rgba(100,192,204,0.18)',
+        'glow-cyan':   '0 4px 24px rgba(100,192,204,0.22)',
+        'glow-pink':   '0 4px 24px rgba(198,88,110,0.20)',
         'glow-purple': '0 4px 24px rgba(148,120,220,0.16)',
         'panel':       '0 0 0 1px rgba(255,255,255,0.07), 0 4px 32px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.06)',
-        'panel-pink':  '0 0 0 1px rgba(0,240,255,0.10), 0 4px 32px rgba(0,0,0,0.65), inset 0 1px 0 rgba(0,240,255,0.05)',
+        'panel-pink':  '0 0 0 1px rgba(198,88,110,0.10), 0 4px 32px rgba(0,0,0,0.65), inset 0 1px 0 rgba(198,88,110,0.05)',
         'glass':       'inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 32px rgba(0,0,0,0.60)',
         'xl-premium':  '0 20px 60px rgba(0,0,0,0.72), 0 0 1px rgba(255,255,255,0.08)',
       },
