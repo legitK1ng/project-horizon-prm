@@ -9,7 +9,7 @@ Responsibilities:
   2. Start and monitor the main API server (port 8000)
   3. Health-check both servers on a 30-second loop
   4. Auto-restart crashed processes with exponential backoff
-  5. Ensure Tailscale funnel is active (port 9000)
+  5. Ensure Tailscale funnel is active (port 9000 → ingest, port 8000 → API via :8443)
   6. Log everything for diagnostics
 
 Usage:
@@ -68,7 +68,9 @@ SERVERS = {
 HEALTH_CHECK_INTERVAL = 30       # seconds between health checks
 MAX_RESTART_BACKOFF = 300        # max 5 min between restart attempts
 HEALTH_CHECK_TIMEOUT = 10        # seconds to wait for health response
-TAILSCALE_FUNNEL_PORT = 9000     # port to funnel via Tailscale
+TAILSCALE_FUNNEL_PORT = 9000     # ingest server — funneled on HTTPS :443
+TAILSCALE_API_FUNNEL_PORT = 8443 # dashboard API (port 8000) — funneled on HTTPS :8443
+TAILSCALE_DEV_FUNNEL_PORT = 10000 # Vite dev server (port 3000) — funneled on HTTPS :10000
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 LOG_DIR = BACKEND_DIR / "logs"
@@ -197,34 +199,84 @@ class ManagedProcess:
 # ── Tailscale Funnel ─────────────────────────────────────────────────────────
 
 def ensure_tailscale_funnel():
-    """Ensure Tailscale funnel is active for the ingestion server port."""
+    """Ensure Tailscale funnels are active for all three servers.
+
+    Funnel map:
+      https://<host>/         → port 9000 (ingestion / ACR Phone webhooks)
+      https://<host>:8443/    → port 8000 (dashboard API / mobile APK)
+      https://<host>:10000/   → port 3000 (Vite dev server / APK live reload)
+    """
+    ingest_ok = False
+    api_ok = False
+    dev_ok = False
+
     try:
         result = subprocess.run(
             ["tailscale", "funnel", "status"],
             capture_output=True, text=True, timeout=10,
         )
-        if str(TAILSCALE_FUNNEL_PORT) in result.stdout:
-            log.info(f"[TAILSCALE] Funnel already active on port {TAILSCALE_FUNNEL_PORT}")
+        status = result.stdout
+        ingest_ok = "9000" in status or ":443" in status
+        api_ok = "8443" in status
+        dev_ok = "10000" in status
+
+        if ingest_ok and api_ok and dev_ok:
+            log.info("[TAILSCALE] All funnels active (:443→9000, :8443→8000, :10000→3000)")
             return True
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
 
-    try:
-        log.info(f"[TAILSCALE] Setting up funnel on port {TAILSCALE_FUNNEL_PORT}...")
-        subprocess.Popen(
-            ["tailscale", "funnel", str(TAILSCALE_FUNNEL_PORT)],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
-        )
-        log.info("[TAILSCALE] Funnel command issued.")
-        return True
-    except FileNotFoundError:
-        log.warning("[TAILSCALE] tailscale CLI not found. Funnel must be set up manually.")
-        return False
-    except Exception as e:
-        log.error(f"[TAILSCALE] Funnel setup failed: {e}")
-        return False
+    creationflags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+
+    # Ingestion funnel (port 9000 → HTTPS :443)
+    if not ingest_ok:
+        try:
+            log.info("[TAILSCALE] Setting up ingestion funnel (9000 → :443)...")
+            subprocess.Popen(
+                ["tailscale", "funnel", "--bg", str(TAILSCALE_FUNNEL_PORT)],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                creationflags=creationflags,
+            )
+        except FileNotFoundError:
+            log.warning("[TAILSCALE] tailscale CLI not found. Funnels must be set up manually.")
+            return False
+        except Exception as e:
+            log.error(f"[TAILSCALE] Ingestion funnel setup failed: {e}")
+
+    # API funnel (port 8000 → HTTPS :8443, for mobile APK)
+    if not api_ok:
+        try:
+            log.info("[TAILSCALE] Setting up API funnel (8000 → :8443)...")
+            subprocess.Popen(
+                ["tailscale", "funnel", "--bg", f"--https={TAILSCALE_API_FUNNEL_PORT}",
+                 "http://localhost:8000"],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                creationflags=creationflags,
+            )
+            log.info("[TAILSCALE] API funnel command issued.")
+        except Exception as e:
+            log.error(f"[TAILSCALE] API funnel setup failed: {e}")
+
+    # Dev server funnel (port 3000 → HTTPS :10000, for APK live reload)
+    if not dev_ok:
+        try:
+            log.info("[TAILSCALE] Setting up dev server funnel (3000 → :10000)...")
+            subprocess.Popen(
+                ["tailscale", "funnel", "--bg", f"--https={TAILSCALE_DEV_FUNNEL_PORT}",
+                 "http://localhost:3000"],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                creationflags=creationflags,
+            )
+            log.info("[TAILSCALE] Dev server funnel command issued.")
+            log.info(
+                "[TAILSCALE] APK live reload URL: "
+                "https://hp-z2g3-mini-workstation.tailb79f25.ts.net:10000 "
+                "— set HORIZON_LIVE_URL to this value, then: npx cap sync android"
+            )
+        except Exception as e:
+            log.error(f"[TAILSCALE] Dev server funnel setup failed: {e}")
+
+    return True
 
 
 # ── Main Supervisor Loop ─────────────────────────────────────────────────────

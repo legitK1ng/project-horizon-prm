@@ -1,5 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { api } from '@/services/apiClient';
+
+// Mirror the same base-URL logic as apiClient.ts so WiFi ingest works in both
+// dev (Vite proxy) and production (direct backend URL) modes.
+const API_BASE = Capacitor.isNativePlatform()
+  ? (import.meta.env.VITE_BACKEND_URL_MOBILE || 'https://hp-z2g3-mini-workstation.tailb79f25.ts.net:8443')
+  : (import.meta.env.VITE_BACKEND_URL        || 'http://localhost:8000');
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface LogEntry {
@@ -48,8 +55,7 @@ const runWifiSync = async (
   log(`Connecting to ACR WiFi server at ${url}…`);
 
   try {
-    // Real backend call — POST to batch-ingest which handles WiFi source
-    const res = await fetch(`/api/v1/batch-ingest`, {
+    const res = await fetch(`${API_BASE}/api/v1/batch-ingest`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ source: 'wifi', url }),
@@ -57,30 +63,70 @@ const runWifiSync = async (
 
     onPhase('reconcile');
     if (!res.ok) {
-      // If backend isn't running (dev mode), show a helpful message
-      log(`Backend unreachable (${res.status}) — check that the API server is running`, 'error');
+      let detail = `HTTP ${res.status}`;
+      try {
+        const errJson = await res.json();
+        detail = errJson.detail || detail;
+      } catch { /* ignore */ }
+      if (res.status === 502 || res.status === 0) {
+        log(`Cannot reach ACR WiFi server — is the phone's WiFi Transfer active? (${detail})`, 'error');
+      } else if (res.status === 503) {
+        log(`Database unavailable — check Supabase connection (${detail})`, 'error');
+      } else if (res.status === 404 || res.status === 422) {
+        log(`Backend API error (${detail}) — ensure the API server is running`, 'error');
+      } else {
+        log(`Sync failed (${detail})`, 'error');
+      }
       onPhase('error');
       return;
     }
 
     const data = await res.json();
     onPhase('download');
-    log(`${data.found ?? 0} recordings found on device`, 'accent');
-    log(`${data.skipped ?? 0} already ingested — skipping`, 'muted');
-    log(`${data.downloaded ?? 0} new recordings queued`, 'accent');
+    const found      = data.found      ?? 0;
+    const skipped    = data.skipped    ?? 0;
+    const downloaded = data.downloaded ?? 0;
+    const transcribed = data.transcribed ?? 0;
+    const errors     = data.errors     ?? 0;
+
+    if (found === 0) {
+      log('No recordings detected on device — verify the ACR WiFi Transfer server is active and serving files', 'error');
+      onPhase('error');
+      return;
+    }
+
+    log(`${found} recordings found on device`, 'accent');
+    if (skipped > 0) log(`${skipped} already archived — skipped`, 'muted');
+    log(`${downloaded} new recordings downloaded & archived`, downloaded > 0 ? 'accent' : 'muted');
 
     onPhase('transcribe');
-    log('Dispatching to transcription pipeline…');
-    log('Frontend subscriptions notified via Realtime', 'success');
+    if (transcribed > 0) {
+      log(`${transcribed} recordings transcribed (Whisper + AI brief)`, 'success');
+    } else if (downloaded > 0) {
+      log(
+        `Transcription running in background for ${downloaded} file${downloaded !== 1 ? 's' : ''} — ` +
+        `results will appear in the dashboard as they complete`,
+        'info'
+      );
+    }
+
+    if (errors > 0) {
+      log(`${errors} download error${errors !== 1 ? 's' : ''} — check backend logs`, 'error');
+    }
 
     onPhase('done');
-    onResult({
-      found: data.found ?? 0,
-      downloaded: data.downloaded ?? 0,
-      skipped: data.skipped ?? 0,
-    });
-  } catch {
-    log('Connection failed — ensure backend is running and URL is reachable', 'error');
+    const totalMsg = downloaded > 0
+      ? `Sync complete — ${downloaded} new recording${downloaded !== 1 ? 's' : ''} saved. Transcription processing in background.`
+      : `Sync complete. All ${found} recordings already up to date.`;
+    log(totalMsg, 'success');
+    onResult({ found, downloaded, skipped });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes('fetch') || msg.includes('network') || msg.includes('Failed')) {
+      log('Network error — ensure the backend API server is running (port 8000)', 'error');
+    } else {
+      log(`Sync failed: ${msg}`, 'error');
+    }
     onPhase('error');
   }
 };
@@ -97,7 +143,7 @@ const runFolderScan = async (
   log(`Scanning ${folderPath}…`);
 
   try {
-    const res = await fetch(`/api/v1/batch-ingest`, {
+    const res = await fetch(`${API_BASE}/api/v1/batch-ingest`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ source: 'folder', path: folderPath }),
@@ -110,11 +156,11 @@ const runFolderScan = async (
 
     const data = await res.json();
     log(`Found ${data.found ?? 0} audio files`);
-    log(`${data.skipped ?? 0} already ingested — skipping`, 'muted');
-    log(`${data.queued ?? 0} new files queued for transcription`, 'accent');
+    if ((data.skipped ?? 0) > 0) log(`${data.skipped} already ingested — skipping`, 'muted');
+    log(`${data.downloaded ?? 0} new files queued for transcription`, 'accent');
     log('Pipeline dispatched', 'success');
 
-    onStatus({ time: new Date(), queued: data.queued ?? 0 });
+    onStatus({ time: new Date(), queued: data.downloaded ?? 0 });
   } catch {
     log('Folder scan failed — check that the backend is running', 'error');
   }

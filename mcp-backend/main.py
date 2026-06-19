@@ -96,12 +96,16 @@ CORS_ORIGINS = [
     "http://localhost",
     "capacitor://localhost",
     "https://localhost",
+    # Tailscale Funnel — APK live reload + direct API calls from mobile
+    "https://hp-z2g3-mini-workstation.tailb79f25.ts.net",
+    "https://hp-z2g3-mini-workstation.tailb79f25.ts.net:8443",
+    "https://hp-z2g3-mini-workstation.tailb79f25.ts.net:10000",
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
-    allow_origin_regex=r"https?://localhost(:\d+)?",
+    allow_origin_regex=r"(https?://localhost(:\d+)?)|(https://[a-z0-9-]+\.tailb79f25\.ts\.net(:\d+)?)",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
