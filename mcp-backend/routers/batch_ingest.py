@@ -63,7 +63,9 @@ async def trigger_batch_ingest(body: BatchIngestRequest, req: Request):
         logger.info(f"[BATCH-WIFI] Starting WiFi ingest from {body.url}")
         try:
             from services.acr_wifi_service import wifi_batch_ingest
-            stats = wifi_batch_ingest(body.url, db)
+            import asyncio
+            loop = asyncio.get_event_loop()
+            stats = await loop.run_in_executor(None, lambda: wifi_batch_ingest(body.url, db))
         except ConnectionError as e:
             raise HTTPException(status_code=502, detail=str(e))
         except Exception as e:
