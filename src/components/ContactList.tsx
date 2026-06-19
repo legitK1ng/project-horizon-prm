@@ -14,10 +14,6 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
-interface ContactListProps {
-    // No props needed as we use the hook directly
-}
-
 type SortOption = 'alpha' | 'recent' | 'stats';
 
 const itemVariants = {
@@ -30,10 +26,10 @@ const itemVariants = {
     },
 };
 
-const ContactList: React.FC<ContactListProps> = () => {
+const ContactList: React.FC = () => {
     const rawContacts = useLiveQuery(() => db.contacts.toArray());
     const contactsLoading = rawContacts === undefined;
-    const contacts = rawContacts || [];
+    const contacts = useMemo(() => rawContacts || [], [rawContacts]);
     
     const { data: calls = [] } = useCalls();
     const { mutate: toggleFavorite } = useToggleFavorite();
@@ -82,7 +78,7 @@ const ContactList: React.FC<ContactListProps> = () => {
     };
 
     const filteredAndSortedContacts = useMemo(() => {
-        let result = contacts.filter(contact => {
+        const result = contacts.filter(contact => {
             const fullName = `${contact.first_name} ${contact.last_name || ''}`.toLowerCase();
             const searchLower = searchTerm.toLowerCase();
             return fullName.includes(searchLower) || (contact.phone && contact.phone.includes(searchTerm));
@@ -90,10 +86,11 @@ const ContactList: React.FC<ContactListProps> = () => {
 
         return result.sort((a, b) => {
             switch (sortBy) {
-                case 'alpha':
+                case 'alpha': {
                     const nameA = `${a.first_name} ${a.last_name || ''}`;
                     const nameB = `${b.first_name} ${b.last_name || ''}`;
                     return nameA.localeCompare(nameB);
+                }
                 case 'recent':
                     return new Date(b.last_contact_at || 0).getTime() - new Date(a.last_contact_at || 0).getTime();
                 case 'stats':

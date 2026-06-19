@@ -68,7 +68,7 @@ export const getInitials = (name: string): string => {
 export const cleanTranscript = (raw: string): string => {
   try {
     return decodeURIComponent(raw.replace(/\+/g, ' ')).trim();
-  } catch (e) {
+  } catch {
     // If decoding fails, assume it's already plain text
     return raw.trim();
   }

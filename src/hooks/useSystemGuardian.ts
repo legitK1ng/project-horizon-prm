@@ -35,8 +35,8 @@ export const useSystemGuardian = () => {
 
     // Calculate localStorage usage (rough estimate)
     let total = 0;
-    for (let x in localStorage) {
-      if (localStorage.hasOwnProperty(x)) {
+    for (const x in localStorage) {
+      if (Object.prototype.hasOwnProperty.call(localStorage, x)) {
         total += ((localStorage[x].length + x.length) * 2);
       }
     }

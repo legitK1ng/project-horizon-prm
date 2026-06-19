@@ -219,6 +219,7 @@ const FloatingChat: React.FC = () => {
       const initY = window.innerHeight - chatHeight - 24;
       setChatPosition({ x: Math.max(0, initX), y: Math.max(0, initY) });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

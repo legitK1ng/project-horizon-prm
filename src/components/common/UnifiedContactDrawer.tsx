@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     X, Mail, Phone, Building, User, Clock, FileText, ChevronRight,
     Shield, Activity, Globe, Linkedin, Twitter, ExternalLink,
@@ -29,10 +29,10 @@ const UnifiedContactDrawer: React.FC<UnifiedContactDrawerProps> = ({
 }) => {
     const [activeTab, setActiveTab] = useState<Tab>('overview');
 
-    const handleClose = () => {
+    const handleClose = useCallback(() => {
         triggerHaptic('LIGHT');
         onClose();
-    };
+    }, [onClose]);
 
     const handleTabChange = (tab: Tab) => {
         if (tab !== activeTab) {

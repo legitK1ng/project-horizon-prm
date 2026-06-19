@@ -58,7 +58,7 @@ const IntelligenceWorkbench: React.FC = () => {
       addTelemetry("SUCCESS: INTELLIGENCE SYNTHESIZED");
       toast.success("Intelligence Briefing Generated!");
       (e.target as HTMLFormElement).reset();
-    } catch (error) {
+    } catch {
       addTelemetry("CRITICAL ERROR: UPLINK FAILED");
       toast.error("Analysis Failed. Check the backend.");
     } finally {

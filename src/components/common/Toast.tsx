@@ -13,6 +13,7 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue>({ toast: () => { } });
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useToast = () => useContext(ToastContext);
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

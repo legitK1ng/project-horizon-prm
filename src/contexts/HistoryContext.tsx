@@ -179,6 +179,7 @@ export const HistoryProvider: React.FC<{ children: ReactNode }> = ({ children })
   return <HistoryContext.Provider value={value}>{children}</HistoryContext.Provider>;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useHistory = (): HistoryContextValue => {
   const context = useContext(HistoryContext);
 

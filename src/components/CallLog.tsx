@@ -193,7 +193,7 @@ const CallLog: React.FC<CallLogProps> = ({ activeTag, onContactClick }) => {
                     const yesterday = new Date();
                     yesterday.setDate(today.getDate() - 1);
 
-                    let label = date.toLocaleDateString();
+                    let label: string;
                     if (date.toDateString() === today.toDateString()) {
                         label = 'Today';
                     } else if (date.toDateString() === yesterday.toDateString()) {

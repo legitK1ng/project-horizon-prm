@@ -21,7 +21,7 @@ const NudgeShelf: React.FC<NudgeShelfProps> = ({ nudges }) => {
     try {
       await refreshHealth.mutateAsync(contactId);
       toast.success("Health score recalculated");
-    } catch (error) {
+    } catch {
       toast.error("Failed to refresh score");
     }
   };
