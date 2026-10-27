@@ -6,11 +6,17 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "type-check": "tsc --noEmit",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css,md}\""
+    "type-check": "cross-env NODE_OPTIONS=\"--max-old-space-size=4096\" tsc --noEmit",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css,md}\"",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:backend": "cd mcp-backend && python -m pytest tests/ -v",
+    "security:audit": "npm audit --production",
+    "security:fix": "npm audit fix"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.1",
@@ -52,8 +58,8 @@
     "zustand": "^4.5.7"
   },
   "devDependencies": {
-    "@google/clasp": "^3.2.0",
     "@eslint/js": "^10.0.1",
+    "@google/clasp": "^3.3.0",
     "@playwright/test": "^1.58.2",
     "@types/aria-query": "^5.0.4",
     "@types/node": "^22.19.11",
@@ -63,6 +69,7 @@
     "@typescript-eslint/parser": "^8.0.0",
     "@vitejs/plugin-react": "^4.3.0",
     "autoprefixer": "^10.4.20",
+    "cross-env": "^10.1.0",
     "cssstyle": "^6.0.1",
     "data-urls": "^7.0.0",
     "decimal.js": "^10.6.0",

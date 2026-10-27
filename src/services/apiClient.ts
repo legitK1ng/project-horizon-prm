@@ -125,7 +125,7 @@ class ApiClient {
       method: 'POST',
       body: formData,
       headers: {
-        'X-ACR-Secret': 'horizon-secret-handshake',
+        'X-ACR-Secret': import.meta.env.VITE_ACR_SECRET || 'horizon-secret-handshake',
       },
     });
     if (!res.ok) {
@@ -290,6 +290,24 @@ class ApiClient {
     await this.request(`/api/v1/actions/projects/${id}`, { method: 'DELETE' });
   }
 
+  // --- OLLAMA / kimi-k2:1t-cloud (Item 5) ---
+  // Cloud-hosted via Ollama daemon — no local VRAM needed.
+
+  async ollamaGenerate(prompt: string, model = 'minimax-m2.7:cloud'): Promise<{ response: string }> {
+    return this.request('/api/v1/ollama/generate', {
+      method: 'POST',
+      body: JSON.stringify({ prompt, model }),
+    });
+  }
+
+  async ollamaModels(): Promise<{ models: string[]; default_model: string }> {
+    return this.request('/api/v1/ollama/models');
+  }
+
+  async ollamaHealth(): Promise<{ status: string; version?: string; model?: string }> {
+    return this.request('/api/v1/ollama/health');
+  }
+
   // --- AI / GEMINI ---
 
   async processTranscript(transcript: string, contactName = 'Unknown'): Promise<any> {
@@ -333,6 +351,20 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify({ user_id: userId, access_token: accessToken }),
     });
+  }
+
+  // --- ACR PORTAL SYNC ---
+
+  async startPortalSync(): Promise<{ sync_id: string; status: string }> {
+    return this.request('/api/v1/portal-sync/start', { method: 'POST' });
+  }
+
+  async getPortalSyncHistory(): Promise<any[]> {
+    return this.request('/api/v1/portal-sync/status');
+  }
+
+  async getPortalSyncStatus(): Promise<{ is_running: boolean; portal_url: string }> {
+    return this.request('/api/v1/portal-sync/current');
   }
 }
 

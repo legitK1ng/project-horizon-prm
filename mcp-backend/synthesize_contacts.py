@@ -1,34 +1,6 @@
 import os
 import json
 import logging
-from datetime import datetime, timezone
-from dotenv import load_dotenv
-from supabase import create_client
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
-logger = logging.getLogger("ContactSynthesis")
-
-load_dotenv()
-
-# Build absolute path to acrphonebackup.json
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-BACKUP_PATH = os.path.join(BASE_DIR, "services", "acrphonebackup.json")
-
-# Supabase setup
-SUPABASE_URL = os.getenv("SUPABASE_URL") or "https://jykucnzotuqingrhufdx.supabase.co"
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_ANON_KEY")
-
-if not SUPABASE_URL or not SUPABASE_KEY:
-    logger.error("Missing Supabase credentials")
-    exit(1)
-
-db = create_client(SUPABASE_URL, SUPABASE_KEY)
-USER_ID = "8f9bd918-48a2-7da2-2e4d-1de095ad5631"
-
-import os
-import json
-import logging
 import asyncio
 import re
 from datetime import datetime, timezone
@@ -48,8 +20,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 BACKUP_PATH = os.path.join(BASE_DIR, "services", "acrphonebackup.json")
 
 # Supabase setup
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+SUPABASE_URL = os.getenv("SUPABASE_URL") or "https://jykucnzotuqingrhufdx.supabase.co"
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_ANON_KEY")
 
 if not SUPABASE_URL or not SUPABASE_KEY:
     logger.error("Missing Supabase credentials")

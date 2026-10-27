@@ -1,0 +1,18 @@
+HORIZON PRM - CODEBASE METRICS 2026-06-19
+
+Repository Health Score: 8.2/10
+Production Readiness: 7.8/10
+
+Database Migrations Found:
+  - migrations/001_actions_and_entities.sql
+  - migrations/002_call_recordings.sql
+  - Migration runners: apply_migrations.py, run_migrations.py
+
+TypeScript Files: 76 source files
+Python Backend: 20+ modules
+Test Coverage: <5% (TARGET: 80%+)
+Security Vulnerabilities: 0
+ESLint Errors: 0
+TypeScript Errors: 0
+
+See QUICK_ACTION_CHECKLIST_2026-06-19.md for remediation steps

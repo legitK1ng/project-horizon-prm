@@ -265,7 +265,10 @@ Respond with ONLY a JSON object:
             if audio_path and _WHISPER_AVAILABLE and os.path.exists(audio_path):
                 # Re-run transcription via TranscriptionManager (PATCH-05: no longer imports from router)
                 try:
-                    transcript, segments, lang, duration = TranscriptionManager().run_transcription(audio_path)
+                    loop = asyncio.get_running_loop()
+                    transcript, segments, lang, duration = await loop.run_in_executor(
+                        None, TranscriptionManager().run_transcription, audio_path
+                    )
 
                     if transcript and len(transcript.strip()) > 0:
                         # Generate brief if we have enough text
@@ -273,7 +276,9 @@ Respond with ONLY a JSON object:
                         if len(transcript) > 50:
                             try:
                                 from services.ai_briefing_service import generate_call_brief
-                                executive_brief = generate_call_brief(transcript, contact)
+                                executive_brief = await loop.run_in_executor(
+                                    None, generate_call_brief, transcript, contact
+                                )
                             except Exception:
                                 pass
 

@@ -27,24 +27,21 @@ class WebNativeService {
    * On web, this will return the mock context defined in web.ts.
    */
   public async getNativeContext(): Promise<NativeContext> {
+    // HARVEST (additive): port Eclipse's more-robust guard — only call the
+    // native plugin when it is actually registered, otherwise fall back
+    // cleanly. Avoids attempting an undefined-plugin call on web/Nexus.
+    if (!Capacitor.isPluginAvailable('CapacitorHorizon')) {
+      console.warn('[WebNative] CapacitorHorizon plugin not detected. Running with Web Fallback.');
+      return this.getWebFallbackContext();
+    }
+
     try {
       const response = await CapacitorHorizon.getNativeContext();
       return response.context;
     } catch (error) {
       console.error('Failed to get native context from WebNative extension:', error);
       // Fallback if plugin fails to load
-      return {
-        deviceInfo: {
-          model: 'Unknown Browser',
-          platform: 'web',
-          osVersion: 'Unknown',
-        },
-        permissions: {
-          contacts: 'denied',
-          calls: 'denied',
-        },
-        isBatteryOptimized: false,
-      };
+      return this.getWebFallbackContext();
     }
   }
 
@@ -52,6 +49,12 @@ class WebNativeService {
    * Tests the native bridge connection.
    */
   public async ping(message: string = 'Ping from Web'): Promise<string> {
+    // HARVEST (additive): port Eclipse's guard so web/non-native environments
+    // return a clean mock instead of attempting an unregistered plugin call.
+    if (!Capacitor.isPluginAvailable('CapacitorHorizon')) {
+      return 'Mock Ping: Success (Web)';
+    }
+
     try {
       const response = await CapacitorHorizon.echo({ value: message });
       return response.value;
@@ -59,6 +62,27 @@ class WebNativeService {
       console.error('WebNative ping failed:', error);
       return 'Failed';
     }
+  }
+
+  /**
+   * HARVEST (additive): Eclipse's centralized fallback for non-native
+   * environments or when the CapacitorHorizon plugin is missing/unavailable.
+   * Centralizing keeps both getNativeContext() and ping() returning a single
+   * consistent Web fallback shape.
+   */
+  private getWebFallbackContext(): NativeContext {
+    return {
+      deviceInfo: {
+        model: 'Web Browser / Nexus',
+        platform: 'web',
+        osVersion: 'N/A',
+      },
+      permissions: {
+        contacts: 'denied',
+        calls: 'denied',
+      },
+      isBatteryOptimized: false,
+    };
   }
 }
 

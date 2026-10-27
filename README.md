@@ -128,7 +128,7 @@ GOOGLE_API_KEY=<gemini-api-key>
 HORIZON_API_KEY=hzn_<any-strong-random-string>
 ```
 
-See `setup.md` for the full variable reference.
+See `docs/setup.md` for the full variable reference.
 
 ### 4. Database migrations
 

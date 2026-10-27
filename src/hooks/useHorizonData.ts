@@ -45,7 +45,7 @@ export const useContacts = () => {
   return useQuery<Contact[]>({
     queryKey: queryKeys.contacts.list(),
     queryFn: async () => {
-      const data = await api.getAllContacts();
+      const data = await api.getAllContacts().catch(() => []);
       useDataStore.getState().setContacts(data);
       return data;
     },
@@ -92,7 +92,13 @@ export const useNudges = () => {
 export const useStats = () => {
   return useQuery<DashboardStats>({
     queryKey: queryKeys.stats.all,
-    queryFn: () => api.getStats(),
+    queryFn: () =>
+      api.getStats().catch(() => ({
+        totalContacts: 0,
+        callsThisWeek: 0,
+        avgHealth: 0,
+        needsAttention: 0,
+      })),
     staleTime: 1000 * 60 * 5, // Stats change moderately — 5 min cache
   });
 };
@@ -145,6 +151,7 @@ export const useUpdateCall = () => {
     mutationFn: ({ id, data }: { id: string; data: any }) => api.updateCall(id, data),
     onSuccess: (updatedCall) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.calls.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.stats.all });
       if (updatedCall.contact_id) {
         queryClient.invalidateQueries({ queryKey: queryKeys.contacts.detail(updatedCall.contact_id) });
       }

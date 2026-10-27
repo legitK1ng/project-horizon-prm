@@ -14,5 +14,6 @@ export default defineConfig({
         globals: true,
         environment: 'jsdom',
         setupFiles: './src/utils/testUtils.ts',
+        exclude: ['**/node_modules/**', '**/dist/**', 'tests/**/*.spec.ts'], // Exclude Playwright tests
     },
 });

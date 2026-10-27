@@ -22,6 +22,7 @@ interface Link extends d3.SimulationLinkDatum<Node> {
 
 const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ contacts }) => {
   const svgRef = useRef<SVGSVGElement>(null);
+  const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
 
   useEffect(() => {
     if (!svgRef.current || !contacts || contacts.length === 0) return;
@@ -66,6 +67,16 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ contacts }) => {
     linkGradient.append("stop").attr("offset", "0%").attr("stop-color", "#3b82f6").attr("stop-opacity", 0.2);
     linkGradient.append("stop").attr("offset", "100%").attr("stop-color", "#10b981").attr("stop-opacity", 0.2);
 
+    // Zoom container & attached zoom behavior (Rescue Bug #6)
+    const g = svg.append("g");
+    const zoom = d3.zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.3, 4])
+      .on("zoom", (event) => {
+        g.attr("transform", event.transform);
+      });
+    zoomRef.current = zoom;
+    svg.call(zoom);
+
     // Limit to top 75 contacts by call count to keep the force simulation performant
     const topContacts = [...contacts]
       .sort((a, b) => ((b as any).total_calls || 0) - ((a as any).total_calls || 0))
@@ -74,13 +85,13 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ contacts }) => {
     // REQ-028: Construct nodes from contacts and their organizations
     const nodes: Node[] = topContacts.map(c => ({
       id: c.id,
-      name: `${c.first_name} ${c.last_name}`,
+      name: `${c.first_name} ${c.last_name ?? ""}`.trim(),
       type: "contact",
       group: 1
     }));
 
     // Add unique organizations as nodes (only from the sampled contacts)
-    const orgs = [...new Set(topContacts.map(c => c.org).filter(Boolean))];
+    const orgs = [...new Set(topContacts.map(c => c.org || c.organization).filter(Boolean))];
     orgs.forEach(org => {
       nodes.push({
         id: `org-${org}`,
@@ -92,10 +103,10 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ contacts }) => {
 
     // Create links between contacts and their organizations
     const links: Link[] = topContacts
-      .filter(c => c.org)
+      .filter(c => c.org || c.organization)
       .map(c => ({
         source: c.id,
-        target: `org-${c.org}`,
+        target: `org-${c.org || c.organization}`,
         value: 1
       }));
 
@@ -108,7 +119,7 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ contacts }) => {
       .alphaDecay(0.05); // default 0.0228 — higher = fewer ticks = faster settle
 
     // Draw links
-    const link = svg.append("g")
+    const link = g.append("g")
       .selectAll("line")
       .data(links)
       .enter().append("line")
@@ -118,7 +129,7 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ contacts }) => {
       .attr("class", "animate-pulse");
 
     // Draw nodes
-    const node = svg.append("g")
+    const node = g.append("g")
       .selectAll("g")
       .data(nodes)
       .enter().append("g")
@@ -151,7 +162,15 @@ const RelationshipGraph: React.FC<RelationshipGraphProps> = ({ contacts }) => {
       .attr("font-size", d => d.type === "org" ? "11px" : "9px")
       .attr("class", "fill-slate-900 dark:fill-white font-black uppercase tracking-widest pointer-events-none select-none text-glow");
 
+    // Tooltip
+    node.append("title").text(d => d.name);
+
     simulation.on("tick", () => {
+      nodes.forEach((d: any) => {
+        d.x = Math.max(20, Math.min(width - 20, d.x ?? width / 2));
+        d.y = Math.max(20, Math.min(height - 20, d.y ?? height / 2));
+      });
+
       link
         .attr("x1", (d: any) => d.source.x)
         .attr("y1", (d: any) => d.source.y)

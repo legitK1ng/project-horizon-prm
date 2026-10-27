@@ -38,6 +38,32 @@ export const mockFetch = (url: string) => {
             json: () => Promise.resolve(mockApis.diagnostics)
         });
     }
+    // getStats() calls /api/v1/data
+    if (url.includes('/api/v1/data')) {
+        return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+                totalContacts: 100,
+                totalCalls: 50,
+                avgCallDuration: 300,
+                recentActivity: 25
+            })
+        });
+    }
+    // checkHealth() calls /api/v1/health
+    if (url.includes('/api/v1/health')) {
+        return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ status: 'healthy' })
+        });
+    }
+    // getModels() calls /api/v1/system/models
+    if (url.includes('/api/v1/system/models')) {
+        return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(mockApis.models)
+        });
+    }
     // Default data fetch
     return Promise.resolve({
         ok: true,

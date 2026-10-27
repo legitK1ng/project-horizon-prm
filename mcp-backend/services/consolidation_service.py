@@ -2,6 +2,7 @@
 Orchestrates the consolidation of audio files and metadata across the Google Drive structure.
 Mimics the behavior of 'horizon_consolidate_final.gs' but in the Python backend.
 """
+import os
 import shutil
 import logging
 from pathlib import Path

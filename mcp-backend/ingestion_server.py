@@ -46,6 +46,7 @@ from starlette.responses import StreamingResponse
 
 from middleware.inspector import InspectorMiddleware, inspector_sse_stream
 from routers import transcriptions
+from services.scanner_router import router as scanner_router
 from db.supabase_client import init_supabase
 from core.security.verify_key import verify_encryption_key
 
@@ -108,9 +109,24 @@ app = FastAPI(
 # Inspector MUST be added before CORS so it captures raw requests
 app.add_middleware(InspectorMiddleware)
 
+CORS_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:3000",
+    "http://localhost:8000",
+    "http://localhost:9000",
+    "http://localhost",
+    "capacitor://localhost",
+    "https://localhost",
+    "https://hp-z2g3-mini-workstation.tailb79f25.ts.net",
+]
+_extra = os.environ.get("ALLOWED_ORIGINS", "")
+if _extra:
+    CORS_ORIGINS.extend([o.strip() for o in _extra.split(",") if o.strip()])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -120,6 +136,7 @@ app.add_middleware(
 # ── Routes ─────────────────────────────────────────────────────────────────────
 app.include_router(transcriptions.router, prefix="/v1/audio")   # OpenAI standard
 app.include_router(transcriptions.router, prefix="/audio")       # ACR Phone strips /v1 from Server URL
+app.include_router(scanner_router, prefix="/v1/scan")            # Vault scanner (backfill + status)
 
 
 @app.get("/v1/sentinel/status", tags=["meta"])

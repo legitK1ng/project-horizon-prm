@@ -6,10 +6,21 @@ import { z } from 'zod';
 
 // ─── Core Schemas ───────────────────────────────────────────────────
 
+export const SentimentSchema = z.enum([
+  'Positive',
+  'Neutral',
+  'Negative',
+  'Critical',
+  'POSITIVE',
+  'NEUTRAL',
+  'NEGATIVE',
+  'URGENT',
+]);
+
 export const ExecutiveBriefSchema = z.object({
   title: z.string().optional(),
   summary: z.string().optional(),
-  sentiment: z.enum(['Positive', 'Negative', 'Neutral']).optional(),
+  sentiment: SentimentSchema.optional().nullable(),
   tags: z.array(z.string()).optional().default([]),
   // Backend always sends snake_case; transform camelCase aliases on ingest for legacy compat
   action_items: z.array(z.string()).optional().default([]),
@@ -33,19 +44,23 @@ export const ExecutiveBriefSchema = z.object({
 export const CallRecordSchema = z.object({
   id: z.string().uuid(),
   contact_name: z.string(),
-  contact_id: z.string().uuid().optional().nullable(),
+  contact_id: z.string().uuid().nullable().optional(),
   phone_number: z.string().optional().nullable(),
   duration: z.union([z.string(), z.number()]).optional().nullable(),
   transcript: z.string().optional().nullable(),
   executive_brief: ExecutiveBriefSchema.optional().nullable(),
   status: z.string().optional().nullable(),
-  sentiment: z.enum(['Positive', 'Negative', 'Neutral']).optional().nullable(),
+  sentiment: SentimentSchema.optional().nullable(),
   tags: z.array(z.string()).optional().default([]),
   recommended_followup_date: z.string().optional().nullable(),
   draft_followup_message: z.string().optional().nullable(),
   timestamp: z.string(),
   created_at: z.string().optional(),
 }).passthrough(); // passthrough ensures any extra fields survive
+
+export const TouchpointSchema = CallRecordSchema.extend({
+  contact_id: z.string().uuid().nullable().optional(),
+});
 
 export const ContactSchema = z.object({
   id: z.string().uuid(),
@@ -97,6 +112,7 @@ export function ApiListResponseSchema<T extends z.ZodTypeAny>(itemSchema: T) {
 // ─── Inferred Types ─────────────────────────────────────────────────
 
 export type CallRecord = z.infer<typeof CallRecordSchema>;
+export type Touchpoint = z.infer<typeof TouchpointSchema>;
 export type Contact = z.infer<typeof ContactSchema>;
 export type EnrichmentJob = z.infer<typeof EnrichmentJobSchema>;
 export type DigestResponse = z.infer<typeof DigestResponseSchema>;

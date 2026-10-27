@@ -4,21 +4,29 @@ import { supabase } from '@/lib/supabase';
 
 class GuardianService {
   private initialized = false;
+  private intervals: NodeJS.Timeout[] = [];
 
   init() {
     if (this.initialized) return;
     this.initialized = true;
 
     connectionLogger.addLog('info', 'SYSTEM', 'GUARDIAN', 'Guardian Orchestrator Initialized');
-    
+
     // Start background monitoring loops
     this.startHealthCheck();
     this.startMissionSimulation();
     this.subscribeToLogs();
   }
 
+  dispose() {
+    this.intervals.forEach(clearInterval);
+    this.intervals = [];
+    this.initialized = false;
+    connectionLogger.addLog('info', 'SYSTEM', 'GUARDIAN', 'Guardian Orchestrator Disposed');
+  }
+
   private async startHealthCheck() {
-    setInterval(async () => {
+    this.intervals.push(setInterval(async () => {
       try {
         if (!supabase) { this.handleSystemError('a1', 'Supabase Not Configured', 'Missing env vars'); return; }
         const { error } = await supabase.from('profiles').select('count', { count: 'exact', head: true });
@@ -31,10 +39,11 @@ class GuardianService {
             this.executeMission('a1', 'REPAIR', 'Re-established Supabase Matrix Uplink', 'fixed');
           }
         }
-      } catch (err: any) {
-        this.handleSystemError('a1', 'Supabase Offline', err.message);
+      } catch (err: unknown) {
+        const error = err as Error;
+        this.handleSystemError('a1', 'Supabase Offline', error.message);
       }
-    }, 60000); // Check every minute
+    }, 60000)); // Check every minute
   }
 
   private subscribeToLogs() {
@@ -46,14 +55,14 @@ class GuardianService {
     });
   }
 
-  private analyzeError(log: any) {
+  private analyzeError(log: { type: string; message: string; url?: string }) {
     // Basic heuristics for self-correction
     if (log.message.includes('fetch') || log.message.includes('network')) {
-      this.executeMission('a2', 'SCANNING', `Analyzing Network Instability: ${log.url}`, 'verified');
+      this.executeMission('a2', 'SCANNING', `Analyzing Network Instability: ${log.url || 'unknown'}`, 'verified');
     }
-    
+
     if (log.message.includes('permission') || log.message.includes('auth')) {
-      this.executeMission('a1', 'GUARDIAN', 'Verifying Auth Session Integrity', 'verified');
+      this.executeMission('a1', 'SCANNING', 'Verifying Auth Session Integrity', 'verified');
     }
   }
 
@@ -71,9 +80,10 @@ class GuardianService {
     const agent = store.agents.find(a => a.id === agentId);
     if (!agent) return;
 
+    type AgentStatus = 'idle' | 'warning' | 'scanning' | 'repairing' | 'optimizing';
     // Set agent to active
-    store.updateAgent(agentId, { 
-      status: action.toLowerCase() as any,
+    store.updateAgent(agentId, {
+      status: action.toLowerCase() as AgentStatus,
       progress: 0,
       lastAction: details
     });
@@ -95,7 +105,7 @@ class GuardianService {
         });
 
         store.addReport({
-          id: Math.random().toString(36).substr(2, 9),
+          id: Math.random().toString(36).substring(2, 11),
           agentName: agent.name,
           action: action.toUpperCase(),
           result: result,
@@ -115,7 +125,7 @@ class GuardianService {
    * Do not add real backend calls here. See Constitution §13.
    */
   private startMissionSimulation() {
-    setInterval(() => {
+    this.intervals.push(setInterval(() => {
       const agents = useGuardianStore.getState().agents;
       const idleAgents = agents.filter(a => a.status === 'idle');
       
@@ -135,7 +145,7 @@ class GuardianService {
           }
         }
       }
-    }, 30000);
+    }, 30000));
   }
 }
 

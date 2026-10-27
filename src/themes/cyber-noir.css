@@ -1,0 +1,414 @@
+/* ═══════════════════════════════════════════════════════════════════
+   HORIZON × ECLIPSE — CYBER-NOIR THEME PRESET  (ADDITIVE / OPT-IN)
+   ───────────────────────────────────────────────────────────────────
+   Harvested non-destructively from the Eclipse sibling fork
+   (C:/Users/owner/My Drive/horizon/src/index.css) during the HARVEST step.
+
+   ⚠ NOTICE: EVERY rule below is gated behind the `.theme-cyber-noir`
+   class (applied to <html> / documentElement). With the class absent
+   this file has ZERO effect on Horizon's default "Futuristic Command
+   Center" glassmorphism look. Toggle it via
+   `src/themes/cyberNoirTheme.ts` (enableCyberNoir / toggleCyberNoir).
+
+   Eclipse Cyber-Noir identity:
+     • Neon Pink   #ff00ff  (primary accent)
+     • Electric Cyan #00ffff (secondary accent)
+     • Neon Yellow #ffff00  (horizon glow)
+     • Terminal Green #00ff41
+     • Deep Synthwave Void #020108
+     • CRT scanlines + synth-sun + perspective grid
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── 1. DESIGN TOKENS (mirrors Eclipse's --accent-* + remaps Horizon's
+        --hz-* / --syn-* / --horizon-* to the neon synthwave palette) ── */
+:root.theme-cyber-noir {
+  --hz-bg:          2 1 8;           /* #020108 deep void            */
+  --hz-surface:    8 2 18;
+  --hz-panel:      10 3 22;
+  --hz-overlay:    14 4 28;
+  --hz-border:     255 0 255;       /* neon pink border base        */
+
+  --hz-rose:       255 0 255;       /* neon pink                    */
+  --hz-rose-soft:  255 90 255;
+  --hz-rose-dim:   180 0 180;
+
+  --hz-teal:       0 255 255;       /* electric cyan                */
+  --hz-teal-soft:  120 255 255;
+  --hz-teal-dim:   0 180 180;
+
+  --hz-gold:       255 255 0;       /* neon yellow                  */
+  --hz-gold-dim:   200 200 0;
+
+  --hz-success:    0 255 65;        /* terminal green               */
+  --hz-warn:       255 255 0;
+  --hz-danger:     255 0 128;       /* hot magenta-red              */
+  --hz-info:       0 255 255;
+
+  /* Backward-compat aliases */
+  --hz-cyan:       var(--hz-teal);
+  --hz-cyan-soft:  var(--hz-teal-soft);
+  --hz-cyan-dim:   var(--hz-teal-dim);
+  --hz-coral:      var(--hz-rose);
+  --hz-pink:       var(--hz-rose-soft);
+  --hz-pink-dim:   var(--hz-rose-dim);
+
+  --hz-text:       232 230 245;     /* cool near-white              */
+  --hz-text-sec:   150 200 210;
+  --hz-text-muted: 96 110 130;
+
+  /* Legacy aliases — keeps all existing components working */
+  --syn-bg:         var(--hz-bg);
+  --syn-surface:    var(--hz-surface);
+  --syn-panel:      var(--hz-panel);
+  --syn-overlay:    var(--hz-overlay);
+  --syn-border:     var(--hz-border);
+  --syn-cyan:       var(--hz-teal);
+  --syn-cyan-dim:   var(--hz-teal-dim);
+  --syn-pink:       var(--hz-rose-soft);
+  --syn-pink-dim:   var(--hz-rose-dim);
+  --syn-purple:     180 80 255;
+  --syn-gold:       var(--hz-gold);
+  --syn-green:      var(--hz-success);
+  --syn-red:        var(--hz-danger);
+  --syn-amber:      var(--hz-warn);
+  --syn-text:       var(--hz-text);
+  --syn-text-sec:   var(--hz-text-sec);
+  --syn-text-muted: var(--hz-text-muted);
+
+  --surface-base:    var(--hz-bg);
+  --surface-raised:  var(--hz-panel);
+  --surface-overlay: var(--hz-overlay);
+  --text-primary:    var(--hz-text);
+  --text-secondary:  var(--hz-text-sec);
+  --text-muted:      var(--hz-text-muted);
+  --border-default:  var(--hz-border);
+  --border-subtle:   var(--hz-border);
+  --horizon-primary: var(--hz-rose);
+  --horizon-success: var(--hz-success);
+  --horizon-warn:    var(--hz-warn);
+  --horizon-danger:  var(--hz-danger);
+
+  /* Eclipse-native accent tokens (for components that adopt them) */
+  --accent-primary:   #ff00ff;
+  --accent-secondary: #00ffff;
+  --accent-yellow:    #ffff00;
+  --accent-glow:      rgba(255, 0, 255, 0.5);
+  --accent-muted:     rgba(0, 255, 255, 0.15);
+  --synth-void:       #020108;
+  --terminal-green:   #00ff41;
+
+  --shadow-glow-pink:  0 0 24px rgba(255, 0, 255, 0.35);
+  --shadow-glow-cyan:  0 0 24px rgba(0, 255, 255, 0.30);
+}
+
+/* ── 2. GLOBAL AMBIENCE (only when theme active) ───────────────────── */
+/* Replace the dusk-sky body gradient with a synthwave void + magenta glow */
+html.theme-cyber-noir body {
+  background:
+    radial-gradient(circle at 50% 118%, rgba(255, 0, 255, 0.20) 0%, rgba(45, 10, 78, 0) 46%),
+    radial-gradient(circle at 12% 8%, rgba(0, 255, 255, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 88% 6%, rgba(255, 0, 255, 0.05) 0%, transparent 40%),
+    #020108;
+  background-attachment: fixed;
+  color: rgb(232, 230, 245);
+}
+
+/* Global CRT scanline + phosphor overlay (non-interactive, sits above content) */
+html.theme-cyber-noir::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0) 0px,
+      rgba(0, 0, 0, 0) 2px,
+      rgba(0, 0, 0, 0.12) 3px,
+      rgba(0, 0, 0, 0.12) 3px
+    ),
+    linear-gradient(
+      to right,
+      rgba(255, 0, 255, 0.022),
+      rgba(0, 255, 255, 0.014),
+      rgba(255, 0, 255, 0.022)
+    );
+}
+
+/* ── 3. COMPONENT OVERRIDES (scoped to the theme; originals untouched) ─ */
+
+/* Intel / glass panels → neon-rimmed void glass */
+.theme-cyber-noir .intel-panel,
+.theme-cyber-noir .syn-panel,
+.theme-cyber-noir .syn-panel-cyan,
+.theme-cyber-noir .syn-panel-pink,
+.theme-cyber-noir .card-premium,
+.theme-cyber-noir .glass-effect,
+.theme-cyber-noir .glass-premium {
+  border-color: rgba(0, 255, 255, 0.20);
+  background: rgba(5, 1, 13, 0.55);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow:
+    0 0 0 1px rgba(255, 0, 255, 0.06),
+    0 8px 40px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(0, 255, 255, 0.05);
+}
+.theme-cyber-noir .intel-panel::before {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, transparent 55%);
+}
+.theme-cyber-noir .intel-panel:hover {
+  border-color: rgba(255, 0, 255, 0.45);
+  background: rgba(8, 2, 20, 0.68);
+  box-shadow:
+    0 0 0 1px rgba(255, 0, 255, 0.12),
+    0 0 32px rgba(255, 0, 255, 0.16),
+    0 12px 56px rgba(0, 0, 0, 0.9);
+}
+
+/* Rose / Teal accent variants → pink / cyan respectively */
+.theme-cyber-noir .intel-panel-rose {
+  border-color: rgba(255, 0, 255, 0.28);
+  box-shadow: 0 0 0 1px rgba(255, 0, 255, 0.12), 0 8px 40px rgba(0, 0, 0, 0.85);
+}
+.theme-cyber-noir .intel-panel-rose:hover {
+  border-color: rgba(255, 0, 255, 0.55);
+  box-shadow: 0 0 0 1px rgba(255, 0, 255, 0.18), 0 0 32px rgba(255, 0, 255, 0.22);
+}
+.theme-cyber-noir .intel-panel-teal {
+  border-color: rgba(0, 255, 255, 0.26);
+  box-shadow: 0 0 0 1px rgba(0, 255, 255, 0.10), 0 8px 40px rgba(0, 0, 0, 0.85);
+}
+.theme-cyber-noir .intel-panel-teal:hover {
+  border-color: rgba(0, 255, 255, 0.50);
+  box-shadow: 0 0 0 1px rgba(0, 255, 255, 0.16), 0 0 32px rgba(0, 255, 255, 0.20);
+}
+
+/* Primary button → Eclipse neon-pink gradient */
+.theme-cyber-noir .btn-primary,
+.theme-cyber-noir .btn-syn {
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  background: linear-gradient(135deg, #ff00ff, #8b5cf6);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(255, 0, 255, 0.30);
+}
+.theme-cyber-noir .btn-primary:hover,
+.theme-cyber-noir .btn-syn:hover {
+  box-shadow: 0 0 20px rgba(255, 0, 255, 0.60);
+  transform: translateY(-2px) scale(1.02);
+  filter: brightness(1.2);
+}
+.theme-cyber-noir .btn-ghost {
+  border: 1px solid rgba(0, 255, 255, 0.22);
+  background: rgba(0, 255, 255, 0.05);
+  color: rgb(150, 230, 235);
+}
+.theme-cyber-noir .btn-ghost:hover {
+  border-color: rgba(0, 255, 255, 0.45);
+  background: rgba(0, 255, 255, 0.10);
+  color: rgb(190, 245, 250);
+}
+
+/* Badges → neon semantic colors */
+.theme-cyber-noir .intel-badge-live {
+  background: rgba(0, 255, 255, 0.10);
+  border-color: rgba(0, 255, 255, 0.30);
+  color: rgb(120, 255, 255);
+}
+.theme-cyber-noir .intel-badge-pending {
+  background: rgba(255, 255, 0, 0.10);
+  border-color: rgba(255, 255, 0, 0.28);
+  color: rgb(255, 240, 120);
+}
+.theme-cyber-noir .intel-badge-error {
+  background: rgba(255, 0, 128, 0.10);
+  border-color: rgba(255, 0, 128, 0.30);
+  color: rgb(255, 120, 200);
+}
+.theme-cyber-noir .intel-badge-complete {
+  background: rgba(0, 255, 65, 0.10);
+  border-color: rgba(0, 255, 65, 0.28);
+  color: rgb(120, 255, 130);
+}
+
+/* Nav pill → neon text */
+.theme-cyber-noir .nav-pill {
+  color: rgb(150, 200, 210);
+}
+.theme-cyber-noir .nav-pill:hover,
+.theme-cyber-noir .nav-pill[aria-current="page"],
+.theme-cyber-noir .nav-pill.active {
+  color: #ff00ff;
+  text-shadow: 0 0 10px rgba(255, 0, 255, 0.6);
+}
+
+/* HUD corner brackets → cyan */
+.theme-cyber-noir .hud-corners::before,
+.theme-cyber-noir .hud-corners::after {
+  border-color: rgba(0, 255, 255, 0.30);
+}
+.theme-cyber-noir .hud-corners:hover::before,
+.theme-cyber-noir .hud-corners:hover::after {
+  border-color: rgba(0, 255, 255, 0.60);
+}
+
+/* Accent text utilities → neon */
+.theme-cyber-noir .text-cyan,
+.theme-cyber-noir .text-neon-cyan { color: rgb(0, 255, 255); }
+.theme-cyber-noir .text-rose,
+.theme-cyber-noir .text-neon-pink { color: rgb(255, 0, 255); }
+.theme-cyber-noir .text-coral { color: rgb(255, 0, 128); }
+.theme-cyber-noir .text-teal { color: rgb(120, 255, 255); }
+.theme-cyber-noir .text-gold,
+.theme-cyber-noir .text-neon-gold { color: rgb(255, 255, 0); }
+
+.theme-cyber-noir .neon-text-cyan {
+  color: rgb(0, 255, 255);
+  text-shadow: 0 0 12px rgba(0, 255, 255, 0.45);
+}
+.theme-cyber-noir .neon-text-magenta {
+  color: rgb(255, 0, 255);
+  text-shadow: 0 0 12px rgba(255, 0, 255, 0.45);
+}
+.theme-cyber-noir .neon-text-gold {
+  color: rgb(255, 255, 0);
+  text-shadow: 0 0 12px rgba(255, 255, 0, 0.40);
+}
+
+/* Text gradients → pink → cyan */
+.theme-cyber-noir .text-gradient,
+.theme-cyber-noir .text-gradient-sunset {
+  background-image: linear-gradient(135deg, #ff00ff 0%, #00ffff 100%);
+}
+.theme-cyber-noir .text-gradient-dusk {
+  background-image: linear-gradient(135deg, #ff00ff 0%, #ffff00 100%);
+}
+
+/* Borders → neon */
+.theme-cyber-noir .border-rose,
+.theme-cyber-noir .border-neon-pink { border-color: rgba(255, 0, 255, 0.40); }
+.theme-cyber-noir .border-teal,
+.theme-cyber-noir .border-neon-cyan { border-color: rgba(0, 255, 255, 0.36); }
+.theme-cyber-noir .border-neon-purple { border-color: rgba(180, 80, 255, 0.36); }
+
+.theme-cyber-noir .cyber-border-cyan {
+  border: 1px solid rgba(0, 255, 255, 0.30);
+  box-shadow: inset 0 1px 0 rgba(0, 255, 255, 0.08), 0 0 15px rgba(0, 255, 255, 0.15);
+}
+.theme-cyber-noir .cyber-border-magenta {
+  border: 1px solid rgba(255, 0, 255, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 0, 255, 0.08), 0 0 15px rgba(255, 0, 255, 0.15);
+}
+
+/* Ambient mesh + dot grid → synthwave */
+.theme-cyber-noir .bg-mesh {
+  background-image:
+    radial-gradient(at 0%   0%,   rgba(255, 0, 255, 0.08) 0, transparent 50%),
+    radial-gradient(at 100% 0%,   rgba(0, 255, 255, 0.06) 0, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(255, 0, 255, 0.05) 0, transparent 50%),
+    radial-gradient(at 0%   100%, rgba(0, 255, 255, 0.05) 0, transparent 50%);
+}
+.theme-cyber-noir .bg-grid {
+  background-image:
+    radial-gradient(circle, rgba(0, 255, 255, 0.10) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Glow shadows → neon */
+.theme-cyber-noir .shadow-glow-rose { box-shadow: 0 0 24px rgba(255, 0, 255, 0.35); }
+.theme-cyber-noir .shadow-glow-teal { box-shadow: 0 0 24px rgba(0, 255, 255, 0.30); }
+
+/* ── 4. OPT-IN FLAVOR UTILITIES (activate when the theme is on AND an
+        element carries the class — mirrors Eclipse's cyber-noir kit) ──── */
+.theme-cyber-noir .synth-grid {
+  position: fixed;
+  inset: 0;
+  background-color: var(--synth-void);
+  background-image:
+    linear-gradient(rgba(0, 255, 255, 0.10) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 255, 0.10) 1px, transparent 1px);
+  background-size: 50px 50px;
+  background-position: center bottom;
+  transform: perspective(500px) rotateX(60deg);
+  transform-origin: center bottom;
+  z-index: -1;
+  pointer-events: none;
+  mask-image: linear-gradient(to top, black 20%, transparent 80%);
+}
+.theme-cyber-noir .synth-sun {
+  position: fixed;
+  bottom: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px;
+  height: 300px;
+  background: linear-gradient(to bottom, #ffcc00 0%, #ff00ff 100%);
+  border-radius: 50%;
+  filter: blur(2px);
+  box-shadow: 0 0 60px #ff00ff;
+  opacity: 0.8;
+  mask-image: repeating-linear-gradient(to bottom, black 0px, black 4px, transparent 4px, transparent 8px);
+  z-index: -1;
+  pointer-events: none;
+}
+.theme-cyber-noir .neural-void {
+  background: radial-gradient(circle at center, #0a051a 0%, #020108 100%);
+}
+.theme-cyber-noir .eclipse-card {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(0, 0, 0, 0.80);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 1rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+}
+.theme-cyber-noir .eclipse-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 0%, rgba(255, 0, 255, 0.05) 50%, transparent 100%);
+  pointer-events: none;
+}
+.theme-cyber-noir .glow-border-cyan {
+  border: 1px solid rgba(0, 255, 255, 0.30);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.15);
+}
+.theme-cyber-noir .glow-border-pink {
+  border: 1px solid rgba(255, 0, 255, 0.30);
+  box-shadow: 0 0 15px rgba(255, 0, 255, 0.15);
+}
+.theme-cyber-noir .terminal-text {
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: -0.02em;
+  text-shadow: 0 0 8px currentColor;
+}
+.theme-cyber-noir .glitch-hover:hover {
+  animation: cn-glitch 0.3s cubic-bezier(.25, .46, .45, .94) both infinite;
+}
+
+/* Make Horizon's existing (no-op) .scanline class actually scan under the theme */
+.theme-cyber-noir .scanline::after {
+  content: ' ';
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background:
+    linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+    linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  z-index: 2;
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none;
+  opacity: 0.12;
+}
+
+@keyframes cn-glitch {
+  0%   { transform: translate(0); }
+  20%  { transform: translate(-2px, 1px); }
+  40%  { transform: translate(2px, -1px); }
+  60%  { transform: translate(-1px, -1px); }
+  80%  { transform: translate(1px, 1px); }
+  100% { transform: translate(0); }
+}

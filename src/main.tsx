@@ -4,6 +4,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import App from './App';
 import './index.css';
+// HARVEST (additive): Cyber-Noir theme preset — inert until toggled on via
+// src/themes/cyberNoirTheme.ts. Default Horizon look is unaffected.
+import './themes/cyber-noir.css';
+import { initCyberNoirFromStorage } from './themes/cyberNoirTheme';
 
 // REQ-024: TanStack Query client with global defaults
 const queryClient = new QueryClient({
@@ -17,6 +21,9 @@ const queryClient = new QueryClient({
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Failed to find the root element');
+
+// HARVEST (additive): restore a previously toggled Cyber-Noir preset (no-op by default)
+initCyberNoirFromStorage();
 
 console.log('[App] Booting — real FastAPI backend via Vite proxy.');
 ReactDOM.createRoot(rootElement).render(

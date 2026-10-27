@@ -1,5 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { db } from '../lib/db';
+import { connectionLogger } from '../utils/connectionLogger';
+import type { Contact, CallRecord } from '../types';
 
 export class SyncService {
     static async initialSync() {
@@ -11,14 +13,14 @@ export class SyncService {
             // Fetch call records
             const { data: calls } = await supabase.from('call_records').select('*');
             if (calls) await db.call_records.bulkPut(calls);
-            
+
             // Fetch tasks
             const { data: tasks } = await supabase.from('tasks').select('*');
             if (tasks) await db.tasks.bulkPut(tasks);
 
-            console.log('Initial sync complete.');
+            connectionLogger.addLog('success', 'SYNC', 'SYSTEM', 'Initial sync complete');
         } catch (error) {
-            console.error('Error during initial sync:', error);
+            connectionLogger.addLog('error', 'SYNC', 'SYSTEM', 'Initial sync failed', { error });
         }
     }
 
@@ -28,7 +30,7 @@ export class SyncService {
                 if (payload.eventType === 'DELETE') {
                     await db.contacts.delete(payload.old.id);
                 } else {
-                    await db.contacts.put(payload.new as any);
+                    await db.contacts.put(payload.new as Contact);
                 }
             }).subscribe();
 
@@ -37,7 +39,7 @@ export class SyncService {
                 if (payload.eventType === 'DELETE') {
                     await db.call_records.delete(payload.old.id);
                 } else {
-                    await db.call_records.put(payload.new as any);
+                    await db.call_records.put(payload.new as CallRecord);
                 }
             }).subscribe();
     }

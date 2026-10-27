@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 # Type alias for the transcription return value
 _TranscribeResult = tuple[str, list, str, float]
 
+
 class TranscriptionManager:
     """
     REQ-151: Singleton Manager for the Whisper Model.
@@ -69,26 +70,30 @@ class TranscriptionManager:
         seg_gen, info = model.transcribe(wav_path, **kwargs)
 
         segments = list(seg_gen)
-        segments = [s for s in segments if getattr(s, "no_speech_prob", 0.0) < 0.8]
+        segments = [s for s in segments if (getattr(s, "no_speech_prob", None) or 0.0) < 0.8]
 
         segments_list = [
             {
-                "id": i,
-                "seek": getattr(s, "seek", 0),
-                "start": s.start,
-                "end": s.end,
-                "text": s.text,
-                "tokens": getattr(s, "tokens", []),
-                "temperature": getattr(s, "temperature", 0.0),
-                "avg_logprob": getattr(s, "avg_logprob", 0.0),
-                "compression_ratio": getattr(s, "compression_ratio", 0.0),
-                "no_speech_prob": getattr(s, "no_speech_prob", 0.0),
+                # ── ALL fields are REQUIRED by ACR Phone's strict kotlinx.serialization ──
+                # com.aallam.openai.api.audio.Segment rejects ANY null/missing field.
+                # Use `or` guards so faster-whisper None values become valid primitives.
+                "id": int(getattr(s, "id", None) or i),
+                "seek": int(getattr(s, "seek", None) or 0),
+                "start": float(getattr(s, "start", None) or 0.0),
+                "end": float(getattr(s, "end", None) or 0.0),
+                "text": (getattr(s, "text", None) or "").strip(),
+                "tokens": list(getattr(s, "tokens", None) or []),
+                "temperature": float(getattr(s, "temperature", None) or 0.0),
+                "avg_logprob": float(getattr(s, "avg_logprob", None) or 0.0),
+                "compression_ratio": float(getattr(s, "compression_ratio", None) or 1.0),
+                "no_speech_prob": float(getattr(s, "no_speech_prob", None) or 0.0),
             }
             for i, s in enumerate(segments)
         ]
 
-        full_text = " ".join(seg.text.strip() for seg in segments)
+        full_text = " ".join((seg.text or "").strip() for seg in segments)
         return full_text, segments_list, info.language, info.duration
+
 
 def transcribe_audio(wav_path: str) -> str:
     """
@@ -121,8 +126,8 @@ def transcribe_audio(wav_path: str) -> str:
 
     segments = list(seg_gen)
     # Drop hallucinated silence segments post-VAD
-    segments = [s for s in segments if getattr(s, "no_speech_prob", 0.0) < 0.8]
-    full_text = " ".join(s.text.strip() for s in segments)
+    segments = [s for s in segments if (getattr(s, "no_speech_prob", None) or 0.0) < 0.8]
+    full_text = " ".join((s.text or "").strip() for s in segments)
 
     logger.info(f"[WHISPER] Transcription complete. Length: {len(full_text)} chars.")
     return full_text

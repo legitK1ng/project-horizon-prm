@@ -68,7 +68,7 @@ const NudgeShelf: React.FC<NudgeShelfProps> = ({ nudges }) => {
             </div>
 
             <button
-              onClick={() => handleRefresh(nudge.id)}
+              onClick={() => handleRefresh(nudge.contact_id ?? nudge.id)}
               className="p-1.5 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all"
               title="Manual Health Refresh"
             >

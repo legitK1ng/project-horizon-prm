@@ -22,12 +22,14 @@ import SystemStatusBar from './components/SystemStatusBar';
 import { SyncService } from './services/syncService';
 
 // Lazy-load page components
-const Dashboard        = lazy(() => import('./components/Dashboard'));
-const ContactList      = lazy(() => import('./components/ContactList'));
-const CallLog          = lazy(() => import('./components/CallLog'));
-const Actions          = lazy(() => import('./components/Actions'));
-const Console          = lazy(() => import('./components/Console'));
+const Dashboard         = lazy(() => import('./components/Dashboard'));
+const ContactList       = lazy(() => import('./components/ContactList'));
+const CallLog           = lazy(() => import('./components/CallLog'));
+const Actions           = lazy(() => import('./components/Actions'));
+const Console           = lazy(() => import('./components/Console'));
 const IngestionSettings = lazy(() => import('./components/IngestionSettings'));
+const WebhookMonitor    = lazy(() => import('./components/WebhookMonitor'));
+const Lab               = lazy(() => import('./components/Lab'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,9 +62,10 @@ const AnimatedRoutes: React.FC = () => {
             <Route path="/calls"    element={<CallLog />} />
             <Route path="/contacts" element={<ContactList />} />
             <Route path="/actions"  element={<Actions />} />
-            <Route path="/console"   element={<Console />} />
-            <Route path="/settings"  element={<IngestionSettings />} />
-            <Route path="/lab"       element={<Navigate to="/console" replace />} />
+            <Route path="/console"  element={<Console />} />
+            <Route path="/settings" element={<IngestionSettings />} />
+            <Route path="/webhooks" element={<WebhookMonitor />} />
+            <Route path="/lab"      element={<Lab />} />
             <Route path="*"         element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>

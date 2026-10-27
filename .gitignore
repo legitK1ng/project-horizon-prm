@@ -99,12 +99,24 @@ mcp-backend/.venv/
 # ── OS ────────────────────────────────────
 .DS_Store
 Thumbs.db
+nul
+.tmp.driveupload/
 
-# ── Misc temp/scratch files ───────────────
+# ── Audio Ingest & Media Artifacts ────────
+mcp-backend/audio_ingest/temp/*
+*.wav
+*.mp3
+*.m4a
+
+# ── Misc temp/scratch & Backup files ──────
 *.n8n
+*.vsix
+package-lock.json.backup*
+docs/_pre_merge_backup/
 test_audio.wav
 test_connect.js
 mcp-backend/test_agent5.py
 mcp-backend/scratch/
+
 # ── Agent Data ────────────────────────────
 .claude/

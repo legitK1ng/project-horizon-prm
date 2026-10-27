@@ -155,12 +155,13 @@ const runFolderScan = async (
     }
 
     const data = await res.json();
+    const count = data.downloaded ?? data.queued ?? 0;
     log(`Found ${data.found ?? 0} audio files`);
     if ((data.skipped ?? 0) > 0) log(`${data.skipped} already ingested — skipping`, 'muted');
-    log(`${data.downloaded ?? 0} new files queued for transcription`, 'accent');
+    log(`${count} new files queued for transcription`, 'accent');
     log('Pipeline dispatched', 'success');
 
-    onStatus({ time: new Date(), queued: data.downloaded ?? 0 });
+    onStatus({ time: new Date(), queued: count });
   } catch {
     log('Folder scan failed — check that the backend is running', 'error');
   }

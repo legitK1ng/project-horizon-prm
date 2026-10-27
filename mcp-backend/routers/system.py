@@ -80,6 +80,7 @@ async def health_deep(req: Request):
         logger.error(f"[SYSTEM] health-deep fallback queries failed: {e}")
         raise HTTPException(status_code=500, detail=f"Health check failed: {str(e)}")
 
+
 @router.get("/models")
 async def get_models():
     """
@@ -92,6 +93,7 @@ async def get_models():
             {"name": "whisper-v3", "displayName": "Faster Whisper v3"}
         ]
     }
+
 
 @router.get("/diagnostics")
 async def run_diagnostics(req: Request):
@@ -109,19 +111,20 @@ async def run_diagnostics(req: Request):
     
     return {"status": "success", "results": results}
 
+
 @router.get("/test-gemini")
 async def test_gemini_connection():
     """
-    Simple test call to Gemini.
+    Simple test call to Gemini using the google-genai v2 SDK helper.
     """
-    from services.ai_briefing_service import _get_model
+    from services.ai_briefing_service import _generate
     try:
-        model = _get_model()
-        response = model.generate_content("Hello. Respond with 'Gemini Online'.")
-        return {"status": "success", "message": response.text.strip()}
+        reply = _generate("Hello. Respond with 'Gemini Online'.")
+        return {"status": "success", "message": reply.strip()}
     except Exception as e:
         logger.error(f"[SYSTEM] Gemini test failed: {e}")
         return {"status": "error", "message": str(e)}
+
 
 @router.get("/trigger-processing")
 async def trigger_processing():
@@ -129,6 +132,7 @@ async def trigger_processing():
     Stub for manual processing trigger.
     """
     return {"status": "success", "message": "Background processing triggered (Stub)"}
+
 
 @router.post("/analyze")
 async def analyze_text(req: Request):
@@ -147,6 +151,7 @@ async def analyze_text(req: Request):
     except Exception as e:
         logger.error(f"[SYSTEM] Analysis failed: {e}")
         return {"status": "error", "message": str(e)}
+
 
 @router.get("/tags")
 async def get_tags(req: Request):

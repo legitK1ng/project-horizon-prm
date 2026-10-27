@@ -72,7 +72,7 @@ class SystemAuditor:
 
     def audit_environment(self):
         print("[ENVIRONMENT] Checking Backend Configuration...")
-        required_vars = ["SUPABASE_URL", "SUPABASE_KEY", "HORIZON_API_KEY", "GEMINI_API_KEY",
+        required_vars = ["SUPABASE_URL", "SUPABASE_KEY", "HORIZON_API_KEY",
                          "HUGGINGFACE_TOKEN", "FIELD_ENCRYPTION_MASTER_KEY"]
         for var in required_vars:
             val = os.environ.get(var)
@@ -80,6 +80,13 @@ class SystemAuditor:
                 print(f"  [+] {var}: LOADED (Prefix: {val[:4]}...)")
             else:
                 print(f"  [!] {var}: MISSING")
+
+        gemini_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        if gemini_key:
+            src = "GEMINI_API_KEY" if os.environ.get("GEMINI_API_KEY") else "GOOGLE_API_KEY"
+            print(f"  [+] GEMINI_API_KEY: LOADED (via {src}, Prefix: {gemini_key[:4]}...)")
+        else:
+            print("  [!] GEMINI_API_KEY: MISSING (neither GEMINI_API_KEY nor GOOGLE_API_KEY set)")
 
 if __name__ == "__main__":
     auditor = SystemAuditor()

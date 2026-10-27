@@ -2,7 +2,7 @@
 Whisper v1-Compatible Transcription Router — Horizon PRM Ingestion Server
 Mirrors the OpenAI /v1/audio/transcriptions API surface for ACR Phone compatibility.
 
-POST /v1/audio/transcriptions
+POST /v1/audio/transcriptions  (and /v1/transcriptions)
   Primary auth:   Authorization: Bearer <HORIZON_API_KEY>
   Secondary auth: Secret=<ACR_WEBHOOK_SECRET>  (multipart form field, validated if env is set)
   Content-Type:   multipart/form-data
@@ -19,7 +19,7 @@ ACR Phone native field mapping (multipart form):
   Source    → source  param → normalized to direction ("incoming" | "outgoing")
   Secret    → secret  param → validated against ACR_WEBHOOK_SECRET (secondary auth)
   Number    → phone_number param
-  Date      → call_timestamp param (Unix seconds or ISO string)
+  Date      → call_timestamp param (Unix seconds/ms or ISO string)
   Duration  → duration param
   Note      → (ignored — Horizon generates its own note)
 
@@ -45,7 +45,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 
 from core.api_key_auth import verify_api_key
 from services.audio_processing_service import cleanup_processed_audio, process_audio_ingest, TEMP_DIR
@@ -84,8 +84,27 @@ def _normalize_direction(source: str) -> str:
     return ""
 
 
+def _normalize_date_value(raw_val: str | int | None) -> Optional[str]:
+    """
+    Normalize ACR Phone's 'Date' field (Unix seconds, Unix milliseconds, or ISO-8601 string)
+    into a valid UTC ISO-8601 timestamp string for PostgreSQL TIMESTAMPTZ.
+    """
+    if raw_val is None:
+        return None
+    s = str(raw_val).strip()
+    if not s or s.lower() == "none":
+        return None
+    try:
+        num = float(s)
+        ts = num if num < 1e11 else num / 1000.0
+        return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
+    except (ValueError, TypeError, OverflowError):
+        return s
+
+
 # ── Route ───────────────────────────────────────────────────────────────────────
 @router.post("/transcriptions")
+@router.post("/audio/transcriptions")
 async def create_transcription(
     request: Request,
     background_tasks: BackgroundTasks,
@@ -106,6 +125,7 @@ async def create_transcription(
     # ── ACR Phone native fields (mapped from ACR's multipart field names) ──────
     source: str = Form(""),   # ACR "Source" → direction
     secret: str = Form(""),   # ACR "Secret" → secondary auth
+    Date: Optional[int] = Form(None),  # ACR "Date" → Unix timestamp (seconds or ms)
     # ── Primary auth (Bearer token) ───────────────────────────────────────────
     _key: str = Depends(verify_api_key),
 ):
@@ -116,25 +136,32 @@ async def create_transcription(
     """
 
     # ── Resolve ACR Phone's capitalized field names ───────────────────────────
-    # ACR Phone sends: Source, Secret, Number, Date, Duration (capital first letter).
+    # ACR Phone sends: Source, Secret, Number, Date, Duration, Name, Contact (capital first letter).
     # FastAPI Form matching is case-sensitive so lowercase params miss them all.
     # Re-reading the cached raw form lets us catch both conventions.
     try:
         _raw = await request.form()
         if not source:
-            source = str(_raw.get("Source", ""))
+            source = str(_raw.get("Source", "") or "")
         if not secret:
-            secret = str(_raw.get("Secret", ""))
+            secret = str(_raw.get("Secret", "") or "")
         if not phone_number:
-            phone_number = str(_raw.get("Number", ""))
+            phone_number = str(_raw.get("Number", "") or "")
         if not duration:
-            duration = str(_raw.get("Duration", ""))
+            duration = str(_raw.get("Duration", "") or "")
+        if contact_name == "Unknown":
+            _acr_name = _raw.get("Contact") or _raw.get("Name")
+            if _acr_name and str(_acr_name).strip():
+                contact_name = str(_acr_name).strip()
         if not call_timestamp:
-            _date_val = str(_raw.get("Date", ""))
-            if _date_val and _date_val.lower() != "none":
-                call_timestamp = _date_val
+            _date_val = Date if Date is not None else _raw.get("Date")
+            call_timestamp = _normalize_date_value(_date_val)
+        else:
+            call_timestamp = _normalize_date_value(call_timestamp)
     except Exception as _form_err:
         logger.debug(f"[FORM] Raw form re-read skipped: {_form_err}")
+        if not call_timestamp and Date is not None:
+            call_timestamp = _normalize_date_value(Date)
 
     # ── Secondary auth: validate ACR Secret form field if env is configured ───
     acr_secret_env = os.environ.get("ACR_WEBHOOK_SECRET", "")
@@ -292,7 +319,7 @@ async def create_transcription(
         try:
             from services.ai_briefing_service import generate_call_brief
             logger.info(f"[AI] Generating brief for {contact_name!r}...")
-            executive_brief = generate_call_brief(transcript_text, contact_name)
+            executive_brief = await asyncio.get_running_loop().run_in_executor(None, generate_call_brief, transcript_text, contact_name)
             logger.info(f"[AI] Brief done. Sentiment={executive_brief.get('sentiment', '?')}")
         except Exception as ai_err:
             logger.warning(f"[AI] Brief generation failed (non-blocking): {ai_err}")
@@ -319,32 +346,38 @@ async def create_transcription(
             metadata=metadata,
         )
 
-    # ── Response (Whisper v1 shape — ACR reads the "text" field) ─────────────
+    # ── Response (Strict Whisper v1 shape — ACR reads the "text" field) ───────
+    # IMPORTANT: ACR Phone uses com.aallam.openai Kotlin SDK with strict
+    # kotlinx.serialization. Any unknown JSON key causes "Illegal input" error.
+    # Horizon extensions are sent as X-Horizon-* headers instead of body fields.
+    horizon_headers = {
+        "X-Horizon-Call-Id": str(record_id or ""),
+        "X-Horizon-Contact": str(contact_name or "Unknown"),
+        "X-Horizon-Phone": str(phone_number or ""),
+        "X-Horizon-Duration": str(duration or ""),
+        "X-Horizon-Timestamp": str(call_timestamp or datetime.now(timezone.utc).isoformat()),
+        "X-Horizon-Direction": str(direction or "unknown"),
+        "X-Horizon-Confidence": str(metadata.get("confidence", "")),
+        "X-Horizon-Model": str(model),
+        "X-Horizon-Processing-Ms": str(round(elapsed * 1000)),
+        "X-Horizon-Brief-Generated": str(executive_brief is not None).lower(),
+    }
+
     if response_format == "text":
-        return PlainTextResponse(content=enriched_text)
+        return PlainTextResponse(content=enriched_text, headers=horizon_headers)
 
     if response_format == "json":
-        return {"text": enriched_text}
+        return JSONResponse(content={"text": enriched_text}, headers=horizon_headers)
 
-    # Default: verbose_json — adds horizon_meta extension block
-    return {
+    # Default: verbose_json — strict OpenAI Whisper v1 body, extensions in headers
+    whisper_body = {
         "task": "transcribe",
         "language": detected_language,
         "duration": round(audio_duration, 2),
         "text": enriched_text,
         "segments": segments,
-        "horizon_meta": {
-            "contact_name": contact_name,
-            "phone_number": phone_number,
-            "call_duration": duration,
-            "direction": direction or "unknown",
-            "call_timestamp": call_timestamp or datetime.now(timezone.utc).isoformat(),
-            "model_used": model,
-            "processing_time_s": round(elapsed, 3),
-            "brief_generated": executive_brief is not None,
-            "record_id": record_id,
-        },
     }
+    return JSONResponse(content=whisper_body, headers=horizon_headers)
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────────

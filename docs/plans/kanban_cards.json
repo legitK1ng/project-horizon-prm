@@ -1,0 +1,585 @@
+{
+  "generated_from": [
+    "openclaw-tasks.md",
+    "docs\\horizon_prm_architecture_review.md",
+    "docs\\CONSTITUTION.md",
+    "docs\\database_schema_analysis.md",
+    "docs\\database-schema-reference.md",
+    "docs\\API_CONTRACT.md",
+    "docs\\plans\\2026-04-13-ai-chat-stabilization-design.md",
+    "docs\\superpowers\\plans\\2026-05-10-local-first-architecture-plan.md",
+    "docs\\superpowers\\specs\\2026-05-10-local-first-architecture-design.md",
+    "PROJECT_REQS.md",
+    "setup.md",
+    "README.md",
+    "BOOTSTRAP.md",
+    "KNOWLEDGE1.md",
+    "KNOWLEDGE2.md",
+    "KNOWLEDGE3.md",
+    "docs\\reviews\\archive\\AUTOMATED_ENGINEERING_REVIEW_2026-06-21_FINAL.md",
+    "docs\\reviews\\archive\\AUTOMATED_ENGINEERING_REVIEW_2026-06-22_FINAL.md"
+  ],
+  "card_count": 56,
+  "cards": [
+    {
+      "id": "001",
+      "title": "[OpenClaw] Connect mobile device via OpenClaw node",
+      "source": "openclaw-tasks.md",
+      "line": 9,
+      "column": "Backlog",
+      "category": "Mobile",
+      "priority": "Medium",
+      "note": "priority=Medium"
+    },
+    {
+      "id": "002",
+      "title": "[OpenClaw] Set up Gemini CLI re-auth cron job",
+      "source": "openclaw-tasks.md",
+      "line": 10,
+      "column": "To Do",
+      "category": "Infra/CI",
+      "priority": "Medium",
+      "note": "priority=Medium"
+    },
+    {
+      "id": "003",
+      "title": "[OpenClaw] Install and configure all eligible skills",
+      "source": "openclaw-tasks.md",
+      "line": 11,
+      "column": "To Do",
+      "category": "Agent/Tooling",
+      "priority": "Medium",
+      "note": "priority=Medium"
+    },
+    {
+      "id": "004",
+      "title": "[OpenClaw] Configure all plugins correctly",
+      "source": "openclaw-tasks.md",
+      "line": 12,
+      "column": "To Do",
+      "category": "Agent/Tooling",
+      "priority": "Medium",
+      "note": "priority=Medium"
+    },
+    {
+      "id": "005",
+      "title": "[OpenClaw] Set up ACP tools",
+      "source": "openclaw-tasks.md",
+      "line": 13,
+      "column": "To Do",
+      "category": "Agent/Tooling",
+      "priority": "Medium",
+      "note": "priority=Medium"
+    },
+    {
+      "id": "006",
+      "title": "[OpenClaw] Security audit & harden Telegram group policy",
+      "source": "openclaw-tasks.md",
+      "line": 14,
+      "column": "Backlog",
+      "category": "Agent/Tooling",
+      "priority": "Medium",
+      "note": "priority=Medium"
+    },
+    {
+      "id": "007",
+      "title": "[OpenClaw step] Install openclaw on mobile/remote device",
+      "source": "openclaw-tasks.md",
+      "line": 24,
+      "column": "Backlog",
+      "category": "Mobile",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "008",
+      "title": "[OpenClaw step] Configure node to point at gateway: `wss://legitk1ng.tailb79f25.ts.net`",
+      "source": "openclaw-tasks.md",
+      "line": 25,
+      "column": "To Do",
+      "category": "Agent/Tooling",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "009",
+      "title": "[OpenClaw step] Authenticate with gateway token",
+      "source": "openclaw-tasks.md",
+      "line": 26,
+      "column": "Backlog",
+      "category": "Agent/Tooling",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "010",
+      "title": "[OpenClaw step] Verify node appears in `openclaw status --all`",
+      "source": "openclaw-tasks.md",
+      "line": 27,
+      "column": "Backlog",
+      "category": "Agent/Tooling",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "011",
+      "title": "[OpenClaw step] Create bootstrap file for `main` agent on mobile node",
+      "source": "openclaw-tasks.md",
+      "line": 28,
+      "column": "Backlog",
+      "category": "Mobile",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "012",
+      "title": "[OpenClaw step] Run initial re-auth: `openclaw models auth login --provider google-gemini-cli`",
+      "source": "openclaw-tasks.md",
+      "line": 42,
+      "column": "Backlog",
+      "category": "Agent/Tooling",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "013",
+      "title": "[OpenClaw step] Create Windows Scheduled Task or openclaw cron to run refresh before expiry",
+      "source": "openclaw-tasks.md",
+      "line": 43,
+      "column": "Backlog",
+      "category": "Infra/CI",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "014",
+      "title": "[OpenClaw step] Test that token refresh runs silently without blocking agent",
+      "source": "openclaw-tasks.md",
+      "line": 44,
+      "column": "Backlog",
+      "category": "Testing/QA",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "015",
+      "title": "[OpenClaw step] Install `jq` and `rg` (ripgrep) for session-logs skill",
+      "source": "openclaw-tasks.md",
+      "line": 54,
+      "column": "Backlog",
+      "category": "Agent/Tooling",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "016",
+      "title": "[OpenClaw step] Install `gh` CLI for github/gh-issues skills",
+      "source": "openclaw-tasks.md",
+      "line": 55,
+      "column": "Backlog",
+      "category": "Agent/Tooling",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "017",
+      "title": "[OpenClaw step] Install `ffmpeg` for video-frames skill",
+      "source": "openclaw-tasks.md",
+      "line": 56,
+      "column": "Backlog",
+      "category": "Agent/Tooling",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "018",
+      "title": "[OpenClaw step] Configure `TRELLO_API_KEY` + `TRELLO_TOKEN` env vars for trello skill",
+      "source": "openclaw-tasks.md",
+      "line": 57,
+      "column": "To Do",
+      "category": "Backend/Data",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "019",
+      "title": "[OpenClaw step] Configure `ELEVENLABS_API_KEY` for sag skill",
+      "source": "openclaw-tasks.md",
+      "line": 58,
+      "column": "To Do",
+      "category": "Backend/Data",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "020",
+      "title": "[OpenClaw step] Configure sherpa-onnx runtime + model dirs for TTS",
+      "source": "openclaw-tasks.md",
+      "line": 59,
+      "column": "To Do",
+      "category": "Agent/Tooling",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "021",
+      "title": "[OpenClaw step] Enable coding-agent skill (requires `@anthropic-ai/claude-code`)",
+      "source": "openclaw-tasks.md",
+      "line": 60,
+      "column": "Backlog",
+      "category": "Frontend/UI",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "022",
+      "title": "[OpenClaw step] Re-enable any skills incorrectly auto-disabled by doctor --fix",
+      "source": "openclaw-tasks.md",
+      "line": 61,
+      "column": "Backlog",
+      "category": "Docs",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "023",
+      "title": "[OpenClaw step] Audit disabled plugins list",
+      "source": "openclaw-tasks.md",
+      "line": 71,
+      "column": "Backlog",
+      "category": "Agent/Tooling",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "024",
+      "title": "[OpenClaw step] Enable plugins relevant to Windows environment",
+      "source": "openclaw-tasks.md",
+      "line": 72,
+      "column": "Backlog",
+      "category": "Agent/Tooling",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "025",
+      "title": "[OpenClaw step] Configure any needing API keys",
+      "source": "openclaw-tasks.md",
+      "line": 73,
+      "column": "To Do",
+      "category": "Backend/Data",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "026",
+      "title": "[OpenClaw step] Review full ACP tool catalog: `openclaw tools list`",
+      "source": "openclaw-tasks.md",
+      "line": 85,
+      "column": "Backlog",
+      "category": "Agent/Tooling",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "027",
+      "title": "[OpenClaw step] Add relevant tools to `agents.list[main].tools.alsoAllow`",
+      "source": "openclaw-tasks.md",
+      "line": 86,
+      "column": "Backlog",
+      "category": "Agent/Tooling",
+      "priority": "Low",
+      "note": ""
+    },
+    {
+      "id": "028",
+      "title": "[OpenClaw step] Test tool access from agent session",
+      "source": "openclaw-tasks.md",
+      "line": 87,
+      "column": "Backlog",
+      "category": "Testing/QA",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "029",
+      "title": "[OpenClaw step] Set `channels.telegram.groupPolicy` to `\"allowlist\"`",
+      "source": "openclaw-tasks.md",
+      "line": 97,
+      "column": "Backlog",
+      "category": "Agent/Tooling",
+      "priority": "Low",
+      "note": ""
+    },
+    {
+      "id": "030",
+      "title": "[OpenClaw step] Add known group IDs to `channels.telegram.groupAllowFrom`",
+      "source": "openclaw-tasks.md",
+      "line": 98,
+      "column": "Backlog",
+      "category": "Agent/Tooling",
+      "priority": "Low",
+      "note": ""
+    },
+    {
+      "id": "031",
+      "title": "[OpenClaw step] Run `openclaw security audit --deep`",
+      "source": "openclaw-tasks.md",
+      "line": 99,
+      "column": "Backlog",
+      "category": "Agent/Tooling",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "032",
+      "title": "[OpenClaw step] Review and resolve any audit findings",
+      "source": "openclaw-tasks.md",
+      "line": 100,
+      "column": "Backlog",
+      "category": "Agent/Tooling",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "033",
+      "title": "It should become the user's 'relationship command center'.",
+      "source": "docs\\horizon_prm_architecture_review.md",
+      "line": 40,
+      "column": "To Do",
+      "category": "Docs",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "034",
+      "title": "It should be elevated to a core power-user feature.",
+      "source": "docs\\horizon_prm_architecture_review.md",
+      "line": 57,
+      "column": "To Do",
+      "category": "Docs",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "035",
+      "title": "Rather than simply importing contact data, the platform should implement a Social Signal Feed — a curated stream of activity from connected ",
+      "source": "docs\\horizon_prm_architecture_review.md",
+      "line": 148,
+      "column": "To Do",
+      "category": "Infra/CI",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "036",
+      "title": "| M2 | `msw` is in `dependencies` (not `devDependencies`) | Test tooling should be dev-only |",
+      "source": "docs\\CONSTITUTION.md",
+      "line": 1706,
+      "column": "To Do",
+      "category": "Testing/QA",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "037",
+      "title": "The measure of whether this document is current: a new developer should be able to set up, operate, and extend the full Horizon stack using ",
+      "source": "docs\\CONSTITUTION.md",
+      "line": 1736,
+      "column": "To Do",
+      "category": "Docs",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "038",
+      "title": "Implement the Sync Engine (`src/services/syncService.ts`) with bulk fetch and real-time listeners.",
+      "source": "docs\\superpowers\\specs\\2026-05-10-local-first-architecture-design.md",
+      "line": 50,
+      "column": "To Do",
+      "category": "Docs",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "039",
+      "title": "Based on the `ACR Phone Transcription Handoff` document, the server needs to handle a specific `multipart/form-data` structure.",
+      "source": "KNOWLEDGE1.md",
+      "line": 52,
+      "column": "To Do",
+      "category": "Infra/CI",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "040",
+      "title": "**Memory Management:** The `tiny.en` model and NeMo models should be initialized once on startup (Singleton pattern) to avoid the overhead o",
+      "source": "KNOWLEDGE1.md",
+      "line": 88,
+      "column": "To Do",
+      "category": "Docs",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "041",
+      "title": "Here are the specific fields your team needs to map:",
+      "source": "KNOWLEDGE2.md",
+      "line": 102,
+      "column": "To Do",
+      "category": "Infra/CI",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "042",
+      "title": "need to target a secondary API if ACR provides one for remote updates.",
+      "source": "KNOWLEDGE2.md",
+      "line": 269,
+      "column": "To Do",
+      "category": "Backend/Data",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "043",
+      "title": "Run backend test suite before production deployment:",
+      "source": "docs\\reviews\\archive\\AUTOMATED_ENGINEERING_REVIEW_2026-06-21_FINAL.md",
+      "line": 186,
+      "column": "Backlog",
+      "category": "Testing/QA",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "044",
+      "title": "1. Add `@axe-core/react` for automated accessibility testing",
+      "source": "docs\\reviews\\archive\\AUTOMATED_ENGINEERING_REVIEW_2026-06-21_FINAL.md",
+      "line": 208,
+      "column": "Backlog",
+      "category": "Testing/QA",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "045",
+      "title": "### Recommendation 1: Implement Comprehensive Test Suite",
+      "source": "docs\\reviews\\archive\\AUTOMATED_ENGINEERING_REVIEW_2026-06-21_FINAL.md",
+      "line": 271,
+      "column": "To Do",
+      "category": "Testing/QA",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "046",
+      "title": "CRITICAL:** Implement comprehensive test suite (minimum 70% coverage)",
+      "source": "docs\\reviews\\archive\\AUTOMATED_ENGINEERING_REVIEW_2026-06-21_FINAL.md",
+      "line": 351,
+      "column": "To Do",
+      "category": "Testing/QA",
+      "priority": "High",
+      "note": ""
+    },
+    {
+      "id": "047",
+      "title": "Implement test suite for critical services:",
+      "source": "docs\\reviews\\archive\\AUTOMATED_ENGINEERING_REVIEW_2026-06-21_FINAL.md",
+      "line": 380,
+      "column": "To Do",
+      "category": "Testing/QA",
+      "priority": "High",
+      "note": ""
+    },
+    {
+      "id": "048",
+      "title": "Add E2E tests for core user flows:",
+      "source": "docs\\reviews\\archive\\AUTOMATED_ENGINEERING_REVIEW_2026-06-21_FINAL.md",
+      "line": 384,
+      "column": "Backlog",
+      "category": "Testing/QA",
+      "priority": "Low",
+      "note": ""
+    },
+    {
+      "id": "049",
+      "title": "Add accessibility testing with `@axe-core/react`",
+      "source": "docs\\reviews\\archive\\AUTOMATED_ENGINEERING_REVIEW_2026-06-21_FINAL.md",
+      "line": 391,
+      "column": "Backlog",
+      "category": "Testing/QA",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "050",
+      "title": "Add test coverage for:",
+      "source": "docs\\reviews\\archive\\AUTOMATED_ENGINEERING_REVIEW_2026-06-22_FINAL.md",
+      "line": 98,
+      "column": "To Do",
+      "category": "Testing/QA",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "051",
+      "title": "Add tests for `GuardianService`, `SyncService`, `ContactList`",
+      "source": "docs\\reviews\\archive\\AUTOMATED_ENGINEERING_REVIEW_2026-06-22_FINAL.md",
+      "line": 402,
+      "column": "To Do",
+      "category": "Testing/QA",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "052",
+      "title": "Add integration tests for Supabase ↔ Dexie sync",
+      "source": "docs\\reviews\\archive\\AUTOMATED_ENGINEERING_REVIEW_2026-06-22_FINAL.md",
+      "line": 408,
+      "column": "Backlog",
+      "category": "Testing/QA",
+      "priority": "Medium",
+      "note": ""
+    },
+    {
+      "id": "053",
+      "title": "Supabase project reactivated (was auto-paused for low traffic)",
+      "source": "memory",
+      "line": 0,
+      "column": "Done",
+      "category": "Backend/Data",
+      "priority": "Low",
+      "note": "Reactivated by user 2026-08-11; nslookup resolves."
+    },
+    {
+      "id": "054",
+      "title": "Fix Minified React #310 crash in Eclipse mobile app",
+      "source": "memory",
+      "line": 0,
+      "column": "Done",
+      "category": "Frontend/UI",
+      "priority": "High",
+      "note": "Confirmed fixed (mock data build)."
+    },
+    {
+      "id": "055",
+      "title": "Wire In Progress / Blocked workflow into kanban board tooling",
+      "source": "memory",
+      "line": 0,
+      "column": "In Progress",
+      "category": "Agent/Tooling",
+      "priority": "Medium",
+      "note": "Building interactive board from workspace docs."
+    },
+    {
+      "id": "056",
+      "title": "Verify backend test environment before production deploy (review gated)",
+      "source": "docs/reviews/archive",
+      "line": 0,
+      "column": "Blocked",
+      "category": "Testing/QA",
+      "priority": "High",
+      "note": "2026-06-22 FINAL: APPROVE after fixing backend test env."
+    }
+  ]
+}

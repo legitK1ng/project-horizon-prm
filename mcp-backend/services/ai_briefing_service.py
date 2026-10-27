@@ -3,12 +3,15 @@ AI Briefing Service — AGENT-3a | REQ-006, REQ-027, REQ-033, REQ-034, REQ-035, 
 Handles ALL Gemini interactions server-side. Frontend never calls Gemini directly.
 Migrated to google-genai (v2) SDK — replaces deprecated google-generativeai.
 """
+import logging
 import os
 import json
 from datetime import datetime, timezone
 
 from google import genai
 from google.genai import types
+
+logger = logging.getLogger(__name__)
 
 
 def _get_client() -> genai.Client:
@@ -22,7 +25,7 @@ def _generate(prompt: str, model: str = "gemini-2.0-flash") -> str:
     """Single-call helper — returns response text, strips markdown fences."""
     client = _get_client()
     response = client.models.generate_content(model=model, contents=prompt)
-    text = response.text.strip()
+    text = (response.text or "").strip()
     # Strip markdown code fences if model wrapped the JSON
     for fence in ("```json", "```"):
         if text.startswith(fence):
@@ -30,6 +33,45 @@ def _generate(prompt: str, model: str = "gemini-2.0-flash") -> str:
     if text.endswith("```"):
         text = text[:-3]
     return text.strip()
+
+
+def _parse_json(text: str, context: str = "") -> dict:
+    """Strip markdown fences and parse JSON; raises with context on failure."""
+    text = text.strip()
+    for fence in ("```json", "```"):
+        if text.startswith(fence):
+            text = text[len(fence):]
+    if text.endswith("```"):
+        text = text[:-3]
+    try:
+        return json.loads(text.strip())
+    except json.JSONDecodeError as exc:
+        logger.error(f"[AI] JSON parse failed ({context}): {exc} | raw[:200]={text[:200]!r}")
+        raise
+
+
+class _CompatResponse:
+    """Compatibility response wrapper exposing .text for legacy _get_model() callers."""
+    def __init__(self, text: str):
+        self.text = text
+
+
+class _CompatModel:
+    """
+    Compatibility adapter wrapping google-genai v2 _generate() behind a
+    .generate_content(prompt) method so callers importing _get_model() work cleanly.
+    """
+    def __init__(self, model_name: str = "gemini-2.0-flash"):
+        self.model_name = model_name
+
+    def generate_content(self, prompt: str) -> _CompatResponse:
+        return _CompatResponse(_generate(prompt, model=self.model_name))
+
+
+def _get_model(model_name: str = "gemini-2.0-flash") -> _CompatModel:
+    """Return a google-genai v2 compatibility model wrapper."""
+    _get_client()  # validate GOOGLE_API_KEY early
+    return _CompatModel(model_name=model_name)
 
 
 def generate_call_brief(transcript: str, contact_name: str) -> dict:
@@ -61,7 +103,7 @@ def generate_call_brief(transcript: str, contact_name: str) -> dict:
     {transcript}
     """
 
-    return json.loads(_generate(prompt))
+    return _parse_json(_generate(prompt), context="generate_call_brief")
 
 
 def generate_weekly_digest(call_summaries: list[dict]) -> str:
@@ -126,7 +168,7 @@ def classify_social_signal(content: str, contact_name: str) -> dict:
     Content:
     {content}
     """
-    return json.loads(_generate(prompt))
+    return _parse_json(_generate(prompt), context="classify_social_signal")
 
 
 def generate_reply_suggestion(signal_content: str, contact_name: str, call_history_summaries: list[str]) -> str:
@@ -213,7 +255,7 @@ TRANSCRIPT:
 
 Return ONLY the JSON object."""
 
-    return json.loads(_generate(prompt))
+    return _parse_json(_generate(prompt), context="process_transcript_gemini")
 
 
 # ── Embeddings (Item 14) — Google text-embedding-004 ─────────────────────────

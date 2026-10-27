@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 from datetime import datetime
 
@@ -7,6 +7,8 @@ class ACRWebhookPayload(BaseModel):
     Schema for the ACR Phone Webhook inbound payload.
     Supports both standard phone call fields and Horizon extensions.
     """
+    model_config = ConfigDict(populate_by_name=True)
+
     contact_name: str = Field("Unknown", alias="contact")
     phone_number: str = Field("", alias="phone")
     duration: Optional[str] = None
@@ -17,9 +19,6 @@ class ACRWebhookPayload(BaseModel):
     location: Optional[str] = None   # "lat;lon"
     address: Optional[str] = None
     external_id: Optional[str] = None
-    
-    class Config:
-        populate_by_name = True
 
 class CallRecordBase(BaseModel):
     contact_name: str

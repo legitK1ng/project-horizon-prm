@@ -30,6 +30,7 @@ class CallIngestRequest(BaseModel):
     external_id: str | None = None
 
 @router.post("")
+@router.post("/")
 async def ingest_call(
     req: Request,
     background_tasks: BackgroundTasks,
@@ -67,7 +68,7 @@ async def ingest_call(
             # REQ-151: Real Transcription
             if not transcript or transcript == "[AUDIO_ONLY_PENDING_TRANSCRIPTION]":
                 logger.info("[INGEST] Starting transcription...")
-                transcript = transcribe_audio(wav_path)
+                transcript = await asyncio.get_running_loop().run_in_executor(None, transcribe_audio, wav_path)
                 logger.info(f"[INGEST] Transcription result: {transcript[:50]}...")
                 
             # Schedule cleanup
@@ -85,14 +86,14 @@ async def ingest_call(
     try:
         # Only attempt AI if we have actual text content
         if transcript and not transcript.startswith("["):
-            brief = generate_call_brief(transcript, contact_name)
+            brief = await asyncio.get_running_loop().run_in_executor(None, generate_call_brief, transcript, contact_name)
         else:
             brief = {"summary": "Call ingested. Transcription in progress.", "actionItems": []}
     except Exception as e:
         logger.error(f"[AI] Briefing generation failed: {e}")
         brief = {"error": str(e), "summary": "Brief generation failed", "actionItems": []}
 
-    # 3. Field-level encryption (REQ-039)
+    # 3. Field-level encryption (REQ-037 / REQ-039)
     transcript_encrypted = None
     transcript_iv = None
     
@@ -146,7 +147,7 @@ async def ingest_call(
         " ".join(brief.get("tags", [])),
         (transcript or "")[:2000],
     ]))
-    embedding = embed_text(embed_text_input) if embed_text_input.strip() else None
+    embedding = await asyncio.get_running_loop().run_in_executor(None, embed_text, embed_text_input) if embed_text_input.strip() else None
 
     record = {
         "contact_name": contact_name,
@@ -170,11 +171,21 @@ async def ingest_call(
         "acr_direction":  parsed_meta.get("direction", ""),
         "acr_phone_e164": norm_phone(phone_number) if phone_number else "",
     }
+    if transcript_encrypted and transcript_iv:
+        record["transcript_encrypted"] = transcript_encrypted
+        record["transcript_iv"] = transcript_iv
 
     try:
         # Validate record against schema and insert the VALIDATED data (not raw dict)
         validated_record = CallRecordCreate(**record)
         clean = validated_record.model_dump(exclude_none=True)
+        # Preserve plaintext & encrypted transcript fields that CallRecordCreate may not explicitly declare
+        if transcript:
+            clean.setdefault("transcript", transcript)
+            clean.setdefault("raw_transcript", transcript)
+        if transcript_encrypted and transcript_iv:
+            clean["transcript_encrypted"] = transcript_encrypted
+            clean["transcript_iv"] = transcript_iv
 
         response = db.table("call_records").insert(clean).select("id").execute()
         return {
@@ -202,8 +213,13 @@ async def list_calls(req: Request, limit: int = 100, offset: int = 0):
 
         records = []
         for record in response.data:
-            # Read transcript from the unified column (raw_transcript or transcript)
-            record["transcript"] = record.get("transcript") or record.get("raw_transcript") or ""
+            # Read transcript from the unified column (raw_transcript or transcript), or decrypt if only encrypted is present
+            plain = record.get("transcript") or record.get("raw_transcript") or ""
+            if not plain and record.get("transcript_encrypted") and record.get("transcript_iv"):
+                decrypted = decrypt_data(record["transcript_encrypted"], record["transcript_iv"])
+                if decrypted and decrypted != "[DECRYPTION_FAILED]":
+                    plain = decrypted
+            record["transcript"] = plain
             records.append(record)
 
         return {
@@ -250,4 +266,3 @@ async def update_call(call_id: str, req: Request, update: CallUpdate):
     except Exception as e:
         logger.error(f"[DB] Update failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-

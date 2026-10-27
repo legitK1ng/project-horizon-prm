@@ -1,0 +1,62 @@
+{
+  "surfaces": {
+    "horizon": {
+      "path": "C:/Users/owner/Desktop/horizon",
+      "pkg": "project-horizon-prm",
+      "files": 82,
+      "features": {
+        "transcription": 22,
+        "diarization": 2,
+        "enrichment/OSINT": 15,
+        "health-score": 5,
+        "contacts-sync": 8,
+        "ai-chat": 6,
+        "sse-realtime": 10,
+        "batch-ingest": 10,
+        "mobile/capacitor": 11,
+        "embeddings": 2
+      }
+    },
+    "eclipse": {
+      "path": "C:/Users/owner/My Drive/horizon",
+      "pkg": "project-horizon-eclipse",
+      "files": 53,
+      "features": {
+        "transcription": 18,
+        "diarization": 2,
+        "enrichment/OSINT": 13,
+        "health-score": 4,
+        "contacts-sync": 8,
+        "ai-chat": 6,
+        "sse-realtime": 8,
+        "batch-ingest": 7,
+        "mobile/capacitor": 5,
+        "embeddings": 1
+      }
+    }
+  },
+  "eclipse_unique_components": [],
+  "horizon_unique_components": [
+    "ContactsWidget",
+    "GlassCard",
+    "IngestQueueViewer",
+    "IngestionSettings",
+    "IntelligencePanel",
+    "ManualIngestForm",
+    "NetworkTopology",
+    "NudgesWidget",
+    "PipelineHUD",
+    "PipelineMonitor",
+    "PremiumButton",
+    "QuickActionsWidget",
+    "RecentCallsWidget",
+    "Sentinel",
+    "SentinelStatusPanel",
+    "Skeleton",
+    "SourceConfigPanel",
+    "StatsWidget",
+    "SystemBots",
+    "SystemStatusBar",
+    "WidgetGrid"
+  ]
+}

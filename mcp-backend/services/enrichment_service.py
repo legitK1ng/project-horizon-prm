@@ -71,7 +71,7 @@ async def _stage_phone_lookup(phone: str) -> dict:
 
     async with httpx.AsyncClient(timeout=10) as client:
         resp = await client.get(
-            "http://apilayer.net/api/validate",
+            "https://apilayer.net/api/validate",
             params={"access_key": api_key, "number": phone, "format": 1}
         )
         data = resp.json()
@@ -151,9 +151,8 @@ async def _stage_social_discovery(name: str, email: str) -> dict:
 
 async def _stage_ai_synthesis(contact_name: str, enrichment_data: dict) -> dict:
     """REQ-028 Stage 6: Gemini synthesizes enrichment data into a 'Who is this person' narrative."""
-    from services.ai_briefing_service import _get_model
+    from services.ai_briefing_service import _generate
 
-    model = _get_model()
     prompt = f"""
     Based on the following enrichment data, write a concise 'Who is this person' intelligence brief (3-4 sentences).
     Focus on: professional background, organizational role, relationship context.
@@ -163,8 +162,8 @@ async def _stage_ai_synthesis(contact_name: str, enrichment_data: dict) -> dict:
 
     Return ONLY the narrative text, no JSON.
     """
-    response = model.generate_content(prompt)
-    return {"narrative": response.text.strip()}
+    narrative = _generate(prompt)
+    return {"narrative": narrative.strip()}
 
 
 async def run_enrichment_pipeline(contact_id: str, phone: str = None, email: str = None,
@@ -176,8 +175,12 @@ async def run_enrichment_pipeline(contact_id: str, phone: str = None, email: str
     db = get_supabase()
     enrichment_data = {}
 
-    async def run_stage(stage: EnrichmentStage, coro, source: str):
-        """Run a single stage with retry logic (REQ-023)."""
+    async def run_stage(stage: EnrichmentStage, coro_factory, source: str):
+        """
+        Run a single stage with exponential-backoff retry (REQ-023).
+        Accepts a zero-arg callable that returns a fresh coroutine each call —
+        a coroutine object can only be awaited once, so we must recreate it per attempt.
+        """
         job_resp = db.table("enrichment_jobs").insert({
             "contact_id": contact_id,
             "stage": stage.value,
@@ -188,7 +191,7 @@ async def run_enrichment_pipeline(contact_id: str, phone: str = None, email: str
 
         for attempt in range(1, 4):
             try:
-                result = await coro
+                result = await coro_factory()   # fresh coroutine every attempt
                 confidence_score = result.get("confidence", 0.7) if isinstance(result, dict) else 0.7
                 _save_job_result(job_id, stage.value, result, source, _conf_from_score(confidence_score))
                 return result
@@ -196,9 +199,9 @@ async def run_enrichment_pipeline(contact_id: str, phone: str = None, email: str
                 if attempt == 3:
                     _fail_job(job_id, attempt, str(e))
                     return {}
-                await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                await asyncio.sleep(2 ** attempt)
 
-    # Stage 1: Entity Detection (just record the job)
+    # Stage 1: Entity Detection (just record the job, no external call needed)
     db.table("enrichment_jobs").insert({
         "contact_id": contact_id, "stage": 1, "status": "COMPLETE",
         "result_json": {"job_id": str(uuid.uuid4()), "status": "triggered"},
@@ -206,27 +209,27 @@ async def run_enrichment_pipeline(contact_id: str, phone: str = None, email: str
         "fetched_at": datetime.now(timezone.utc).isoformat()
     }).execute()
 
-    # Stage 2: Phone
+    # Stage 2: Phone — lambda creates a fresh coroutine on each retry attempt
     if phone:
-        result = await run_stage(EnrichmentStage.PHONE_LOOKUP, _stage_phone_lookup(phone), "numverify")
+        result = await run_stage(EnrichmentStage.PHONE_LOOKUP, lambda: _stage_phone_lookup(phone), "numverify")
         enrichment_data["phone"] = result
 
     # Stage 3: Email
     if email:
-        result = await run_stage(EnrichmentStage.EMAIL_ENRICHMENT, _stage_email_enrichment(email), "hunter.io")
+        result = await run_stage(EnrichmentStage.EMAIL_ENRICHMENT, lambda: _stage_email_enrichment(email), "hunter.io")
         enrichment_data["email"] = result
 
     # Stage 4: Org
     if company_domain:
-        result = await run_stage(EnrichmentStage.ORG_ENRICHMENT, _stage_org_enrichment(company_domain), "clearbit")
+        result = await run_stage(EnrichmentStage.ORG_ENRICHMENT, lambda: _stage_org_enrichment(company_domain), "clearbit")
         enrichment_data["org"] = result
 
     # Stage 5: Social Discovery
-    result = await run_stage(EnrichmentStage.SOCIAL_DISCOVERY, _stage_social_discovery(contact_name, email or ""), "osint")
+    result = await run_stage(EnrichmentStage.SOCIAL_DISCOVERY, lambda: _stage_social_discovery(contact_name, email or ""), "osint")
     enrichment_data["social"] = result
 
-    # Stage 6: AI Synthesis
-    result = await run_stage(EnrichmentStage.AI_SYNTHESIS, _stage_ai_synthesis(contact_name, enrichment_data), "gemini")
+    # Stage 6: AI Synthesis — capture enrichment_data snapshot via default arg to avoid closure mutation
+    result = await run_stage(EnrichmentStage.AI_SYNTHESIS, lambda d=dict(enrichment_data): _stage_ai_synthesis(contact_name, d), "gemini")
     enrichment_data["synthesis"] = result
 
     return enrichment_data
