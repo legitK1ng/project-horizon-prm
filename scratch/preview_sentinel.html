@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sentinel Guardian — Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #0E0D0B;
+      color: #E8E4DC;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow-x: hidden;
+    }
+    input, select, textarea, button { font-family: inherit; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    const T = {
+      bg:          "#0E0D0B",
+      surface:     "rgba(255,255,255,0.04)",
+      surfaceMd:   "rgba(255,255,255,0.07)",
+      surfaceHover:"rgba(255,255,255,0.09)",
+      border:      "rgba(255,255,255,0.08)",
+      borderMd:    "rgba(255,255,255,0.13)",
+      inkPrimary:  "#E8E4DC",
+      inkSecond:   "#9B9289",
+      inkMuted:    "#5C5750",
+      ochre:       "#E8A656",
+      ochreAlpha:  "rgba(232,166,86,0.14)",
+      ochreBorder: "rgba(232,166,86,0.32)",
+      green:       "#70C98A",
+      greenAlpha:  "rgba(112,201,138,0.14)",
+      greenBorder: "rgba(112,201,138,0.30)",
+      blue:        "#68A5E8",
+      blueAlpha:   "rgba(104,165,232,0.14)",
+      blueBorder:  "rgba(104,165,232,0.30)",
+      red:         "#E07070",
+      redAlpha:    "rgba(224,112,112,0.14)",
+      redBorder:   "rgba(224,112,112,0.30)"
+    };
+
+    const INITIAL_SERVICES = [
+      {
+        id: 'fastapi',
+        name: 'FastAPI Ingestion Core',
+        host: 'HP-Z2G3 (100.90.84.53:8000)',
+        status: 'nominal',
+        load: 14,
+        latency: '18ms',
+        uptime: '99.98%',
+        description: 'ACR phone Whisper-mimic listener with run_in_executor offloading'
+      },
+      {
+        id: 'tailscale',
+        name: 'Tailscale Encrypted Mesh',
+        host: 'tailnet-horizon.ts.net',
+        status: 'nominal',
+        load: 8,
+        latency: '24ms',
+        uptime: '100%',
+        description: 'WireGuard encrypted tunnel with Funnel public ingress proxy'
+      },
+      {
+        id: 'gemini',
+        name: 'Gemini Neural Processor',
+        host: 'gemini-2.5-flash',
+        status: 'nominal',
+        load: 22,
+        latency: '412ms',
+        uptime: '99.95%',
+        description: 'Autonomous call summarization, executive brief distillation & action extractor'
+      },
+      {
+        id: 'supabase',
+        name: 'Supabase Vector Database',
+        host: 'db.supabase.co (pgvector)',
+        status: 'nominal',
+        load: 19,
+        latency: '62ms',
+        uptime: '99.99%',
+        description: 'Relational call records, contact dossiers, and pgvector semantic embeddings'
+      },
+      {
+        id: 'people_api',
+        name: 'Google People OSINT Sync',
+        host: 'people.googleapis.com',
+        status: 'nominal',
+        load: 4,
+        latency: '88ms',
+        uptime: '99.90%',
+        description: 'Bi-directional contact synchronization and biographical OSINT enrichment'
+      },
+      {
+        id: 'dexie',
+        name: 'Dexie Offline Cache',
+        host: 'IndexedDB (Browser Local)',
+        status: 'nominal',
+        load: 2,
+        latency: '2ms',
+        uptime: '100%',
+        description: 'Zero-latency offline first store with background dual-sync replication'
+      }
+    ];
+
+    const INITIAL_LOGS = [
+      { id: 'l-1', time: '18:24:10', level: 'INFO', system: 'FASTAPI', message: 'ACR Phone Whisper-mimic endpoint listening on 0.0.0.0:8000/api/whisper-mimic' },
+      { id: 'l-2', time: '18:24:12', level: 'SUCCESS', system: 'TAILNET', message: 'Tailscale Funnel proxy established: https://horizon-edge.tailnet.ts.net' },
+      { id: 'l-3', time: '18:24:15', level: 'INFO', system: 'SENTINEL', message: 'Autonomous Guardian monitor heartbeat started. Polling every 5000ms' },
+      { id: 'l-4', time: '18:24:20', level: 'SUCCESS', system: 'SUPABASE', message: 'Connection pool verified: 12 active workers, 0 pool exhaustion warnings' },
+      { id: 'l-5', time: '18:24:28', level: 'INFO', system: 'GEMINI', message: 'Model context primed (gemini-2.5-flash). System prompt cached' }
+    ];
+
+    function SentinelGuardianView() {
+      const [services, setServices] = useState(INITIAL_SERVICES);
+      const [logs, setLogs] = useState(INITIAL_LOGS);
+      const [filter, setFilter] = useState('ALL');
+      const [healing, setHealing] = useState(false);
+      const [simulating, setSimulating] = useState(false);
+      const [toastMsg, setToastMsg] = useState(null);
+
+      const showToast = (msg) => {
+        setToastMsg(msg);
+        setTimeout(() => setToastMsg(null), 3500);
+      };
+
+      const appendLog = (level, system, message) => {
+        const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+        const newEntry = {
+          id: `l-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          time,
+          level,
+          system,
+          message
+        };
+        setLogs(prev => [newEntry, ...prev.slice(0, 49)]);
+      };
+
+      const runSelfHealing = () => {
+        if (healing) return;
+        setHealing(true);
+        appendLog('INFO', 'SENTINEL', 'Initiating autonomous cluster diagnostics and self-healing sweep...');
+
+        setTimeout(() => {
+          appendLog('INFO', 'SUPABASE', 'Analyzing pgvector indices and vacuum states...');
+          setServices(prev => prev.map(s => s.id === 'supabase' ? { ...s, status: 'optimizing' } : s));
+        }, 800);
+
+        setTimeout(() => {
+          appendLog('SUCCESS', 'SUPABASE', 'Re-indexed call_records_embedding_idx (18,420 rows scanned, 0 errors)');
+          appendLog('INFO', 'FASTAPI', 'Flushing stale audio temporary buffers...');
+          setServices(prev => prev.map(s => s.id === 'supabase' ? { ...s, status: 'nominal' } : s));
+        }, 1600);
+
+        setTimeout(() => {
+          appendLog('SUCCESS', 'FASTAPI', 'Temp buffer purged: 142 MB reclaimed');
+          appendLog('SUCCESS', 'SENTINEL', 'Self-healing routine concluded. All 6 nodes aligned at 100% health.');
+          setHealing(false);
+          showToast('Autonomous Self-Healing Cycle Complete');
+        }, 2400);
+      };
+
+      const simulateInbound = () => {
+        if (simulating) return;
+        setSimulating(true);
+        showToast('Incoming ACR Audio Telemetry Detected...');
+        appendLog('INFO', 'FASTAPI', 'POST /api/whisper-mimic: [call_elena_20261029.m4a, 4.8MB]');
+
+        setTimeout(() => {
+          appendLog('INFO', 'WHISPER', 'Offloaded audio to run_in_executor worker thread');
+        }, 800);
+
+        setTimeout(() => {
+          appendLog('SUCCESS', 'WHISPER', 'Audio transcribed (18m 42s in 3.4s). Diarization ready');
+          appendLog('INFO', 'GEMINI', 'Prompting Gemini 2.5 Flash for brief & action items...');
+        }, 1800);
+
+        setTimeout(() => {
+          appendLog('SUCCESS', 'GEMINI', 'Brief synthesized (2 actions extracted, sentiment: 0.94)');
+          appendLog('SUCCESS', 'SUPABASE', 'Committed call record & pgvector embedding');
+          setSimulating(false);
+          showToast('ACR Call Processed & Indexed');
+        }, 2800);
+      };
+
+      const filteredLogs = logs.filter(l => {
+        if (filter === 'ALL') return true;
+        if (filter === 'INGEST') return l.system === 'FASTAPI' || l.system === 'WHISPER';
+        if (filter === 'SENTINEL') return l.system === 'SENTINEL' || l.system === 'TAILNET';
+        if (filter === 'AI') return l.system === 'GEMINI';
+        return true;
+      });
+
+      return (
+        <div style={{ minHeight: "100vh", backgroundColor: T.bg, padding: "32px 24px" }}>
+          
+          {/* Toast */}
+          {toastMsg && (
+            <div style={{
+              position: "fixed",
+              bottom: "24px",
+              right: "24px",
+              zIndex: 9999,
+              backgroundColor: "#161512",
+              border: `1px solid ${T.ochre}`,
+              color: "#FFF",
+              padding: "12px 20px",
+              borderRadius: "12px",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.8)",
+              fontSize: "13px"
+            }}>
+              ✦ {toastMsg}
+            </div>
+          )}
+
+          {/* Header */}
+          <div style={{ maxWidth: "1200px", margin: "0 auto 32px auto", display: "flex", justifyContent: "space-between", alignItems: "flex-end", borderBottom: `1px solid ${T.border}`, paddingBottom: "24px" }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: T.ochre }}></span>
+                <span style={{ fontSize: "11px", fontFamily: "JetBrains Mono", color: T.ochre, letterSpacing: "1.5px", textTransform: "uppercase" }}>
+                  PROJECT HORIZON PRM • SENTINEL GUARDIAN
+                </span>
+              </div>
+              <h1 style={{ fontFamily: "Bricolage Grotesque", fontSize: "40px", margin: 0, fontWeight: 700, color: "#FFF" }}>
+                System <span style={{ color: T.ochre }}>Guardian</span>
+              </h1>
+              <p style={{ fontSize: "14px", color: T.inkSecond, margin: "4px 0 0 0" }}>
+                Autonomous cluster telemetry, Tailscale mesh status, event-loop watchdog, and real-time ACR pipeline monitor.
+              </p>
+            </div>
+
+            <div style={{ display: "flex", gap: "12px" }}>
+              <button
+                id="btn-simulate-call"
+                onClick={simulateInbound}
+                disabled={simulating}
+                style={{
+                  background: T.surface,
+                  border: `1px solid ${T.ochreBorder}`,
+                  color: T.ochre,
+                  padding: "10px 18px",
+                  borderRadius: "12px",
+                  fontFamily: "JetBrains Mono",
+                  fontSize: "11px",
+                  textTransform: "uppercase",
+                  cursor: "pointer",
+                  letterSpacing: "1px"
+                }}
+              >
+                {simulating ? 'Simulating Call...' : '⚡ Simulate Inbound ACR'}
+              </button>
+
+              <button
+                id="btn-self-healing"
+                onClick={runSelfHealing}
+                disabled={healing}
+                style={{
+                  background: `linear-gradient(135deg, ${T.ochre}, #C68030)`,
+                  border: "none",
+                  color: "#0E0D0B",
+                  padding: "10px 18px",
+                  borderRadius: "12px",
+                  fontWeight: "bold",
+                  fontSize: "11px",
+                  fontFamily: "JetBrains Mono",
+                  textTransform: "uppercase",
+                  cursor: "pointer",
+                  letterSpacing: "1px"
+                }}
+              >
+                {healing ? 'Healing...' : '↻ Self-Healing Sweep'}
+              </button>
+            </div>
+          </div>
+
+          {/* Telemetry Strip */}
+          <div style={{ maxWidth: "1200px", margin: "0 auto 32px auto", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
+            <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: "14px", padding: "16px" }}>
+              <div style={{ fontSize: "10px", fontFamily: "JetBrains Mono", color: T.inkMuted, textTransform: "uppercase" }}>Cluster State</div>
+              <div style={{ fontSize: "18px", fontWeight: "bold", fontFamily: "JetBrains Mono", color: T.green, marginTop: "6px" }}>ALL NOMINAL</div>
+              <div style={{ fontSize: "11px", fontFamily: "JetBrains Mono", color: T.inkSecond, marginTop: "4px" }}>6 of 6 services online</div>
+            </div>
+
+            <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: "14px", padding: "16px" }}>
+              <div style={{ fontSize: "10px", fontFamily: "JetBrains Mono", color: T.inkMuted, textTransform: "uppercase" }}>Primary Node</div>
+              <div style={{ fontSize: "18px", fontWeight: "bold", fontFamily: "JetBrains Mono", color: "#FFF", marginTop: "6px" }}>HP-Z2G3</div>
+              <div style={{ fontSize: "11px", fontFamily: "JetBrains Mono", color: T.inkSecond, marginTop: "4px" }}>100.90.84.53 • Online</div>
+            </div>
+
+            <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: "14px", padding: "16px" }}>
+              <div style={{ fontSize: "10px", fontFamily: "JetBrains Mono", color: T.inkMuted, textTransform: "uppercase" }}>Relay Latency</div>
+              <div style={{ fontSize: "18px", fontWeight: "bold", fontFamily: "JetBrains Mono", color: T.ochre, marginTop: "6px" }}>24 ms</div>
+              <div style={{ fontSize: "11px", fontFamily: "JetBrains Mono", color: T.inkSecond, marginTop: "4px" }}>Tailscale Funnel Active</div>
+            </div>
+
+            <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: "14px", padding: "16px" }}>
+              <div style={{ fontSize: "10px", fontFamily: "JetBrains Mono", color: T.inkMuted, textTransform: "uppercase" }}>Loop Watchdog</div>
+              <div style={{ fontSize: "18px", fontWeight: "bold", fontFamily: "JetBrains Mono", color: "#FFF", marginTop: "6px" }}>0.2 ms / tick</div>
+              <div style={{ fontSize: "11px", fontFamily: "JetBrains Mono", color: T.green, marginTop: "4px" }}>Unblocked • P0 Verified</div>
+            </div>
+          </div>
+
+          {/* Microservices Grid */}
+          <div style={{ maxWidth: "1200px", margin: "0 auto 32px auto" }}>
+            <div style={{ fontSize: "11px", fontFamily: "JetBrains Mono", color: T.ochre, textTransform: "uppercase", marginBottom: "16px" }}>
+              ✦ COMPONENT TOPOLOGY & SERVICES
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
+              {services.map(s => {
+                const isNom = s.status === 'nominal';
+                return (
+                  <div key={s.id} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: "14px", padding: "16px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+                        <div style={{ fontWeight: 600, color: "#FFF", fontSize: "14px" }}>{s.name}</div>
+                        <span style={{ fontSize: "10px", fontFamily: "JetBrains Mono", textTransform: "uppercase", color: isNom ? T.green : T.ochre, border: `1px solid ${isNom ? T.greenBorder : T.ochreBorder}`, padding: "2px 6px", borderRadius: "4px" }}>
+                          {s.status}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: "11px", fontFamily: "JetBrains Mono", color: T.ochre, marginBottom: "8px" }}>{s.host}</div>
+                      <div style={{ fontSize: "12px", color: T.inkSecond, lineHeight: 1.5, marginBottom: "16px" }}>{s.description}</div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", borderTop: `1px solid ${T.border}`, paddingTop: "12px", textAlign: "center", fontSize: "10px", fontFamily: "JetBrains Mono" }}>
+                      <div>
+                        <div style={{ color: T.inkMuted }}>LOAD</div>
+                        <div style={{ color: "#FFF", fontWeight: "bold", marginTop: "2px" }}>{s.load}%</div>
+                      </div>
+                      <div>
+                        <div style={{ color: T.inkMuted }}>LATENCY</div>
+                        <div style={{ color: T.ochre, fontWeight: "bold", marginTop: "2px" }}>{s.latency}</div>
+                      </div>
+                      <div>
+                        <div style={{ color: T.inkMuted }}>UPTIME</div>
+                        <div style={{ color: T.green, fontWeight: "bold", marginTop: "2px" }}>{s.uptime}</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Terminal Console */}
+          <div style={{ maxWidth: "1200px", margin: "0 auto", background: "#12110F", border: `1px solid ${T.borderMd}`, borderRadius: "16px", overflow: "hidden" }}>
+            <div style={{ padding: "12px 16px", background: "#161512", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: "11px", fontFamily: "JetBrains Mono", color: "#FFF", display: "flex", alignItems: "center", gap: "8px" }}>
+                <span>&gt;_</span>
+                <span>SENTINEL TELEMETRY FEED</span>
+                <span style={{ color: T.green, fontSize: "9px" }}>[STREAMING]</span>
+              </div>
+
+              <div style={{ display: "flex", gap: "6px" }}>
+                {['ALL', 'INGEST', 'SENTINEL', 'AI'].map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    style={{
+                      background: filter === f ? T.ochre : T.surface,
+                      border: `1px solid ${T.border}`,
+                      color: filter === f ? "#0E0D0B" : T.inkSecond,
+                      padding: "4px 8px",
+                      borderRadius: "6px",
+                      fontSize: "10px",
+                      fontFamily: "JetBrains Mono",
+                      cursor: "pointer",
+                      fontWeight: filter === f ? "bold" : "normal"
+                    }}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ padding: "16px", fontFamily: "JetBrains Mono", fontSize: "12px", display: "flex", flexDirection: "column", gap: "6px", maxHeight: "300px", overflowY: "auto", background: "rgba(0,0,0,0.5)" }}>
+              {filteredLogs.map(l => {
+                const col = l.level === 'SUCCESS' ? T.green : l.level === 'WARN' ? T.ochre : T.inkSecond;
+                return (
+                  <div key={l.id} style={{ display: "flex", gap: "10px", lineHeight: "1.4" }}>
+                    <span style={{ color: T.inkMuted }}>{l.time}</span>
+                    <span style={{ color: T.ochre, fontWeight: "bold", minWidth: "75px" }}>[{l.system}]</span>
+                    <span style={{ color: col, fontWeight: "bold", minWidth: "65px" }}>{l.level}</span>
+                    <span style={{ color: T.inkPrimary, flex: 1 }}>{l.message}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<SentinelGuardianView />);
+  </script>
+</body>
+</html>

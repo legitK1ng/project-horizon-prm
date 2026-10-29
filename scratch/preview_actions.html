@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Action Intelligence Matrix — Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #0E0D0B;
+      color: #E8E4DC;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow-x: hidden;
+    }
+    input, select, textarea, button { font-family: inherit; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useMemo } = React;
+
+    const T = {
+      bg:          "#0E0D0B",
+      surface:     "rgba(255,255,255,0.04)",
+      surfaceMd:   "rgba(255,255,255,0.07)",
+      surfaceHover:"rgba(255,255,255,0.09)",
+      border:      "rgba(255,255,255,0.08)",
+      borderMd:    "rgba(255,255,255,0.13)",
+      inkPrimary:  "#E8E4DC",
+      inkSecond:   "#9B9289",
+      inkMuted:    "#5C5750",
+      ochre:       "#E8A656",
+      ochreAlpha:  "rgba(232,166,86,0.14)",
+      ochreBorder: "rgba(232,166,86,0.32)",
+      green:       "#70C98A",
+      greenAlpha:  "rgba(112,201,138,0.14)",
+      greenBorder: "rgba(112,201,138,0.30)",
+      blue:        "#68A5E8",
+      blueAlpha:   "rgba(104,165,232,0.14)",
+      blueBorder:  "rgba(104,165,232,0.30)",
+      red:         "#E07070",
+      redAlpha:    "rgba(224,112,112,0.14)",
+      redBorder:   "rgba(224,112,112,0.30)"
+    };
+
+    const INITIAL_TASKS = [
+      {
+        id: 'act-101',
+        title: 'Transmit signed encryption NDA to Vanguard Legal team',
+        description: 'Elena confirmed on call #101 that compliance review begins Friday. Send via encrypted Signal.',
+        status: 'pending',
+        priority: 'urgent',
+        contact_name: 'Elena Rostova',
+        call_source: 'Call #101 (18m 42s)',
+        due_date: '2026-10-30'
+      },
+      {
+        id: 'act-102',
+        title: 'Validate HP-Z2G3 gateway ping across tailnet failover',
+        description: 'Ensure Tailscale Funnel ingress remains responsive if primary node drops offline.',
+        status: 'in_progress',
+        priority: 'high',
+        contact_name: 'Marcus Vance',
+        call_source: 'Call #100 (14m 19s)',
+        due_date: '2026-10-31'
+      },
+      {
+        id: 'act-103',
+        title: 'Benchmark Gemini 2.5 Flash token speed against Whisper local',
+        description: 'Dr. Thorne recommended testing run_in_executor offloading to measure event loop unblocking delta.',
+        status: 'in_progress',
+        priority: 'high',
+        contact_name: 'Dr. Aris Thorne',
+        call_source: 'Call #099 (22m 05s)',
+        due_date: '2026-11-01'
+      },
+      {
+        id: 'act-104',
+        title: 'Send updated executive deck before November capital review',
+        description: 'Include multi-node architecture diagram and offline ACR ingestion benchmarks.',
+        status: 'pending',
+        priority: 'medium',
+        contact_name: 'Sophia Sterling',
+        call_source: 'Call #082 (09m 11s)',
+        due_date: '2026-11-04'
+      },
+      {
+        id: 'act-105',
+        title: 'Schedule dual-channel ACR audio telemetry test',
+        description: 'Verified test completed on Android client; stereo channel split confirmed.',
+        status: 'completed',
+        priority: 'high',
+        contact_name: 'Elena Rostova',
+        call_source: 'Call #098 (34m 10s)',
+        due_date: '2026-10-22'
+      }
+    ];
+
+    function ActionsKanbanView() {
+      const [tasks, setTasks] = useState(INITIAL_TASKS);
+      const [viewMode, setViewMode] = useState('kanban'); // 'kanban' | 'canvas'
+      const [priorityFilter, setPriorityFilter] = useState('ALL');
+      const [searchTerm, setSearchTerm] = useState('');
+      const [toastMsg, setToastMsg] = useState(null);
+      const [showModal, setShowModal] = useState(false);
+      const [newTitle, setNewTitle] = useState('');
+      const [newContact, setNewContact] = useState('Elena Rostova');
+      const [newPriority, setNewPriority] = useState('high');
+
+      const showToast = (msg) => {
+        setToastMsg(msg);
+        setTimeout(() => setToastMsg(null), 3000);
+      };
+
+      const filtered = useMemo(() => {
+        return tasks.filter(t => {
+          const matchSearch =
+            t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            t.contact_name.toLowerCase().includes(searchTerm.toLowerCase());
+          const matchPri = priorityFilter === 'ALL' || t.priority.toLowerCase() === priorityFilter.toLowerCase();
+          return matchSearch && matchPri;
+        });
+      }, [tasks, searchTerm, priorityFilter]);
+
+      const pending = useMemo(() => filtered.filter(t => t.status === 'pending'), [filtered]);
+      const inProg = useMemo(() => filtered.filter(t => t.status === 'in_progress'), [filtered]);
+      const done = useMemo(() => filtered.filter(t => t.status === 'completed'), [filtered]);
+
+      const advance = (id) => {
+        setTasks(prev => prev.map(t => {
+          if (t.id === id) {
+            if (t.status === 'pending') {
+              showToast(`Advanced "${t.title.slice(0, 20)}..." to Active`);
+              return { ...t, status: 'in_progress' };
+            }
+            if (t.status === 'in_progress') {
+              showToast(`Resolved "${t.title.slice(0, 20)}..."`);
+              return { ...t, status: 'completed' };
+            }
+          }
+          return t;
+        }));
+      };
+
+      const regress = (id) => {
+        setTasks(prev => prev.map(t => {
+          if (t.id === id) {
+            if (t.status === 'completed') return { ...t, status: 'in_progress' };
+            if (t.status === 'in_progress') return { ...t, status: 'pending' };
+          }
+          return t;
+        }));
+      };
+
+      const remove = (id) => {
+        setTasks(prev => prev.filter(t => t.id !== id));
+        showToast('Deliverable removed');
+      };
+
+      const handleCreate = (e) => {
+        e.preventDefault();
+        if (!newTitle.trim()) return;
+        const item = {
+          id: `act-${Date.now().toString().slice(-4)}`,
+          title: newTitle.trim(),
+          description: 'Manually logged executive action deliverable',
+          status: 'pending',
+          priority: newPriority,
+          contact_name: newContact,
+          call_source: 'Manual Horizon Input',
+          due_date: '2026-11-06'
+        };
+        setTasks([item, ...tasks]);
+        setNewTitle('');
+        setShowModal(false);
+        showToast('New deliverable registered');
+      };
+
+      const getPriColor = (p) => {
+        if (p === 'urgent') return { text: T.red, border: T.redBorder, bg: T.redAlpha };
+        if (p === 'high') return { text: T.ochre, border: T.ochreBorder, bg: T.ochreAlpha };
+        if (p === 'medium') return { text: T.blue, border: T.blueBorder, bg: T.blueAlpha };
+        return { text: T.inkSecond, border: T.border, bg: T.surface };
+      };
+
+      const renderCard = (t) => {
+        const pCol = getPriColor(t.priority);
+        return (
+          <div
+            key={t.id}
+            id={`task-${t.id}`}
+            style={{
+              background: T.surface,
+              border: `1px solid ${T.border}`,
+              borderRadius: "14px",
+              padding: "16px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "12px",
+              transition: "border 0.2s ease"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{
+                fontSize: "10px",
+                fontFamily: "JetBrains Mono",
+                textTransform: "uppercase",
+                fontWeight: "bold",
+                color: pCol.text,
+                border: `1px solid ${pCol.border}`,
+                background: pCol.bg,
+                padding: "2px 8px",
+                borderRadius: "4px"
+              }}>
+                {t.priority}
+              </span>
+
+              <button
+                onClick={() => remove(t.id)}
+                style={{ background: "none", border: "none", color: T.inkMuted, cursor: "pointer", fontSize: "12px" }}
+                title="Delete"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{
+              fontSize: "13px",
+              fontWeight: 600,
+              color: t.status === 'completed' ? T.inkMuted : "#FFF",
+              textDecoration: t.status === 'completed' ? 'line-through' : 'none',
+              lineHeight: 1.4
+            }}>
+              {t.title}
+            </div>
+
+            <div style={{ fontSize: "11px", color: T.inkSecond, lineHeight: 1.5 }}>
+              {t.description}
+            </div>
+
+            <div style={{
+              paddingTop: "10px",
+              borderTop: `1px solid ${T.border}`,
+              fontSize: "10px",
+              fontFamily: "JetBrains Mono",
+              color: T.inkMuted,
+              display: "flex",
+              justifyContent: "space-between"
+            }}>
+              <span style={{ color: T.ochre }}>{t.contact_name}</span>
+              <span>{t.call_source}</span>
+            </div>
+
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              paddingTop: "6px"
+            }}>
+              {t.status !== 'pending' ? (
+                <button
+                  id={`btn-regress-${t.id}`}
+                  onClick={() => regress(t.id)}
+                  style={{
+                    background: "none",
+                    border: `1px solid ${T.border}`,
+                    color: T.inkSecond,
+                    padding: "4px 8px",
+                    borderRadius: "6px",
+                    fontSize: "10px",
+                    fontFamily: "JetBrains Mono",
+                    cursor: "pointer"
+                  }}
+                >
+                  ← Back
+                </button>
+              ) : <div />}
+
+              {t.status !== 'completed' ? (
+                <button
+                  id={`btn-advance-${t.id}`}
+                  onClick={() => advance(t.id)}
+                  style={{
+                    background: T.ochreAlpha,
+                    border: `1px solid ${T.ochre}`,
+                    color: T.ochre,
+                    padding: "4px 10px",
+                    borderRadius: "6px",
+                    fontSize: "10px",
+                    fontFamily: "JetBrains Mono",
+                    fontWeight: "bold",
+                    cursor: "pointer"
+                  }}
+                >
+                  {t.status === 'in_progress' ? 'Resolve ✓' : 'Advance →'}
+                </button>
+              ) : (
+                <span style={{ color: T.green, fontSize: "11px", fontFamily: "JetBrains Mono" }}>✓ Resolved</span>
+              )}
+            </div>
+          </div>
+        );
+      };
+
+      return (
+        <div style={{ minHeight: "100vh", backgroundColor: T.bg, padding: "32px 24px" }}>
+          
+          {/* Toast */}
+          {toastMsg && (
+            <div style={{
+              position: "fixed",
+              bottom: "24px",
+              right: "24px",
+              zIndex: 9999,
+              backgroundColor: "#161512",
+              border: `1px solid ${T.ochre}`,
+              color: "#FFF",
+              padding: "12px 20px",
+              borderRadius: "12px",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.8)",
+              fontSize: "13px"
+            }}>
+              ✦ {toastMsg}
+            </div>
+          )}
+
+          {/* Header */}
+          <div style={{ maxWidth: "1200px", margin: "0 auto 32px auto", display: "flex", justifyContent: "space-between", alignItems: "flex-end", borderBottom: `1px solid ${T.border}`, paddingBottom: "24px" }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: T.ochre }}></span>
+                <span style={{ fontSize: "11px", fontFamily: "JetBrains Mono", color: T.ochre, letterSpacing: "1.5px", textTransform: "uppercase" }}>
+                  PROJECT HORIZON PRM • WORKFLOW
+                </span>
+              </div>
+              <h1 style={{ fontFamily: "Bricolage Grotesque", fontSize: "40px", margin: 0, fontWeight: 700, color: "#FFF" }}>
+                Action <span style={{ color: T.ochre }}>Intelligence</span>
+              </h1>
+              <p style={{ fontSize: "14px", color: T.inkSecond, margin: "4px 0 0 0" }}>
+                AI-extracted deliverables, autonomous task prioritization, and cross-entity relationship canvas.
+              </p>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <div style={{ background: T.surface, border: `1px solid ${T.border}`, padding: "8px 16px", borderRadius: "12px", display: "flex", gap: "16px" }}>
+                <div>
+                  <div style={{ fontSize: "10px", color: T.inkMuted, textTransform: "uppercase", fontFamily: "JetBrains Mono" }}>In Flight</div>
+                  <div style={{ fontSize: "18px", fontWeight: "bold", fontFamily: "JetBrains Mono", color: "#FFF" }}>{pending.length + inProg.length}</div>
+                </div>
+                <div style={{ width: "1px", height: "30px", background: T.border }} />
+                <div>
+                  <div style={{ fontSize: "10px", color: T.inkMuted, textTransform: "uppercase", fontFamily: "JetBrains Mono" }}>Resolved</div>
+                  <div style={{ fontSize: "18px", fontWeight: "bold", fontFamily: "JetBrains Mono", color: T.green }}>{done.length}</div>
+                </div>
+              </div>
+
+              <button
+                id="btn-new-task"
+                onClick={() => setShowModal(true)}
+                style={{
+                  background: `linear-gradient(135deg, ${T.ochre}, #C68030)`,
+                  border: "none",
+                  color: "#0E0D0B",
+                  padding: "10px 18px",
+                  borderRadius: "12px",
+                  fontWeight: "bold",
+                  fontSize: "12px",
+                  textTransform: "uppercase",
+                  letterSpacing: "1px",
+                  cursor: "pointer"
+                }}
+              >
+                + New Deliverable
+              </button>
+            </div>
+          </div>
+
+          {/* Controls Bar */}
+          <div style={{ maxWidth: "1200px", margin: "0 auto 24px auto", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px" }}>
+            <input
+              id="search-input"
+              type="text"
+              placeholder="Search deliverables by name, person, or origin..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                flex: 1,
+                padding: "12px 16px",
+                background: T.surface,
+                border: `1px solid ${T.border}`,
+                borderRadius: "12px",
+                color: "#FFF",
+                fontSize: "13px",
+                outline: "none"
+              }}
+            />
+
+            <div style={{ display: "flex", gap: "8px" }}>
+              {['ALL', 'URGENT', 'HIGH', 'MEDIUM'].map(p => (
+                <button
+                  key={p}
+                  onClick={() => setPriorityFilter(p)}
+                  style={{
+                    padding: "8px 14px",
+                    borderRadius: "8px",
+                    fontSize: "11px",
+                    fontFamily: "JetBrains Mono",
+                    textTransform: "uppercase",
+                    cursor: "pointer",
+                    background: priorityFilter === p ? T.ochreAlpha : T.surface,
+                    border: priorityFilter === p ? `1px solid ${T.ochre}` : `1px solid ${T.border}`,
+                    color: priorityFilter === p ? T.ochre : T.inkSecond
+                  }}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ display: "flex", background: T.surface, border: `1px solid ${T.border}`, padding: "4px", borderRadius: "10px" }}>
+              <button
+                id="btn-kanban-view"
+                onClick={() => setViewMode('kanban')}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: "6px",
+                  fontSize: "11px",
+                  fontFamily: "JetBrains Mono",
+                  cursor: "pointer",
+                  border: "none",
+                  background: viewMode === 'kanban' ? T.ochre : "transparent",
+                  color: viewMode === 'kanban' ? "#0E0D0B" : T.inkSecond,
+                  fontWeight: viewMode === 'kanban' ? "bold" : "normal"
+                }}
+              >
+                Kanban
+              </button>
+              <button
+                id="btn-canvas-view"
+                onClick={() => setViewMode('canvas')}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: "6px",
+                  fontSize: "11px",
+                  fontFamily: "JetBrains Mono",
+                  cursor: "pointer",
+                  border: "none",
+                  background: viewMode === 'canvas' ? T.ochre : "transparent",
+                  color: viewMode === 'canvas' ? "#0E0D0B" : T.inkSecond,
+                  fontWeight: viewMode === 'canvas' ? "bold" : "normal"
+                }}
+              >
+                Entity Canvas
+              </button>
+            </div>
+          </div>
+
+          {/* Kanban Mode */}
+          {viewMode === 'kanban' && (
+            <div style={{ maxWidth: "1200px", margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px" }}>
+              
+              {/* Column 1: Pending */}
+              <div style={{ background: "#12110F", border: `1px solid ${T.border}`, borderRadius: "16px", padding: "16px", minHeight: "450px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "12px", borderBottom: `1px solid ${T.border}`, marginBottom: "16px" }}>
+                  <span style={{ fontSize: "11px", fontFamily: "JetBrains Mono", fontWeight: "bold", color: T.inkPrimary, textTransform: "uppercase" }}>
+                    Pending Ingestion ({pending.length})
+                  </span>
+                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: T.ochre }}></span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {pending.map(renderCard)}
+                </div>
+              </div>
+
+              {/* Column 2: In Progress */}
+              <div style={{ background: "#12110F", border: `1px solid ${T.ochreBorder}`, borderRadius: "16px", padding: "16px", minHeight: "450px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "12px", borderBottom: `1px solid ${T.border}`, marginBottom: "16px" }}>
+                  <span style={{ fontSize: "11px", fontFamily: "JetBrains Mono", fontWeight: "bold", color: T.ochre, textTransform: "uppercase" }}>
+                    Active Execution ({inProg.length})
+                  </span>
+                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: T.blue }}></span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {inProg.map(renderCard)}
+                </div>
+              </div>
+
+              {/* Column 3: Completed */}
+              <div style={{ background: "#12110F", border: `1px solid ${T.border}`, borderRadius: "16px", padding: "16px", minHeight: "450px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "12px", borderBottom: `1px solid ${T.border}`, marginBottom: "16px" }}>
+                  <span style={{ fontSize: "11px", fontFamily: "JetBrains Mono", fontWeight: "bold", color: T.green, textTransform: "uppercase" }}>
+                    Resolved Deliverables ({done.length})
+                  </span>
+                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: T.green }}></span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {done.map(renderCard)}
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* Canvas Mode */}
+          {viewMode === 'canvas' && (
+            <div style={{ maxWidth: "1200px", margin: "0 auto", background: "#12110F", border: `1px solid ${T.border}`, borderRadius: "16px", padding: "32px" }}>
+              <div style={{ fontSize: "12px", fontFamily: "JetBrains Mono", color: T.ochre, marginBottom: "24px" }}>
+                ✦ AUTONOMOUS ENTITY DELIVERABLE MAPPING
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "24px" }}>
+                {['Elena Rostova', 'Marcus Vance', 'Dr. Aris Thorne'].map(name => {
+                  const items = tasks.filter(t => t.contact_name === name);
+                  return (
+                    <div key={name} style={{ background: T.surface, border: `1px solid ${T.borderMd}`, borderRadius: "14px", padding: "20px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
+                        <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: T.ochreAlpha, color: T.ochre, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontFamily: "JetBrains Mono" }}>
+                          {name.split(' ').map(n=>n[0]).join('')}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: "bold", color: "#FFF", fontSize: "14px" }}>{name}</div>
+                          <div style={{ fontSize: "11px", color: T.inkSecond, fontFamily: "JetBrains Mono" }}>{items.length} linked commitments</div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                        {items.map(it => (
+                          <div key={it.id} style={{ background: "rgba(0,0,0,0.3)", border: `1px solid ${T.border}`, padding: "8px 12px", borderRadius: "8px", fontSize: "12px", display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ color: it.status === 'completed' ? T.inkMuted : T.inkPrimary, textDecoration: it.status === 'completed' ? 'line-through' : 'none' }}>
+                              {it.title}
+                            </span>
+                            <span style={{ fontSize: "10px", fontFamily: "JetBrains Mono", color: T.ochre, textTransform: "uppercase" }}>{it.priority}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Add Modal */}
+          {showModal && (
+            <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+              <div style={{ background: "#161512", border: `1px solid ${T.borderMd}`, borderRadius: "16px", padding: "24px", width: "100%", maxWidth: "480px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                  <h3 style={{ margin: 0, fontSize: "16px", color: "#FFF" }}>Register New Deliverable</h3>
+                  <button onClick={() => setShowModal(false)} style={{ background: "none", border: "none", color: T.inkSecond, cursor: "pointer", fontSize: "16px" }}>✕</button>
+                </div>
+
+                <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <div>
+                    <label style={{ fontSize: "11px", fontFamily: "JetBrains Mono", color: T.inkSecond, textTransform: "uppercase", display: "block", marginBottom: "6px" }}>Title</label>
+                    <input
+                      id="modal-title-input"
+                      type="text"
+                      required
+                      placeholder="e.g. Transmit review..."
+                      value={newTitle}
+                      onChange={(e) => setNewTitle(e.target.value)}
+                      style={{ width: "100%", padding: "10px", background: T.surface, border: `1px solid ${T.border}`, borderRadius: "8px", color: "#FFF", fontSize: "13px" }}
+                    />
+                  </div>
+
+                  <div style={{ display: "flex", gap: "12px" }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: "11px", fontFamily: "JetBrains Mono", color: T.inkSecond, textTransform: "uppercase", display: "block", marginBottom: "6px" }}>Priority</label>
+                      <select
+                        id="modal-priority-select"
+                        value={newPriority}
+                        onChange={(e) => setNewPriority(e.target.value)}
+                        style={{ width: "100%", padding: "10px", background: T.surface, border: `1px solid ${T.border}`, borderRadius: "8px", color: "#FFF", fontSize: "12px", fontFamily: "JetBrains Mono" }}
+                      >
+                        <option value="urgent">Urgent</option>
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                      </select>
+                    </div>
+
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: "11px", fontFamily: "JetBrains Mono", color: T.inkSecond, textTransform: "uppercase", display: "block", marginBottom: "6px" }}>Entity</label>
+                      <select
+                        id="modal-entity-select"
+                        value={newContact}
+                        onChange={(e) => setNewContact(e.target.value)}
+                        style={{ width: "100%", padding: "10px", background: T.surface, border: `1px solid ${T.border}`, borderRadius: "8px", color: "#FFF", fontSize: "12px", fontFamily: "JetBrains Mono" }}
+                      >
+                        <option value="Elena Rostova">Elena Rostova</option>
+                        <option value="Marcus Vance">Marcus Vance</option>
+                        <option value="Dr. Aris Thorne">Dr. Aris Thorne</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowModal(false)}
+                      style={{ background: T.surface, border: `1px solid ${T.border}`, color: T.inkSecond, padding: "8px 16px", borderRadius: "8px", cursor: "pointer", fontSize: "12px" }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      id="btn-submit-task"
+                      type="submit"
+                      style={{ background: T.ochre, border: "none", color: "#0E0D0B", padding: "8px 16px", borderRadius: "8px", cursor: "pointer", fontWeight: "bold", fontSize: "12px", fontFamily: "JetBrains Mono" }}
+                    >
+                      Commit
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<ActionsKanbanView />);
+  </script>
+</body>
+</html>

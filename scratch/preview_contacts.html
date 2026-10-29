@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Intelligence Directory — Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #0E0D0B;
+      color: #E8E4DC;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow-x: hidden;
+    }
+    input, select, textarea, button { font-family: inherit; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useMemo } = React;
+
+    const T = {
+      bg:          "#0E0D0B",
+      surface:     "rgba(255,255,255,0.04)",
+      surfaceMd:   "rgba(255,255,255,0.07)",
+      surfaceHover:"rgba(255,255,255,0.09)",
+      border:      "rgba(255,255,255,0.08)",
+      borderMd:    "rgba(255,255,255,0.13)",
+      inkPrimary:  "#E8E4DC",
+      inkSecond:   "#9B9289",
+      inkMuted:    "#5C5750",
+      ochre:       "#E8A656",
+      ochreAlpha:  "rgba(232,166,86,0.14)",
+      ochreBorder: "rgba(232,166,86,0.32)",
+      green:       "#70C98A",
+      greenAlpha:  "rgba(112,201,138,0.14)",
+      greenBorder: "rgba(112,201,138,0.30)",
+      blue:        "#68A5E8",
+      blueAlpha:   "rgba(104,165,232,0.14)",
+      blueBorder:  "rgba(104,165,232,0.30)",
+      red:         "#E07070",
+      redAlpha:    "rgba(224,112,112,0.14)",
+      redBorder:   "rgba(224,112,112,0.30)"
+    };
+
+    const INITIAL_CONTACTS = [
+      {
+        id: 'cnt-1',
+        first_name: 'Elena',
+        last_name: 'Rostova',
+        title: 'Chief Strategy Officer',
+        company: 'Vanguard Aerospace Dynamics',
+        email: 'e.rostova@vanguard-aero.com',
+        phone: '+1 (415) 892-4410',
+        location: 'San Francisco, CA',
+        is_favorite: true,
+        warmth_score: 94,
+        last_contact_at: '2026-10-28T14:32:00Z',
+        touchpoint_count: 18,
+        tags: ['Executive', 'Tier 1 Partner', 'Aerospace'],
+        osint_status: 'verified',
+        osint_sources: ['Google People API', 'LinkedIn Enterprise', 'US SEC EDGAR'],
+        socials: {
+          linkedin: 'https://linkedin.com/in/elena-rostova',
+          twitter: 'https://x.com/erostova_strategy',
+          website: 'https://vanguard-aero.com'
+        },
+        bio: 'Leads global mergers, avionics procurement, and satellite payload joint ventures across North America & EMEA.',
+        recent_calls: [
+          {
+            id: 'call-101',
+            date: '2026-10-28',
+            duration: '18m 42s',
+            brief: 'Finalized preliminary pricing for the dual-band telemetry expansion. Horizon PRM integration slated for Q1.',
+            sentiment: 'Strongly Positive'
+          },
+          {
+            id: 'call-098',
+            date: '2026-10-21',
+            duration: '34m 10s',
+            brief: 'Strategic sync regarding Department of Defense compliance boundaries and local node failover.',
+            sentiment: 'Neutral / Focused'
+          }
+        ],
+        tasks: [
+          { id: 't-1', title: 'Transmit signed encryption NDA to Vanguard Legal', status: 'pending', priority: 'urgent' },
+          { id: 't-2', title: 'Schedule dual-channel ACR audio telemetry test', status: 'completed', priority: 'high' }
+        ]
+      },
+      {
+        id: 'cnt-2',
+        first_name: 'Marcus',
+        last_name: 'Vance',
+        title: 'VP Infrastructure & Networks',
+        company: 'Apex Core Logistics',
+        email: 'm.vance@apexcore.io',
+        phone: '+1 (312) 554-9102',
+        location: 'Chicago, IL',
+        is_favorite: false,
+        warmth_score: 68,
+        last_contact_at: '2026-10-26T09:15:00Z',
+        touchpoint_count: 9,
+        tags: ['Mesh Networks', 'Client', 'Midwest'],
+        osint_status: 'verified',
+        osint_sources: ['Google People API', 'GitHub', 'Tailscale Community'],
+        socials: {
+          linkedin: 'https://linkedin.com/in/marcus-vance-net',
+          twitter: null,
+          website: 'https://apexcore.io'
+        },
+        bio: 'Oversees 40+ node multi-region Tailnet deployments and Edge compute orchestration for supply-chain sensors.',
+        recent_calls: [
+          {
+            id: 'call-100',
+            date: '2026-10-26',
+            duration: '14m 19s',
+            brief: 'Reviewed Tailscale Funnel ingress latency for ACR webhook packets. Packet drops reduced to 0.02%.',
+            sentiment: 'Positive'
+          }
+        ],
+        tasks: [
+          { id: 't-3', title: 'Validate HP-Z2G3 gateway ping across tailnet', status: 'completed', priority: 'medium' }
+        ]
+      },
+      {
+        id: 'cnt-3',
+        first_name: 'Dr. Aris',
+        last_name: 'Thorne',
+        title: 'Principal Research Scientist',
+        company: 'Hyperion Deep Technologies',
+        email: 'athorne@hyperion-research.ai',
+        phone: '+1 (617) 402-9981',
+        location: 'Cambridge, MA',
+        is_favorite: true,
+        warmth_score: 88,
+        last_contact_at: '2026-10-27T17:45:00Z',
+        touchpoint_count: 24,
+        tags: ['AI Labs', 'Gemini Architect', 'Advisor'],
+        osint_status: 'verified',
+        osint_sources: ['Google People API', 'Google Scholar', 'ArXiv'],
+        socials: {
+          linkedin: 'https://linkedin.com/in/aristhorne-ai',
+          twitter: 'https://x.com/aris_thorne',
+          website: 'https://hyperion-research.ai'
+        },
+        bio: 'Specialist in multi-modal LLM reasoning pipelines, autonomous audio diarization, and edge voice transcription.',
+        recent_calls: [
+          {
+            id: 'call-099',
+            date: '2026-10-27',
+            duration: '22m 05s',
+            brief: 'Deep dive into asynchronous run_in_executor loop delegation for Gemini API embeddings.',
+            sentiment: 'Enthusiastic'
+          }
+        ],
+        tasks: [
+          { id: 't-4', title: 'Benchmark Gemini 2.5 Flash token speed against Whisper local', status: 'pending', priority: 'high' }
+        ]
+      },
+      {
+        id: 'cnt-4',
+        first_name: 'Sophia',
+        last_name: 'Sterling',
+        title: 'Managing Director',
+        company: 'Sterling & Croft Capital',
+        email: 's.sterling@sterlingcroft.com',
+        phone: '+1 (212) 808-3390',
+        location: 'New York, NY',
+        is_favorite: false,
+        warmth_score: 41,
+        last_contact_at: '2026-10-12T11:00:00Z',
+        touchpoint_count: 5,
+        tags: ['Financing', 'Investor', 'Stale'],
+        osint_status: 'partial',
+        osint_sources: ['Google People API', 'Bloomberg Terminal'],
+        socials: {
+          linkedin: 'https://linkedin.com/in/sophia-sterling-nyc',
+          twitter: null,
+          website: 'https://sterlingcroft.com'
+        },
+        bio: 'Fintech and deep-tech seed-to-growth investor. Focused on autonomous systems and private data custody.',
+        recent_calls: [
+          {
+            id: 'call-082',
+            date: '2026-10-12',
+            duration: '09m 11s',
+            brief: 'Introductory overview of Project Horizon PRM telemetry and offline-first edge architecture.',
+            sentiment: 'Cautious / Interested'
+          }
+        ],
+        tasks: [
+          { id: 't-5', title: 'Send updated executive deck before November review', status: 'pending', priority: 'medium' }
+        ]
+      }
+    ];
+
+    function ContactDossierView() {
+      const [contacts, setContacts] = useState(INITIAL_CONTACTS);
+      const [searchTerm, setSearchTerm] = useState('');
+      const [selectedTag, setSelectedTag] = useState('ALL');
+      const [sortBy, setSortBy] = useState('warmth');
+      const [selectedContact, setSelectedContact] = useState(INITIAL_CONTACTS[0]);
+      const [drawerOpen, setDrawerOpen] = useState(false);
+      const [drawerTab, setDrawerTab] = useState('overview');
+      const [enrichingId, setEnrichingId] = useState(null);
+      const [syncingGoogle, setSyncingGoogle] = useState(false);
+      const [toastMsg, setToastMsg] = useState(null);
+      const [notes, setNotes] = useState({
+        'cnt-1': ['Prefers encrypted Signal channel for NDA documents.', 'Targeting Q1 prototype deployment.'],
+        'cnt-2': ['Configured Tailscale auth key with 90-day expiry.'],
+        'cnt-3': ['Shared ArXiv pre-print on low-latency audio quantization.']
+      });
+      const [newNote, setNewNote] = useState('');
+
+      const showToast = (msg) => {
+        setToastMsg(msg);
+        setTimeout(() => setToastMsg(null), 3500);
+      };
+
+      const allTags = useMemo(() => {
+        const s = new Set();
+        contacts.forEach(c => c.tags.forEach(t => s.add(t)));
+        return ['ALL', ...Array.from(s)];
+      }, [contacts]);
+
+      const filteredContacts = useMemo(() => {
+        return contacts
+          .filter(c => {
+            const full = `${c.first_name} ${c.last_name}`.toLowerCase();
+            const matchesSearch =
+              full.includes(searchTerm.toLowerCase()) ||
+              c.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              c.phone.includes(searchTerm);
+            const matchesTag = selectedTag === 'ALL' || c.tags.includes(selectedTag);
+            return matchesSearch && matchesTag;
+          })
+          .sort((a, b) => {
+            if (sortBy === 'warmth') return b.warmth_score - a.warmth_score;
+            if (sortBy === 'recent') return new Date(b.last_contact_at).getTime() - new Date(a.last_contact_at).getTime();
+            if (sortBy === 'alpha') return a.last_name.localeCompare(b.last_name);
+            return 0;
+          });
+      }, [contacts, searchTerm, selectedTag, sortBy]);
+
+      const handleEnrich = (e, c) => {
+        e.stopPropagation();
+        if (enrichingId) return;
+        setEnrichingId(c.id);
+        setTimeout(() => {
+          setContacts(prev => prev.map(item => {
+            if (item.id === c.id) {
+              return {
+                ...item,
+                osint_status: 'verified',
+                warmth_score: Math.min(100, item.warmth_score + 5),
+                tags: Array.from(new Set([...item.tags, 'OSINT Verified'])),
+                osint_sources: Array.from(new Set([...item.osint_sources, 'Google People API']))
+              };
+            }
+            return item;
+          }));
+          setEnrichingId(null);
+          showToast(`OSINT verified for ${c.first_name} ${c.last_name}`);
+        }, 1200);
+      };
+
+      const handleToggleFavorite = (e, id) => {
+        e.stopPropagation();
+        setContacts(prev => prev.map(c => c.id === id ? { ...c, is_favorite: !c.is_favorite } : c));
+        if (selectedContact?.id === id) {
+          setSelectedContact(prev => ({ ...prev, is_favorite: !prev.is_favorite }));
+        }
+      };
+
+      const handleToggleTask = (taskId) => {
+        if (!selectedContact) return;
+        const updated = selectedContact.tasks.map(t =>
+          t.id === taskId ? { ...t, status: t.status === 'completed' ? 'pending' : 'completed' } : t
+        );
+        setSelectedContact({ ...selectedContact, tasks: updated });
+        setContacts(prev => prev.map(c => c.id === selectedContact.id ? { ...c, tasks: updated } : c));
+      };
+
+      const handleAddNote = (e) => {
+        e.preventDefault();
+        if (!newNote.trim() || !selectedContact) return;
+        const id = selectedContact.id;
+        setNotes(prev => ({
+          ...prev,
+          [id]: [newNote.trim(), ...(prev[id] || [])]
+        }));
+        setNewNote('');
+        showToast('Field note appended to dossier');
+      };
+
+      const getInitials = (fn, ln) => `${fn?.[0] || ''}${ln?.[0] || ''}`.toUpperCase();
+
+      return (
+        <div style={{ minHeight: "100vh", backgroundColor: T.bg, padding: "32px 24px" }}>
+          
+          {/* Toast */}
+          {toastMsg && (
+            <div style={{
+              position: "fixed",
+              bottom: "24px",
+              right: "24px",
+              zIndex: 9999,
+              backgroundColor: "#161512",
+              border: `1px solid ${T.ochre}`,
+              color: "#FFF",
+              padding: "12px 20px",
+              borderRadius: "12px",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.8)",
+              fontSize: "13px",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px"
+            }}>
+              <span style={{ color: T.ochre }}>✦</span>
+              <span>{toastMsg}</span>
+            </div>
+          )}
+
+          {/* Header */}
+          <div style={{ maxWidth: "1200px", margin: "0 auto 32px auto", display: "flex", justifyContent: "space-between", alignItems: "flex-end", borderBottom: `1px solid ${T.border}`, paddingBottom: "24px" }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: T.ochre }}></span>
+                <span style={{ fontSize: "11px", fontFamily: "JetBrains Mono", color: T.ochre, letterSpacing: "1.5px", textTransform: "uppercase" }}>
+                  PROJECT HORIZON PRM • DIRECTORY
+                </span>
+              </div>
+              <h1 style={{ fontFamily: "Bricolage Grotesque", fontSize: "40px", margin: 0, fontWeight: 700, color: "#FFF" }}>
+                Intelligence <span style={{ color: T.ochre }}>Dossiers</span>
+              </h1>
+              <p style={{ fontSize: "14px", color: T.inkSecond, margin: "4px 0 0 0" }}>
+                Bi-directional Google People sync, OSINT metadata telemetry, and relationship pulse monitoring.
+              </p>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <div style={{ background: T.surface, border: `1px solid ${T.border}`, padding: "8px 16px", borderRadius: "12px", display: "flex", gap: "16px" }}>
+                <div>
+                  <div style={{ fontSize: "10px", color: T.inkMuted, textTransform: "uppercase", fontFamily: "JetBrains Mono" }}>Entities</div>
+                  <div style={{ fontSize: "18px", fontWeight: "bold", fontFamily: "JetBrains Mono", color: "#FFF" }}>{contacts.length}</div>
+                </div>
+                <div style={{ width: "1px", height: "30px", background: T.border }} />
+                <div>
+                  <div style={{ fontSize: "10px", color: T.inkMuted, textTransform: "uppercase", fontFamily: "JetBrains Mono" }}>Avg Warmth</div>
+                  <div style={{ fontSize: "18px", fontWeight: "bold", fontFamily: "JetBrains Mono", color: T.ochre }}>
+                    {Math.round(contacts.reduce((a,c) => a + c.warmth_score, 0)/contacts.length)}%
+                  </div>
+                </div>
+              </div>
+
+              <button
+                id="btn-google-sync"
+                onClick={() => {
+                  setSyncingGoogle(true);
+                  setTimeout(() => {
+                    setSyncingGoogle(false);
+                    showToast('Google People synchronization aligned');
+                  }, 1200);
+                }}
+                style={{
+                  background: `linear-gradient(135deg, ${T.ochre}, #C68030)`,
+                  border: "none",
+                  color: "#0E0D0B",
+                  padding: "10px 18px",
+                  borderRadius: "12px",
+                  fontWeight: "bold",
+                  fontSize: "12px",
+                  textTransform: "uppercase",
+                  letterSpacing: "1px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px"
+                }}
+              >
+                <span>↻</span>
+                <span>{syncingGoogle ? 'Syncing...' : 'Google People Sync'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Search & Sort Bar */}
+          <div style={{ maxWidth: "1200px", margin: "0 auto 20px auto", display: "flex", gap: "16px" }}>
+            <input
+              id="input-search"
+              type="text"
+              placeholder="Search dossiers by name, company, phone..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                flex: 1,
+                padding: "12px 16px",
+                background: T.surface,
+                border: `1px solid ${T.border}`,
+                borderRadius: "12px",
+                color: "#FFF",
+                fontSize: "14px",
+                outline: "none"
+              }}
+            />
+
+            <select
+              id="select-sort"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              style={{
+                padding: "12px 16px",
+                background: T.surface,
+                border: `1px solid ${T.border}`,
+                borderRadius: "12px",
+                color: T.inkPrimary,
+                fontSize: "12px",
+                fontFamily: "JetBrains Mono",
+                outline: "none",
+                cursor: "pointer"
+              }}
+            >
+              <option value="warmth">Sort: Warmth Score</option>
+              <option value="recent">Sort: Last Contacted</option>
+              <option value="alpha">Sort: Alphabetical</option>
+            </select>
+          </div>
+
+          {/* Tag Pills */}
+          <div style={{ maxWidth: "1200px", margin: "0 auto 28px auto", display: "flex", gap: "8px", overflowX: "auto" }}>
+            {allTags.map(tag => (
+              <button
+                key={tag}
+                onClick={() => setSelectedTag(tag)}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "8px",
+                  fontSize: "11px",
+                  fontFamily: "JetBrains Mono",
+                  textTransform: "uppercase",
+                  cursor: "pointer",
+                  background: selectedTag === tag ? T.ochreAlpha : T.surface,
+                  border: selectedTag === tag ? `1px solid ${T.ochre}` : `1px solid ${T.border}`,
+                  color: selectedTag === tag ? T.ochre : T.inkSecond
+                }}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+
+          {/* Contact Cards Grid */}
+          <div style={{ maxWidth: "1200px", margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: "20px" }}>
+            {filteredContacts.map(c => {
+              const initials = getInitials(c.first_name, c.last_name);
+              const warmthCol = c.warmth_score >= 80 ? T.ochre : c.warmth_score >= 60 ? T.blue : T.red;
+
+              return (
+                <div
+                  key={c.id}
+                  id={`card-${c.id}`}
+                  onClick={() => {
+                    setSelectedContact(c);
+                    setDrawerOpen(true);
+                  }}
+                  style={{
+                    background: T.surface,
+                    border: `1px solid ${selectedContact?.id === c.id ? T.ochre : T.border}`,
+                    borderRadius: "16px",
+                    padding: "20px",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease"
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+                    <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                      <div style={{
+                        width: "48px",
+                        height: "48px",
+                        borderRadius: "12px",
+                        background: "linear-gradient(135deg, #1C1A16, #2A261F)",
+                        border: `1px solid ${T.borderMd}`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontFamily: "JetBrains Mono",
+                        fontWeight: "bold",
+                        color: T.ochre
+                      }}>
+                        {initials}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600, color: "#FFF", fontSize: "16px", display: "flex", alignItems: "center", gap: "6px" }}>
+                          {c.first_name} {c.last_name}
+                          {c.is_favorite && <span style={{ color: T.ochre }}>★</span>}
+                        </div>
+                        <div style={{ fontSize: "12px", color: T.inkSecond }}>{c.title}</div>
+                        <div style={{ fontSize: "11px", fontFamily: "JetBrains Mono", color: T.ochre }}>{c.company}</div>
+                      </div>
+                    </div>
+
+                    <div style={{
+                      padding: "4px 10px",
+                      borderRadius: "20px",
+                      fontSize: "11px",
+                      fontFamily: "JetBrains Mono",
+                      fontWeight: "bold",
+                      border: `1px solid ${warmthCol}`,
+                      color: warmthCol,
+                      background: "rgba(0,0,0,0.3)"
+                    }}>
+                      {c.warmth_score}%
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: "12px", fontFamily: "JetBrains Mono", color: T.inkSecond, display: "flex", flexDirection: "column", gap: "6px", marginBottom: "16px" }}>
+                    <div>📞 {c.phone}</div>
+                    <div>✉ {c.email}</div>
+                    <div>📍 {c.location}</div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "16px" }}>
+                    {c.tags.map(t => (
+                      <span key={t} style={{
+                        fontSize: "10px",
+                        fontFamily: "JetBrains Mono",
+                        background: "rgba(255,255,255,0.03)",
+                        border: `1px solid ${T.border}`,
+                        padding: "2px 8px",
+                        borderRadius: "4px",
+                        color: T.inkPrimary
+                      }}>
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div style={{
+                    paddingTop: "12px",
+                    borderTop: `1px solid ${T.border}`,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    fontSize: "11px",
+                    fontFamily: "JetBrains Mono",
+                    color: T.inkMuted
+                  }}>
+                    <div>Last: {new Date(c.last_contact_at).toLocaleDateString()}</div>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button
+                        onClick={(e) => handleEnrich(e, c)}
+                        style={{
+                          background: "none",
+                          border: `1px solid ${T.border}`,
+                          color: T.ochre,
+                          padding: "4px 8px",
+                          borderRadius: "6px",
+                          fontSize: "10px",
+                          cursor: "pointer"
+                        }}
+                      >
+                        {enrichingId === c.id ? '...' : '✦ Enrich'}
+                      </button>
+                      <button
+                        onClick={(e) => handleToggleFavorite(e, c.id)}
+                        style={{
+                          background: "none",
+                          border: `1px solid ${T.border}`,
+                          color: c.is_favorite ? T.ochre : T.inkMuted,
+                          padding: "4px 8px",
+                          borderRadius: "6px",
+                          fontSize: "10px",
+                          cursor: "pointer"
+                        }}
+                      >
+                        ★
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Drawer */}
+          {drawerOpen && selectedContact && (
+            <div style={{
+              position: "fixed",
+              top: 0,
+              right: 0,
+              bottom: 0,
+              width: "100%",
+              maxWidth: "600px",
+              backgroundColor: "#12110F",
+              borderLeft: `1px solid ${T.borderMd}`,
+              zIndex: 1000,
+              boxShadow: "-10px 0 40px rgba(0,0,0,0.8)",
+              display: "flex",
+              flexDirection: "column",
+              overflowY: "auto"
+            }}>
+              {/* Drawer Top */}
+              <div style={{ padding: "24px", borderBottom: `1px solid ${T.border}`, background: "#161512", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                  <h2 style={{ fontSize: "22px", margin: "0 0 4px 0", color: "#FFF", fontWeight: 700 }}>
+                    {selectedContact.first_name} {selectedContact.last_name}
+                  </h2>
+                  <div style={{ fontSize: "13px", color: T.inkSecond }}>{selectedContact.title}</div>
+                  <div style={{ fontSize: "12px", fontFamily: "JetBrains Mono", color: T.ochre }}>{selectedContact.company}</div>
+                </div>
+
+                <button
+                  id="btn-close-drawer"
+                  onClick={() => setDrawerOpen(false)}
+                  style={{
+                    background: T.surface,
+                    border: `1px solid ${T.border}`,
+                    color: T.inkSecond,
+                    padding: "8px 12px",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    fontSize: "14px"
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Drawer Tabs */}
+              <div style={{ display: "flex", borderBottom: `1px solid ${T.border}`, background: "#141310", padding: "0 16px" }}>
+                {[
+                  { id: 'overview', label: 'Overview' },
+                  { id: 'calls', label: `Calls (${selectedContact.recent_calls.length})` },
+                  { id: 'tasks', label: `Actions (${selectedContact.tasks.length})` },
+                  { id: 'notes', label: 'Notes' }
+                ].map(t => (
+                  <button
+                    key={t.id}
+                    id={`tab-${t.id}`}
+                    onClick={() => setDrawerTab(t.id)}
+                    style={{
+                      padding: "12px 14px",
+                      background: "none",
+                      border: "none",
+                      borderBottom: drawerTab === t.id ? `2px solid ${T.ochre}` : "2px solid transparent",
+                      color: drawerTab === t.id ? T.ochre : T.inkSecond,
+                      fontFamily: "JetBrains Mono",
+                      fontSize: "11px",
+                      textTransform: "uppercase",
+                      cursor: "pointer"
+                    }}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Drawer Content */}
+              <div style={{ padding: "24px", flex: 1, display: "flex", flexDirection: "column", gap: "20px" }}>
+                {drawerTab === 'overview' && (
+                  <div>
+                    <div style={{ background: T.surface, border: `1px solid ${T.border}`, padding: "16px", borderRadius: "12px", marginBottom: "16px" }}>
+                      <div style={{ fontSize: "10px", fontFamily: "JetBrains Mono", color: T.inkMuted, textTransform: "uppercase", marginBottom: "8px" }}>Bio Summary</div>
+                      <p style={{ fontSize: "13px", lineHeight: "1.6", color: T.inkPrimary, margin: 0 }}>{selectedContact.bio}</p>
+                    </div>
+
+                    <div style={{ background: T.surface, border: `1px solid ${T.border}`, padding: "16px", borderRadius: "12px" }}>
+                      <div style={{ fontSize: "10px", fontFamily: "JetBrains Mono", color: T.inkMuted, textTransform: "uppercase", marginBottom: "8px" }}>OSINT Verification Sources</div>
+                      <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "12px", color: T.inkSecond, fontFamily: "JetBrains Mono" }}>
+                        {selectedContact.osint_sources.map(s => <li key={s} style={{ marginBottom: "4px" }}>{s}</li>)}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
+                {drawerTab === 'calls' && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    {selectedContact.recent_calls.map(call => (
+                      <div key={call.id} style={{ background: T.surface, border: `1px solid ${T.border}`, padding: "14px", borderRadius: "12px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontFamily: "JetBrains Mono", marginBottom: "6px" }}>
+                          <span style={{ color: T.ochre }}>{call.id}</span>
+                          <span style={{ color: T.inkMuted }}>{call.date} • {call.duration}</span>
+                        </div>
+                        <div style={{ fontSize: "13px", color: T.inkPrimary, lineHeight: "1.5" }}>{call.brief}</div>
+                        <div style={{ fontSize: "11px", color: T.green, marginTop: "6px", fontFamily: "JetBrains Mono" }}>Sentiment: {call.sentiment}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {drawerTab === 'tasks' && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    {selectedContact.tasks.map(task => {
+                      const isDone = task.status === 'completed';
+                      return (
+                        <div
+                          key={task.id}
+                          onClick={() => handleToggleTask(task.id)}
+                          style={{
+                            background: T.surface,
+                            border: `1px solid ${T.border}`,
+                            padding: "12px",
+                            borderRadius: "10px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "12px",
+                            cursor: "pointer"
+                          }}
+                        >
+                          <div style={{
+                            width: "16px",
+                            height: "16px",
+                            borderRadius: "4px",
+                            border: `1px solid ${isDone ? T.green : T.inkMuted}`,
+                            background: isDone ? T.green : "transparent",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "11px",
+                            color: "#0E0D0B",
+                            fontWeight: "bold"
+                          }}>
+                            {isDone ? '✓' : ''}
+                          </div>
+                          <div style={{ flex: 1, textDecoration: isDone ? 'line-through' : 'none', color: isDone ? T.inkMuted : T.inkPrimary, fontSize: "13px" }}>
+                            {task.title}
+                          </div>
+                          <span style={{ fontSize: "10px", fontFamily: "JetBrains Mono", color: T.ochre, textTransform: "uppercase" }}>{task.priority}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {drawerTab === 'notes' && (
+                  <div>
+                    <form onSubmit={handleAddNote} style={{ marginBottom: "16px" }}>
+                      <textarea
+                        rows="3"
+                        placeholder="Append field note..."
+                        value={newNote}
+                        onChange={(e) => setNewNote(e.target.value)}
+                        style={{
+                          width: "100%",
+                          padding: "12px",
+                          background: T.surface,
+                          border: `1px solid ${T.border}`,
+                          borderRadius: "10px",
+                          color: "#FFF",
+                          fontSize: "13px",
+                          outline: "none",
+                          marginBottom: "8px"
+                        }}
+                      />
+                      <button
+                        type="submit"
+                        style={{
+                          background: T.ochre,
+                          border: "none",
+                          color: "#0E0D0B",
+                          padding: "8px 16px",
+                          borderRadius: "8px",
+                          fontWeight: "bold",
+                          fontSize: "11px",
+                          fontFamily: "JetBrains Mono",
+                          textTransform: "uppercase",
+                          cursor: "pointer"
+                        }}
+                      >
+                        Append Note
+                      </button>
+                    </form>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      {(notes[selectedContact.id] || []).map((n, i) => (
+                        <div key={i} style={{ background: T.surface, border: `1px solid ${T.border}`, padding: "10px", borderRadius: "8px", fontSize: "12px", color: T.inkPrimary }}>
+                          {n}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<ContactDossierView />);
+  </script>
+</body>
+</html>

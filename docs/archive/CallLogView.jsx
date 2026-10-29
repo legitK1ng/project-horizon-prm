@@ -1,0 +1,867 @@
+import { useState, useRef, useEffect, useCallback } from "react";
+
+// ─── Design Tokens ──────────────────────────────────────────────────────────
+const T = {
+  bg:          "#0E0D0B",
+  surface:     "rgba(255,255,255,0.04)",
+  surfaceMd:   "rgba(255,255,255,0.07)",
+  surfaceHover:"rgba(255,255,255,0.09)",
+  border:      "rgba(255,255,255,0.08)",
+  borderMd:    "rgba(255,255,255,0.13)",
+  inkPrimary:  "#E8E4DC",
+  inkSecond:   "#9B9289",
+  inkMuted:    "#5C5750",
+  ochre:       "#E8A656",
+  ochreAlpha:  "rgba(232,166,86,0.14)",
+  ochreBorder: "rgba(232,166,86,0.32)",
+  green:       "#70C98A",
+  greenAlpha:  "rgba(112,201,138,0.14)",
+  greenBorder: "rgba(112,201,138,0.30)",
+  blue:        "#68A5E8",
+  blueAlpha:   "rgba(104,165,232,0.14)",
+  blueBorder:  "rgba(104,165,232,0.30)",
+  purple:      "#B784E8",
+  purpleAlpha: "rgba(183,132,232,0.14)",
+  purpleBorder:"rgba(183,132,232,0.30)",
+  red:         "#E07070",
+  redAlpha:    "rgba(224,112,112,0.14)",
+  redBorder:   "rgba(224,112,112,0.30)",
+};
+
+// ─── Mock Call Catalog ──────────────────────────────────────────────────────
+const MOCK_CALLS = [
+  {
+    id: "call-901",
+    contactName: "Sarah Jenkins",
+    company: "Apex Ventures",
+    phone: "+1 (415) 890-2341",
+    direction: "IN",
+    timestamp: "2026-10-29T14:22:00Z",
+    duration: 384, // 6m 24s
+    sentiment: "Positive",
+    pattern: "Pattern A (E.164 + Name)",
+    channel: "Cellular",
+    brief: {
+      title: "Q4 Series A Syndication Terms & Legal Sign-off",
+      summary: "Sarah called to finalize the syndicate term sheet for the upcoming Series A close. She confirmed that Cooley completed their IP audit with no blockers. Apex agreed to lead with a $2.5M commitment provided we lock in the board seat observer rights by Friday afternoon.",
+      sentimentScore: 0.88,
+      tags: ["Fundraising", "Term Sheet", "Series A", "Legal", "Syndicate"],
+      actionItems: [
+        { id: "act-1", text: "Send revised side-letter regarding board observer seat to Sarah", done: false, due: "Tomorrow 2:00 PM" },
+        { id: "act-2", text: "Coordinate signature packet with Cooley lead partner", done: true, due: "Today" },
+        { id: "act-3", text: "Sync cap table model with CFO", done: false, due: "Friday" }
+      ],
+      keyTopics: [
+        "Valuation cap reaffirmed at $18M post",
+        "Apex requested pro-rata rights on future bridge note",
+        "Closing scheduled for Nov 14th"
+      ],
+      transcript: [
+        { speaker: "Sarah Jenkins", time: "00:03", text: "Hey! Just jumping off the call with our investment committee. Really positive news." },
+        { speaker: "You", time: "00:08", text: "Awesome to hear, Sarah. Did Cooley finish their review of the IP assignments?" },
+        { speaker: "Sarah Jenkins", time: "00:14", text: "Yes, clean bill of health. No red flags at all. We are officially approved to lead with the full $2.5M allocation." },
+        { speaker: "You", time: "00:22", text: "That is fantastic. What are the final gating items on your end before we circulate docs?" },
+        { speaker: "Sarah Jenkins", time: "00:29", text: "Just need the side-letter covering our observer seat in by Friday afternoon, then our general partner will sign." },
+        { speaker: "You", time: "00:36", text: "I'll have our counsel deliver that first thing tomorrow morning." }
+      ]
+    }
+  },
+  {
+    id: "call-902",
+    contactName: "David Chen",
+    company: "Distributed Systems Labs",
+    phone: "+1 (206) 412-8879",
+    direction: "OUT",
+    timestamp: "2026-10-29T11:15:00Z",
+    duration: 512, // 8m 32s
+    sentiment: "Technical",
+    pattern: "Pattern C2 (Timestamp Head)",
+    channel: "Cellular",
+    brief: {
+      title: "Tailscale Funnel Latency & Whisper Server Daemonization",
+      summary: "Technical architecture deep-dive on eliminating audio ingestion bottlenecks between mobile devices and the HP-Z2G3 workstation. David advised configuring an asynchronous queue with persistent disk spillover to prevent dropped packets during cellular network handoffs.",
+      sentimentScore: 0.72,
+      tags: ["Infrastructure", "Tailscale", "Whisper", "FastAPI", "Latency"],
+      actionItems: [
+        { id: "act-4", text: "Test keep-alive timeout on Tailscale Funnel reverse proxy", done: true, due: "Done" },
+        { id: "act-5", text: "Implement local SQLite buffering queue on mobile client", done: false, due: "Nov 2" }
+      ],
+      keyTopics: [
+        "Headless systemd / NSSM supervision setup",
+        "Whisper v1 audio ingestion benchmarking (average 1.4s per minute of audio)",
+        "Zero-VRAM cloud fallback strategy"
+      ],
+      transcript: [
+        { speaker: "You", time: "00:02", text: "David, thanks for picking up. Wanted to pick your brain on the Funnel proxy configuration." },
+        { speaker: "David Chen", time: "00:07", text: "Sure thing! Are you seeing connection drops when switching from WiFi to cellular?" },
+        { speaker: "You", time: "00:13", text: "Exactly. The TCP handshake gets torn down before the binary audio finishes transferring." },
+        { speaker: "David Chen", time: "00:21", text: "Yeah, classic mobile edge issue. You need an idempotent chunked upload or an SQLite staging spool on the phone." }
+      ]
+    }
+  },
+  {
+    id: "call-903",
+    contactName: "Marcus Brody",
+    company: "Vanguard Commercial",
+    phone: "+1 (512) 774-0199",
+    direction: "IN",
+    timestamp: "2026-10-28T16:45:00Z",
+    duration: 215, // 3m 35s
+    sentiment: "Urgent",
+    pattern: "Pattern B (Bracketed Note)",
+    channel: "Cellular",
+    brief: {
+      title: "Downtown Austin Data Center Lease Extension",
+      summary: "Marcus called with an urgent update regarding our rack space lease expiration. The landlord has a competing offer for the suite and requires written intent to renew within 48 hours or our power reservation rate will reset to standard commercial tariff.",
+      sentimentScore: 0.45,
+      tags: ["Real Estate", "Data Center", "Lease", "Urgent", "Austin"],
+      actionItems: [
+        { id: "act-6", text: "Review power density requirements with DevOps", done: false, due: "Today 6:00 PM" },
+        { id: "act-7", text: "Submit Letter of Intent (LOI) to Marcus", done: false, due: "Tomorrow 10:00 AM" }
+      ],
+      keyTopics: [
+        "Competitor trying to acquire contiguous rack row",
+        "15% price lock guaranteed if 2-year renewal executed this week"
+      ],
+      transcript: [
+        { speaker: "Marcus Brody", time: "00:01", text: "Hey, I have only a quick minute between meetings, but this couldn't wait." },
+        { speaker: "You", time: "00:05", text: "What's up Marcus?" },
+        { speaker: "Marcus Brody", time: "00:08", text: "The building manager just informed us another enterprise tenant is requesting our entire floor row. We have 48 hours to exercise our option." }
+      ]
+    }
+  },
+  {
+    id: "call-904",
+    contactName: "Elena Rostova",
+    company: "BioSyn Analytics",
+    phone: "+1 (617) 332-9011",
+    direction: "OUT",
+    timestamp: "2026-10-28T09:30:00Z",
+    duration: 620, // 10m 20s
+    sentiment: "Positive",
+    pattern: "Pattern H (Underscore Date)",
+    channel: "Cellular",
+    brief: {
+      title: "AI Voice Pipeline Partnership & Data Hygiene Protocol",
+      summary: "Exploratory call with Elena regarding joint research on low-latency voice synthesis and clinical call note transcription. Elena shared their field-tested data anonymization guidelines for HIPAA/SOC2 compliance.",
+      sentimentScore: 0.84,
+      tags: ["Partnership", "AI", "Voice", "Compliance", "Research"],
+      actionItems: [
+        { id: "act-8", text: "Send Horizon PRM architecture overview whitepaper", done: true, due: "Completed" }
+      ],
+      keyTopics: [
+        "Local-first cryptographic field redaction",
+        "Faster-Whisper custom medical vocab adaptation"
+      ],
+      transcript: [
+        { speaker: "Elena Rostova", time: "00:04", text: "Good morning! Delighted we could connect on this." },
+        { speaker: "You", time: "00:09", text: "Same here Elena. Very impressed with your recent paper on speaker diarization." }
+      ]
+    }
+  }
+];
+
+// ─── Component ──────────────────────────────────────────────────────────────
+export default function CallLogView() {
+  const [calls, setCalls] = useState(MOCK_CALLS);
+  const [selectedId, setSelectedId] = useState(MOCK_CALLS[0].id);
+  const [search, setSearch] = useState("");
+  const [filterDirection, setFilterDirection] = useState("ALL");
+  const [filterSentiment, setFilterSentiment] = useState("ALL");
+  const [activeTab, setActiveTab] = useState("brief"); // brief | transcript | actions | forensics
+
+  // Audio player simulation state
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackTime, setPlaybackTime] = useState(24);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
+  const playTimerRef = useRef(null);
+
+  const selectedCall = calls.find((c) => c.id === selectedId) || calls[0];
+
+  // Filter logic
+  const filteredCalls = calls.filter((c) => {
+    const matchSearch =
+      c.contactName.toLowerCase().includes(search.toLowerCase()) ||
+      c.brief.title.toLowerCase().includes(search.toLowerCase()) ||
+      c.phone.includes(search);
+    const matchDir = filterDirection === "ALL" || c.direction === filterDirection;
+    const matchSent = filterSentiment === "ALL" || c.sentiment === filterSentiment;
+    return matchSearch && matchDir && matchSent;
+  });
+
+  // Simulated audio playback advancement
+  useEffect(() => {
+    if (isPlaying) {
+      playTimerRef.current = setInterval(() => {
+        setPlaybackTime((prev) => {
+          if (prev >= selectedCall.duration) {
+            setIsPlaying(false);
+            return 0;
+          }
+          return prev + 1;
+        });
+      }, 1000 / playbackSpeed);
+    } else {
+      clearInterval(playTimerRef.current);
+    }
+    return () => clearInterval(playTimerRef.current);
+  }, [isPlaying, playbackSpeed, selectedCall.duration]);
+
+  // Toggle action item completion
+  const handleToggleAction = (actionId) => {
+    setCalls((prev) =>
+      prev.map((c) => {
+        if (c.id !== selectedId) return c;
+        return {
+          ...c,
+          brief: {
+            ...c.brief,
+            actionItems: c.brief.actionItems.map((act) =>
+              act.id === actionId ? { ...act, done: !act.done } : act
+            ),
+          },
+        };
+      })
+    );
+  };
+
+  const handleSelectCall = (id) => {
+    setSelectedId(id);
+    setIsPlaying(false);
+    setPlaybackTime(0);
+  };
+
+  const sentimentColor = (s) => {
+    if (s === "Positive") return { color: T.green, bg: T.greenAlpha, border: T.greenBorder };
+    if (s === "Urgent") return { color: T.red, bg: T.redAlpha, border: T.redBorder };
+    if (s === "Technical") return { color: T.blue, bg: T.blueAlpha, border: T.blueBorder };
+    return { color: T.ochre, bg: T.ochreAlpha, border: T.ochreBorder };
+  };
+
+  return (
+    <div style={{
+      background: T.bg,
+      minHeight: "100vh",
+      padding: "28px 24px",
+      fontFamily: "'Geist Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      color: T.inkPrimary,
+      boxSizing: "border-box"
+    }}>
+
+      {/* ── Page Header ── */}
+      <header style={{ marginBottom: "24px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
+              <span style={{ fontSize: "16px", color: T.inkMuted }}>◎</span>
+              <h1 style={{
+                margin: 0,
+                fontFamily: "'Bricolage Grotesque', sans-serif",
+                fontSize: "20px",
+                fontWeight: 600,
+                letterSpacing: "-0.025em",
+                color: T.inkPrimary,
+              }}>
+                Call Intelligence
+              </h1>
+            </div>
+            <p style={{ margin: 0, fontSize: "12px", color: T.inkMuted, paddingLeft: "26px" }}>
+              Voice records · Faster-Whisper transcripts · Gemini executive briefings
+            </p>
+          </div>
+
+          {/* Quick Metrics Bar */}
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            <Pill label="Total Recorded" value={`${calls.length} calls`} />
+            <Pill label="Vault Storage" value="AES-256 GCM" accent />
+            <Pill label="Avg Sentiment" value="82% High" green />
+          </div>
+        </div>
+      </header>
+
+      {/* ── Filter / Search Bar ── */}
+      <div style={{
+        display: "flex",
+        gap: "10px",
+        marginBottom: "20px",
+        flexWrap: "wrap",
+        alignItems: "center"
+      }}>
+        {/* Search Box */}
+        <div style={{ flex: "1 1 240px", position: "relative" }}>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by contact, title, phone, or keyword..."
+            style={styles.input}
+          />
+        </div>
+
+        {/* Direction Tabs */}
+        <div style={styles.segmentContainer}>
+          {["ALL", "IN", "OUT"].map((dir) => (
+            <button
+              key={dir}
+              onClick={() => setFilterDirection(dir)}
+              style={styles.segmentButton(filterDirection === dir)}
+            >
+              {dir === "IN" ? "↗ Inbound" : dir === "OUT" ? "↙ Outbound" : "All Direction"}
+            </button>
+          ))}
+        </div>
+
+        {/* Sentiment Filter */}
+        <div style={styles.segmentContainer}>
+          {["ALL", "Positive", "Urgent", "Technical"].map((sent) => (
+            <button
+              key={sent}
+              onClick={() => setFilterSentiment(sent)}
+              style={styles.segmentButton(filterSentiment === sent)}
+            >
+              {sent}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Main Split Workstation Layout ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "360px 1fr", gap: "16px", alignItems: "start" }}>
+
+        {/* ══ LEFT PANE: Call Record Feed ══════════════════════════════ */}
+        <div>
+          <SectionLabel>Recorded Calls ({filteredCalls.length})</SectionLabel>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "calc(100vh - 220px)", overflowY: "auto", paddingRight: "4px" }}>
+            {filteredCalls.map((c) => {
+              const isSelected = c.id === selectedId;
+              const sentStyle = sentimentColor(c.sentiment);
+
+              return (
+                <div
+                  key={c.id}
+                  onClick={() => handleSelectCall(c.id)}
+                  style={{
+                    background: isSelected ? T.surfaceMd : T.surface,
+                    border: `1px solid ${isSelected ? T.ochreBorder : T.border}`,
+                    borderRadius: "10px",
+                    padding: "14px 16px",
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                    boxShadow: isSelected ? "0 0 12px rgba(232,166,86,0.08)" : "none",
+                  }}
+                >
+                  {/* Top row: Name & Sentiment */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{
+                          color: c.direction === "IN" ? T.green : T.blue,
+                          fontSize: "12px",
+                          fontWeight: 700
+                        }}>
+                          {c.direction === "IN" ? "↗" : "↙"}
+                        </span>
+                        <span style={{
+                          fontFamily: "'Bricolage Grotesque', sans-serif",
+                          fontSize: "14px",
+                          fontWeight: 600,
+                          color: isSelected ? T.ochre : T.inkPrimary,
+                        }}>
+                          {c.contactName}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: "11px", color: T.inkMuted, marginTop: "2px" }}>
+                        {c.company} · {c.phone}
+                      </div>
+                    </div>
+
+                    <span style={{
+                      fontSize: "10px",
+                      padding: "2px 7px",
+                      borderRadius: "12px",
+                      background: sentStyle.bg,
+                      border: `1px solid ${sentStyle.border}`,
+                      color: sentStyle.color,
+                      fontWeight: 600
+                    }}>
+                      {c.sentiment}
+                    </span>
+                  </div>
+
+                  {/* Title snippet */}
+                  <div style={{
+                    fontSize: "12px",
+                    color: T.inkSecond,
+                    marginBottom: "8px",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis"
+                  }}>
+                    {c.brief.title}
+                  </div>
+
+                  {/* Bottom row: Time & duration */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", color: T.inkMuted, fontFamily: "'JetBrains Mono', monospace" }}>
+                    <span>{formatDate(c.timestamp)}</span>
+                    <span>{formatDuration(c.duration)}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ══ RIGHT PANE: Call Intelligence Dossier ════════════════════ */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+
+          {/* 1. Interactive Audio Waveform & Player Console */}
+          <Card>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px", flexWrap: "wrap", gap: "8px" }}>
+              <div>
+                <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.08em", color: T.ochre, fontWeight: 600 }}>
+                  Active Audio Replay · Dual-Channel Stereo
+                </span>
+                <h2 style={{
+                  margin: "4px 0 2px 0",
+                  fontFamily: "'Bricolage Grotesque', sans-serif",
+                  fontSize: "17px",
+                  fontWeight: 600,
+                  color: T.inkPrimary,
+                }}>
+                  {selectedCall.brief.title}
+                </h2>
+                <div style={{ fontSize: "11px", color: T.inkMuted }}>
+                  Participant: <span style={{ color: T.inkPrimary }}>{selectedCall.contactName}</span> ({selectedCall.phone}) · {selectedCall.company}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                <button
+                  onClick={() => setPlaybackSpeed((s) => (s === 1.0 ? 1.5 : s === 1.5 ? 2.0 : 1.0))}
+                  style={styles.speedButton}
+                >
+                  {playbackSpeed}x
+                </button>
+                <button
+                  onClick={() => setIsPlaying(!isPlaying)}
+                  style={{
+                    padding: "7px 18px",
+                    background: isPlaying ? T.ochreAlpha : "rgba(232,166,86,0.22)",
+                    border: `1px solid ${T.ochre}`,
+                    borderRadius: "7px",
+                    color: T.ochre,
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}
+                >
+                  <span>{isPlaying ? "❚❚ Pause" : "▶ Play Audio"}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Simulated Dynamic Waveform Bars */}
+            <div style={{
+              background: "rgba(0,0,0,0.35)",
+              border: `1px solid ${T.border}`,
+              borderRadius: "8px",
+              padding: "16px 14px",
+              marginBottom: "10px"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "3px", height: "42px", marginBottom: "10px" }}>
+                {Array.from({ length: 64 }).map((_, i) => {
+                  const progressPct = playbackTime / selectedCall.duration;
+                  const barPct = i / 64;
+                  const isPast = barPct <= progressPct;
+                  // Synthetic pseudo-random wave height
+                  const height = 12 + Math.sin(i * 0.45) * 16 + ((i * 13) % 15);
+
+                  return (
+                    <div
+                      key={i}
+                      onClick={() => setPlaybackTime(Math.floor(barPct * selectedCall.duration))}
+                      style={{
+                        flex: 1,
+                        height: `${Math.max(6, height)}px`,
+                        background: isPast ? T.ochre : "rgba(255,255,255,0.12)",
+                        borderRadius: "2px",
+                        cursor: "pointer",
+                        transition: "background 0.1s ease",
+                      }}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* Scrubber & Timers */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: T.inkMuted }}>
+                <span>{formatDuration(playbackTime)}</span>
+                <span style={{ fontSize: "10px", color: T.inkSecond }}>Channel 1: Mic / Channel 2: Telephony Baseband</span>
+                <span>{formatDuration(selectedCall.duration)}</span>
+              </div>
+            </div>
+          </Card>
+
+          {/* 2. Intelligence Tabs Switcher */}
+          <div style={{ display: "flex", gap: "8px", borderBottom: `1px solid ${T.border}`, paddingBottom: "10px" }}>
+            {[
+              { id: "brief", label: "Executive Brief" },
+              { id: "actions", label: `Action Items (${selectedCall.brief.actionItems.length})` },
+              { id: "transcript", label: "Verbatim Transcript" },
+              { id: "forensics", label: "ACR Forensics & Atoms" },
+            ].map((tab) => {
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    background: active ? T.ochreAlpha : "transparent",
+                    border: `1px solid ${active ? T.ochreBorder : "transparent"}`,
+                    borderRadius: "6px",
+                    color: active ? T.ochre : T.inkSecond,
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    padding: "6px 14px",
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* 3. Tab Contents */}
+          {activeTab === "brief" && (
+            <Card>
+              <CardHeader
+                title="Executive Brief & Core Synthesis"
+                badge={`Confidence: ${Math.round(selectedCall.brief.sentimentScore * 100)}%`}
+                badgeGreen
+                description="Synthesized by Horizon AI via Gemini 2.5 Flash from raw Whisper transcription"
+              />
+
+              {/* Summary Paragraph */}
+              <div style={{
+                background: "rgba(0,0,0,0.22)",
+                padding: "14px 16px",
+                borderRadius: "8px",
+                borderLeft: `3px solid ${T.ochre}`,
+                fontSize: "13px",
+                lineHeight: "1.7",
+                color: T.inkPrimary,
+                marginBottom: "16px"
+              }}>
+                {selectedCall.brief.summary}
+              </div>
+
+              {/* Key Topics List */}
+              <div style={{ marginBottom: "16px" }}>
+                <SectionLabel>Key Discussion Points</SectionLabel>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  {selectedCall.brief.keyTopics.map((topic, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: T.inkSecond }}>
+                      <span style={{ color: T.ochre }}>•</span>
+                      <span>{topic}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tags */}
+              <div>
+                <SectionLabel>Contextual Semantic Tags</SectionLabel>
+                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                  {selectedCall.brief.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      style={{
+                        fontSize: "11px",
+                        padding: "3px 9px",
+                        borderRadius: "14px",
+                        background: "rgba(255,255,255,0.06)",
+                        border: `1px solid ${T.border}`,
+                        color: T.inkSecond,
+                      }}
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {activeTab === "actions" && (
+            <Card>
+              <CardHeader
+                title="Action Items & Commitments"
+                badge="Extracted Tasks"
+                description="Automatically extracted commitments, follow-ups, and agreed deadlines"
+              />
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {selectedCall.brief.actionItems.map((act) => (
+                  <div
+                    key={act.id}
+                    onClick={() => handleToggleAction(act.id)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "12px 14px",
+                      background: act.done ? "rgba(112,201,138,0.05)" : "rgba(255,255,255,0.03)",
+                      border: `1px solid ${act.done ? T.greenBorder : T.border}`,
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <input
+                        type="checkbox"
+                        checked={act.done}
+                        readOnly
+                        style={{ cursor: "pointer", accentColor: T.green }}
+                      />
+                      <span style={{
+                        fontSize: "12px",
+                        color: act.done ? T.inkMuted : T.inkPrimary,
+                        textDecoration: act.done ? "line-through" : "none"
+                      }}>
+                        {act.text}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: "10px", color: act.done ? T.green : T.ochre, fontFamily: "'JetBrains Mono', monospace" }}>
+                      {act.due}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {activeTab === "transcript" && (
+            <Card>
+              <CardHeader
+                title="Verbatim Whisper Transcript"
+                badge="Diarized"
+                description="Audio processed with faster-whisper + Pyannote speaker identification"
+              />
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "360px", overflowY: "auto", paddingRight: "6px" }}>
+                {selectedCall.brief.transcript.map((line, i) => {
+                  const isUser = line.speaker === "You";
+                  return (
+                    <div key={i} style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                      <span style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: "11px",
+                        color: T.ochre,
+                        cursor: "pointer",
+                        paddingTop: "2px"
+                      }}>
+                        [{line.time}]
+                      </span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: "11px", fontWeight: 600, color: isUser ? T.blue : T.inkSecond, marginBottom: "2px" }}>
+                          {line.speaker}
+                        </div>
+                        <div style={{ fontSize: "12px", color: T.inkPrimary, lineHeight: "1.6" }}>
+                          {line.text}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+
+          {activeTab === "forensics" && (
+            <Card>
+              <CardHeader
+                title="ACR Recording Metadata & Atom Forensics"
+                badge="Audit Vault"
+                description="Raw audio metadata resolved via acr_parser_reference.py"
+              />
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                <ForensicPill label="Matched Pattern" value={selectedCall.pattern} />
+                <ForensicPill label="Telephony Channel" value={selectedCall.channel} />
+                <ForensicPill label="Caller ID (E.164)" value={selectedCall.phone} />
+                <ForensicPill label="Payload Source" value="Tailscale Funnel (Port 9000)" />
+                <ForensicPill label="Atoms Scanned" value="ftyp, moov, trak, mdat (MP4/M4A)" />
+                <ForensicPill label="Field Encryption" value="transcript_encrypted (AES-GCM)" />
+              </div>
+            </Card>
+          )}
+
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
+// ─── Sub-Components ─────────────────────────────────────────────────────────
+
+function SectionLabel({ children }) {
+  return (
+    <div style={{
+      fontSize: "10px",
+      fontWeight: 600,
+      letterSpacing: "0.1em",
+      textTransform: "uppercase",
+      color: T.inkMuted,
+      marginBottom: "10px",
+      paddingLeft: "2px",
+    }}>
+      {children}
+    </div>
+  );
+}
+
+function Card({ children }) {
+  return (
+    <div style={{
+      background: T.surface,
+      border: `1px solid ${T.border}`,
+      borderRadius: "12px",
+      padding: "18px 20px",
+      marginBottom: "12px",
+    }}>
+      {children}
+    </div>
+  );
+}
+
+function CardHeader({ title, badge, badgeGreen, description }) {
+  return (
+    <div style={{ marginBottom: "14px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "3px" }}>
+        <span style={{
+          fontFamily: "'Bricolage Grotesque', sans-serif",
+          fontSize: "14px",
+          fontWeight: 600,
+          color: T.inkPrimary,
+          letterSpacing: "-0.01em",
+        }}>{title}</span>
+        <span style={{
+          fontSize: "10px",
+          padding: "1px 7px",
+          borderRadius: "20px",
+          background: badgeGreen ? T.greenAlpha : T.ochreAlpha,
+          border: `1px solid ${badgeGreen ? T.greenBorder : T.ochreBorder}`,
+          color: badgeGreen ? T.green : T.ochre,
+          fontWeight: 500,
+          letterSpacing: "0.02em",
+        }}>{badge}</span>
+      </div>
+      <p style={{ margin: 0, fontSize: "11px", color: T.inkMuted }}>{description}</p>
+    </div>
+  );
+}
+
+function Pill({ label, value, accent, green }) {
+  return (
+    <div style={{
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "5px",
+      padding: "3px 10px",
+      borderRadius: "20px",
+      background: green ? T.greenAlpha : accent ? T.ochreAlpha : "rgba(255,255,255,0.04)",
+      border: `1px solid ${green ? T.greenBorder : accent ? T.ochreBorder : T.border}`,
+    }}>
+      <span style={{ fontSize: "10px", color: T.inkMuted }}>{label}</span>
+      <span style={{
+        fontSize: "10px",
+        fontWeight: 600,
+        color: green ? T.green : accent ? T.ochre : T.inkSecond,
+      }}>{value}</span>
+    </div>
+  );
+}
+
+function ForensicPill({ label, value }) {
+  return (
+    <div style={{
+      padding: "9px 12px",
+      background: "rgba(0,0,0,0.25)",
+      border: `1px solid ${T.border}`,
+      borderRadius: "6px"
+    }}>
+      <div style={{ fontSize: "10px", color: T.inkMuted, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "2px" }}>
+        {label}
+      </div>
+      <div style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: T.inkPrimary }}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+// ─── Style Helpers ──────────────────────────────────────────────────────────
+const styles = {
+  input: {
+    padding: "8px 12px",
+    background: T.surfaceMd,
+    border: `1px solid ${T.border}`,
+    borderRadius: "7px",
+    color: T.inkPrimary,
+    fontSize: "12px",
+    outline: "none",
+    boxSizing: "border-box",
+    width: "100%",
+    fontFamily: "inherit",
+    transition: "border-color 0.15s",
+  },
+  segmentContainer: {
+    display: "flex",
+    background: "rgba(255,255,255,0.03)",
+    border: `1px solid ${T.border}`,
+    borderRadius: "8px",
+    padding: "2px",
+    gap: "2px",
+  },
+  segmentButton: (active) => ({
+    padding: "5px 11px",
+    background: active ? T.surfaceHover : "transparent",
+    border: "none",
+    borderRadius: "6px",
+    color: active ? T.ochre : T.inkMuted,
+    fontSize: "11px",
+    fontWeight: active ? 600 : 500,
+    cursor: "pointer",
+    transition: "all 0.15s ease",
+  }),
+  speedButton: {
+    padding: "4px 8px",
+    background: "rgba(255,255,255,0.06)",
+    border: `1px solid ${T.border}`,
+    borderRadius: "5px",
+    color: T.inkSecond,
+    fontSize: "10px",
+    fontWeight: 600,
+    cursor: "pointer",
+    fontFamily: "'JetBrains Mono', monospace"
+  }
+};
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+function formatDuration(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${s < 10 ? "0" : ""}${s}`;
+}
+
+function formatDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
